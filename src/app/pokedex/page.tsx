@@ -10,12 +10,19 @@ export default function PokedexPage() {
 
   const toggleType = (type: string) => {
     const newTypes = new Set(selectedTypes);
+
     if (newTypes.has(type)) {
+      // Type is selected - try to deselect it
       newTypes.delete(type);
-    }
-    if (newTypes.size === 0) {
+      // If this would leave no filters selected, ensure at least one remains
+      if (newTypes.size === 0) {
+        newTypes.add(type);
+      }
+    } else {
+      // Type is not selected - select it
       newTypes.add(type);
     }
+
     setSelectedTypes(newTypes);
   };
 
