@@ -1,0 +1,10 @@
+pre-push:
+  parallel: false
+  commands:
+    build-check:
+      run: npm run build
+      glob: "*.{ts,tsx,js,jsx}"
+      exclude:
+        - "node_modules/**"
+        - ".next/**"
+        - "out/**"
