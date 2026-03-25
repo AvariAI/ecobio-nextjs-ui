@@ -296,7 +296,6 @@ export default function RetroBattlePage() {
             backgroundColor: GBA_COLORS.bg,
             color: GBA_COLORS.text,
             fontFamily: '"Press Start 2P", monospace',
-            fontFamilyFallback: "'Courier New', monospace",
           }}
         >
           <link
