@@ -2,7 +2,7 @@
 const nextConfig = {
   output: 'export',
   basePath: '/ecobio-nextjs-ui',
-  assetPrefix: '/ecobio-nextjs-ui',
+  // Removing assetPrefix as it may cause issues with GitHub Pages deployment
   images: {
     unoptimized: true,
   },
