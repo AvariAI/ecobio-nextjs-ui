@@ -422,7 +422,7 @@ export default function HuntingPage() {
                 <div
                   key={c.id}
                   onClick={() => handleViewCreature(c)}
-                  className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-4 border border-green-700 hover:border-green-600 cursor-pointer hover:scale-105 transition-all duration-200"
+                  className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-4 border border-green-700 hover:border-green-600 cursor-pointer hover:scale-105 transition-all duration-200 relative"
                 >
                   <div className="flex items-center justify-between">
                     <h3 className="text-xl font-bold text-green-100">{c.name}</h3>
@@ -431,7 +431,7 @@ export default function HuntingPage() {
                     </span>
                   </div>
                   {c.feedCount > 0 && <p className="text-yellow-300 text-sm mt-1">Nourri {c.feedCount}x</p>}
-                  <div className="grid grid-cols-5 gap-1 mt-3 text-center text-xs">
+                  <div className="grid grid-cols-5 gap-1 mt-3 text-center text-xs pointer-events-none">
                     <div className="bg-green-950 rounded p-1">
                       <p className="text-green-200">HP</p>
                       <p className="text-green-100 font-bold">{c.finalStats.hp}</p>
