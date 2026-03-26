@@ -178,15 +178,15 @@ function CreatureSelector({
         <input
           type="range"
           min="1"
-          max="30"
+          max="50"
           value={level}
           onChange={(e) => onLevelChange(parseInt(e.target.value))}
           className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
         />
         <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
           <span>1</span>
-          <span>15</span>
-          <span>30</span>
+          <span>25</span>
+          <span>50</span>
         </div>
       </div>
 
