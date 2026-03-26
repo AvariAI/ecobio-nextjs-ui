@@ -49,22 +49,22 @@ function spawnCreature(): HuntedCreature {
   const rank: Rank = rollRarity();
   const [minVar, maxVar] = getVarianceRange(rank);
 
-  // Generate individual variance per stat
+  // Generate individual variance per stat (APPLIED AS MULTIPLIER, NOT +1)
   const hpVariance = minVar + Math.random() * (maxVar - minVar);
   const atkVariance = minVar + Math.random() * (maxVar - minVar);
   const defVariance = minVar + Math.random() * (maxVar - minVar);
   const spdVariance = minVar + Math.random() * (maxVar - minVar);
   const critVariance = minVar + Math.random() * (maxVar - minVar);
 
-  // FINAL STATS: base stats × rank multiplier × individual variance
-  // Variance is APPLIED ON TOP of rank multiplier, not separately
+  // FINAL STATS: base stats × rank multiplier × variance multiplier
+  // Variance IS the multiplier (0.80-1.10 for E), not added to 1
   const rankMult = { E: 1.0, D: 1.2, C: 1.4, B: 1.6, A: 1.8, S: 2.0, "S+": 2.2 }[rank];
   const finalStats: BattleStats = {
-    hp: Math.max(1, Math.floor(creature.baseStats.hp * rankMult * (1 + hpVariance))),
-    attack: Math.max(1, Math.floor(creature.baseStats.attack * rankMult * (1 + atkVariance))),
-    defense: Math.max(1, Math.floor(creature.baseStats.defense * rankMult * (1 + defVariance))),
-    speed: Math.max(1, Math.floor(creature.baseStats.speed * rankMult * (1 + spdVariance))),
-    crit: Math.max(1, Math.floor(creature.baseStats.crit * rankMult * (1 + critVariance))),
+    hp: Math.max(1, Math.floor(creature.baseStats.hp * rankMult * hpVariance)),
+    attack: Math.max(1, Math.floor(creature.baseStats.attack * rankMult * atkVariance)),
+    defense: Math.max(1, Math.floor(creature.baseStats.defense * rankMult * defVariance)),
+    speed: Math.max(1, Math.floor(creature.baseStats.speed * rankMult * spdVariance)),
+    crit: Math.max(1, Math.floor(creature.baseStats.crit * rankMult * critVariance)),
     rank,
   };
 
@@ -74,27 +74,27 @@ function spawnCreature(): HuntedCreature {
     varianceBreakdown: {
       hp: {
         base: creature.baseStats.hp,
-        variance: hpVariance * 100,
+        variance: (hpVariance - 1) * 100, // Show % from 1.0 baseline
         final: finalStats.hp,
       },
       atk: {
         base: creature.baseStats.attack,
-        variance: atkVariance * 100,
+        variance: (atkVariance - 1) * 100,
         final: finalStats.attack,
       },
       def: {
         base: creature.baseStats.defense,
-        variance: defVariance * 100,
+        variance: (defVariance - 1) * 100,
         final: finalStats.defense,
       },
       spd: {
         base: creature.baseStats.speed,
-        variance: spdVariance * 100,
+        variance: (spdVariance - 1) * 100,
         final: finalStats.speed,
       },
       crit: {
         base: creature.baseStats.crit,
-        variance: critVariance * 100,
+        variance: (critVariance - 1) * 100,
         final: finalStats.crit,
       },
     },
