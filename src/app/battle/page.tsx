@@ -35,8 +35,8 @@ export default function BattlePage() {
     <main className="min-h-screen bg-gradient-to-br from-red-50 via-purple-50 to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-8">
       <div className="max-w-7xl mx-auto">
         <header className="mb-8">
-          <Link href="/" className="text-blue-600 hover:text-blue-800 hover:underline mb-4 inline-block">
-            ← Back to Home
+          <Link href="/" className="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 rounded-lg shadow-md hover:shadow-lg hover:bg-gradient-to-r hover:from-red-50 hover:to-purple-50 dark:hover:from-gray-700 dark:hover:to-gray-700 transition-all duration-200 mb-4 border border-red-200 dark:border-red-800 font-semibold">
+            <span className="mr-2">←</span> Back to Home
           </Link>
           <h1 className="text-5xl font-bold bg-gradient-to-r from-red-600 to-purple-600 bg-clip-text text-transparent mb-4">
             ⚔️ Battle Arena
