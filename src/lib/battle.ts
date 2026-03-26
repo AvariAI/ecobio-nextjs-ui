@@ -48,14 +48,16 @@ export interface BattleResult {
  * D: ±15% (0.85-1.15)
  * C: ±20% (0.80-1.20)
  * B: ±25% (0.75-1.25)
- * A: +10% à +30% (1.10-1.40) - always bonus
- * S: +15% à +35% (1.15-1.50) - always bonus
- * S+: +20% à +40% (1.20-1.60) - always bonus
+ * A: +5% à +15% (1.05-1.15) - bonus modéré
+ * S: +5% à +20% (1.05-1.20) - bonus notable
+ * S+: +5% à +25% (1.05-1.25) - bonus légendaire mais pas OP
  *
  * IMPORTANT: Ces variances s'appliquent SUR la valeur par défaut du rang
- * Ex: Fourmi HP 100 × rankMult (E×1.0 = 100, B×1.6 = 160)
- * puis × varianceMultiplier (E 0.90-1.10, B 0.75-1.25)
- * Résultat: E HP 90-110, B HP 120-200
+ * Ex: Fourmi HP 100 × rankMult (E×1.0 = 100, S+×2.2 = 220)
+ * puis × varianceMultiplier (E 0.90-1.10, S+ 1.05-1.25)
+ * Résultat Level 50 (×2.0 levelMult): E HP 180-220, S+ HP 528-660
+ *
+ * High ranks NE PAS overpowered avec rank multiplier + level scaling
  */
 export function getVarianceRange(rank: Rank): [number, number] {
   const ranges: Record<Rank, [number, number]> = {
@@ -63,9 +65,9 @@ export function getVarianceRange(rank: Rank): [number, number] {
     D: [0.85, 1.15],         // ±15%
     C: [0.80, 1.20],         // ±20%
     B: [0.75, 1.25],         // ±25%
-    A: [1.10, 1.40],         // +10% à +30% (seulement bonus)
-    S: [1.15, 1.50],         // +15% à +35%
-    "S+": [1.20, 1.60],      // +20% à +40%
+    A: [1.05, 1.15],         // +5% à +15% (réduit pour éviter OP)
+    S: [1.05, 1.20],         // +5% à +20% (réduit)
+    "S+": [1.05, 1.25],      // +5% à +25% (réduit de +60% à +25%)
   };
   return ranges[rank];
 }
