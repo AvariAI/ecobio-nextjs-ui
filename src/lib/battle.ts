@@ -1,6 +1,6 @@
 /**
- * ÉcoBio Battle System - Overhaul Version
- * With Ant/Fly mechanics, dodge, crit, skills, cooldowns, RNG, rarity
+ * ÉcoBio Battle System - Overhaul Version v2
+ * Ant/Fly mechanics, dodge/crit overhaul, skills, cooldowns, RNG, rarity
  */
 
 import { Creature, BaseStats, Rank, RANK_MULTIPLIERS } from "./database";
@@ -67,11 +67,6 @@ export function getVarianceRange(rank: Rank): [number, number] {
 
 /**
  * Generate RNG individual stats with rank-based variance
- * E: ±10% (0.90-1.10), D: ±15% (0.85-1.15), C: ±20% (0.90-1.20)
- * B: ±25% (0.75-1.25) - Rare outliers with negatives allowed
- * A: +10% à +30% (1.10-1.40) - Epics with floor
- * S: +15% à +35% (1.15-1.50)
- * S+: +20% à +40% (1.20-1.60) - Legendaries
  */
 export function generateIndividualStats(
   baseStats: BaseStats,
@@ -163,20 +158,47 @@ export function calculateDamage(attacker: BattleCreature, defender: BattleCreatu
   return Math.max(1, Math.floor(damage));
 }
 
+/**
+ * Calculate dodge chance - defender faster than attacker
+ * If defender is slower/equal: 0% dodge (no evade)
+ * If defender is faster: (speedDiff / 100) + dodgeBuff
+ * - Mouche (SPD 20) vs Fourmi (SPD 10) defends: speedDiff = 10 → 10% base dodge
+ * - With +40% dodge buff: 50% total dodge
+ * - Level 50 (×2): Mouche 40 vs Fourmi 20 → speedDiff = 20 → 60% dodge
+ */
 export function calculateDodgeChance(
   attackerSpeed: number,
   defenderSpeed: number,
   dodgeBuff: number = 0
 ): number {
-  const spdDiff = attackerSpeed - defenderSpeed;
-  const logValue = Math.log10(Math.abs(spdDiff) + 1);
-  const dodgePercent = logValue * 0.1 + dodgeBuff;
+  const speedDiff = defenderSpeed - attackerSpeed;
+  if (speedDiff <= 0) {
+    // Defender is slower or equal speed → no natural dodge
+    return Math.min(0.75, Math.max(0.0, dodgeBuff));
+  }
+  // Defender is faster → evade based on speed advantage
+  const dodgePercent = speedDiff / 100 + dodgeBuff;
   return Math.min(0.75, Math.max(0.0, dodgePercent));
 }
 
+/**
+ * Calculate crit chance AND crit damage multiplier
+ * - Chance: crit / (crit + 150) - higher crit = more frequent
+ * - Damage: 1.5 + (crit / 50) - higher crit = more bonus damage on crit
+ *
+ * Examples:
+ * - Fourmi CRIT 10 → 6.25% chance, 1.70x damage
+ * - Mouche CRIT 20 → 11.76% chance, 1.90x damage
+ * - Level 50 CRIT 40 → 21.05% chance, 2.30x damage (massive!)
+ *
+ * Tanks with high crit can hit harder, but DPS with crit annihilates
+ */
 export function calculateCritChance(stats: BattleStats): number {
-  const score = stats.crit + stats.speed / 10;
-  return score / (score + 200);
+  return stats.crit / (stats.crit + 150);
+}
+
+export function calculateCritMultiplier(stats: BattleStats): number {
+  return 1.5 + (stats.crit / 50);
 }
 
 export function useSkill(
@@ -258,9 +280,10 @@ export function executeAttack(
   const critChance = calculateCritChance(attacker.stats);
   const isCrit = Math.random() < critChance;
   if (isCrit) {
-    damage = Math.floor(damage * 1.5);
+    const critMult = calculateCritMultiplier(attacker.stats);
+    damage = Math.floor(damage * critMult);
     log.push({
-      text: `CRITICAL HIT! Dégâts: ${damage}`,
+      text: `CRITICAL HIT! Dégâts: ${damage} (${critMult.toFixed(2)}x)`,
       type: "critical",
     });
   }
