@@ -14,20 +14,17 @@ import Link from "next/link";
 
 type BattlePhase = "setup" | "battle" | "complete";
 
-// Helper format functions
 function formatBuffChange(
-  creatureName: string,
   buffType: string,
   oldValue: number,
   newValue: number
 ): string {
   const diffNumeric = (newValue - oldValue) * 100;
   const sign = diffNumeric > 0 ? "+" : "";
-  return `✨ ${creatureName}: ${buffType} ${sign}${diffNumeric.toFixed(0)}% (${oldValue * 100}% → ${newValue * 100}%)`;
+  return `${buffType} ${sign}${diffNumeric.toFixed(0)}%`;
 }
 
 export default function BattlePage() {
-  // Setup phase
   const [playerCreatureId, setPlayerCreatureId] = useState("ant");
   const [playerLevel, setPlayerLevel] = useState(10);
   const [playerRank, setPlayerRank] = useState<Rank>("E");
@@ -35,21 +32,22 @@ export default function BattlePage() {
   const [enemyLevel, setEnemyLevel] = useState(10);
   const [enemyRank, setEnemyRank] = useState<Rank>("E");
 
-  // Battle phase
   const [phase, setPhase] = useState<BattlePhase>("setup");
   const [player, setPlayer] = useState<BattleCreature | null>(null);
   const [enemy, setEnemy] = useState<BattleCreature | null>(null);
   const [log, setLog] = useState<BattleLogEntry[]>([]);
   const [turn, setTurn] = useState<"player" | "enemy">("player");
   const [round, setRound] = useState(1);
-  const [playerAction, setPlayerAction] = useState<string | null>(null);
 
   const playerCreature = CREATURES[playerCreatureId];
   const enemyCreature = CREATURES[enemyCreatureId];
 
+  const playerPreviewStats = calculateFinalStats(playerCreature, playerLevel, playerRank);
+  const enemyPreviewStats = calculateFinalStats(enemyCreature, enemyLevel, enemyRank);
+
   const startBattle = () => {
-    const pStats = calculateFinalStats(playerCreature, playerLevel, playerRank);
-    const eStats = calculateFinalStats(enemyCreature, enemyLevel, enemyRank);
+    const pStats = playerPreviewStats;
+    const eStats = enemyPreviewStats;
 
     const p: BattleCreature = {
       creature: playerCreature,
@@ -101,29 +99,25 @@ export default function BattlePage() {
     const logCopy = [...log];
     logCopy.push({ text: `--- Round ${round}: Player Turn ---`, type: "info" });
 
-    // Decay buffs
     const oldDefenseBuff = player.buffs.defenseBuff;
     const oldDodgeBuff = player.buffs.dodgeBuff;
     tickCooldownsAndBuffs(player);
 
     if (oldDefenseBuff !== player.buffs.defenseBuff) {
-      logCopy.push({ text: formatBuffChange(player.name, "DEF buff", oldDefenseBuff, player.buffs.defenseBuff), type: "info" });
+      logCopy.push({ text: `✨ ${player.name}: ${formatBuffChange("DEF buff", oldDefenseBuff, player.buffs.defenseBuff)}`, type: "info" });
     }
     if (oldDodgeBuff !== player.buffs.dodgeBuff) {
-      logCopy.push({ text: formatBuffChange(player.name, "Dodge buff", oldDodgeBuff, player.buffs.dodgeBuff), type: "info" });
+      logCopy.push({ text: `${player.name}: ${formatBuffChange("Dodge buff", oldDodgeBuff, player.buffs.dodgeBuff)}`, type: "info" });
     }
 
-    // Player attacks
     const damage = executeAttack(player, enemy, logCopy);
     setLog(logCopy);
     setEnemy({ ...enemy });
-    setPlayerAction(`Attack dealt ${damage} damage`);
 
-    // Check victory/defeat
     if (damage === 0) {
       setTimeout(() => enemyTurn(logCopy), 1500);
     } else if (enemy.currentHP <= 0) {
-      logCopy.push({ text: `🏆 VICTORY! ${player.name} wins!`, type: "victory" });
+      logCopy.push({ text: `🏆 VICTORY!`, type: "victory" });
       setLog(logCopy);
       setPhase("complete");
     } else {
@@ -132,31 +126,25 @@ export default function BattlePage() {
   };
 
   const handleSkill = () => {
-    if (!player || !enemy || phase !== "battle" || turn !== "player") return;
+    if (!player || !player.creature.skill || phase !== "battle" || turn !== "player") return;
 
     const skill = player.creature.skill;
-    if (!skill) {
-      setLog((prev) => [...prev, { text: `No skill available`, type: "info" }]);
-      return;
-    }
-
     const logCopy = [...log];
     logCopy.push({ text: `--- Round ${round}: Player Turn (Skill) ---`, type: "info" });
 
-    // Decay buffs
     const oldDefenseBuff = player.buffs.defenseBuff;
     const oldDodgeBuff = player.buffs.dodgeBuff;
     tickCooldownsAndBuffs(player);
 
     if (oldDefenseBuff !== player.buffs.defenseBuff) {
-      logCopy.push({ text: formatBuffChange(player.name, "DEF buff", oldDefenseBuff, player.buffs.defenseBuff), type: "info" });
+      logCopy.push({ text: `✨ ${player.name}: ${formatBuffChange("DEF buff", oldDefenseBuff, player.buffs.defenseBuff)}`, type: "info" });
     }
     if (oldDodgeBuff !== player.buffs.dodgeBuff) {
-      logCopy.push({ text: formatBuffChange(player.name, "Dodge buff", oldDodgeBuff, player.buffs.dodgeBuff), type: "info" });
+      logCopy.push({ text: `${player.name}: ${formatBuffChange("Dodge buff", oldDodgeBuff, player.buffs.dodgeBuff)}`, type: "info" });
     }
 
-    // Use skill
     const success = useSkill(player, logCopy);
+
     if (!success) {
       setLog(logCopy);
       setTimeout(() => enemyTurn(logCopy), 1500);
@@ -165,20 +153,23 @@ export default function BattlePage() {
 
     const buffType = skill.effect === "defense" ? "DEF" : "Dodge";
     const newBuff = skill.effect === "defense" ? player.buffs.defenseBuff : player.buffs.dodgeBuff;
-    logCopy.push({ text: `${buffType} buff activated (+${Math.floor(newBuff * 100)}% for ${skill.duration} turns)`, type: "skill" });
+    logCopy.push({ text: `✨ ${player.name}: ${buffType} buff actif!`, type: "skill" });
 
     if (skill.effect === "defense") {
       const newDEF = Math.floor(player.stats.defense * (1 + newBuff));
-      logCopy.push({ text: `DEF: ${player.stats.defense} → ${newDEF}`, type: "info" });
+      logCopy.push({ text: `💪 DEF: ${player.stats.defense} → ${newDEF} (+${Math.floor(newBuff * 100)}%)`, type: "info" });
     } else {
-      const baseDodge = Math.log10(Math.abs(player.stats.speed - enemy.stats.speed) + 1) * 0.1;
-      const newDodge = Math.min(0.75, baseDodge + newBuff);
-      logCopy.push({ text: `Dodge: ${(baseDodge * 100).toFixed(1)}% → ${(newDodge * 100).toFixed(1)}%`, type: "info" });
+      if (!enemy) {
+        logCopy.push({ text: `💨 Dodge: Buff activé (+${Math.floor(newBuff * 100)}%)`, type: "info" });
+      } else {
+        const baseDodge = Math.log10(Math.abs(player.stats.speed - enemy.stats.speed) + 1) * 0.1;
+        const newDodge = Math.min(0.75, baseDodge + newBuff);
+        logCopy.push({ text: `💨 Dodge: ${(baseDodge * 100).toFixed(1)}% → ${(newDodge * 100).toFixed(1)}%`, type: "info" });
+      }
     }
 
     setLog(logCopy);
     setPlayer({ ...player });
-    setPlayerAction(`Used ${skill.name}`);
     setTimeout(() => enemyTurn(logCopy), 1500);
   };
 
@@ -200,36 +191,33 @@ export default function BattlePage() {
 
     const logCopy = [...currentLog];
 
-    // Decay buffs
     const oldDefenseBuff = enemy.buffs.defenseBuff;
     const oldDodgeBuff = enemy.buffs.dodgeBuff;
     tickCooldownsAndBuffs(enemy);
 
     if (oldDefenseBuff !== enemy.buffs.defenseBuff) {
-      logCopy.push({ text: formatBuffChange(enemy.name, "DEF buff", oldDefenseBuff, enemy.buffs.defenseBuff), type: "info" });
+      logCopy.push({ text: `${enemy.name}: ${formatBuffChange("DEF buff", oldDefenseBuff, enemy.buffs.defenseBuff)}`, type: "info" });
     }
     if (oldDodgeBuff !== enemy.buffs.dodgeBuff) {
-      logCopy.push({ text: formatBuffChange(enemy.name, "Dodge buff", oldDodgeBuff, enemy.buffs.dodgeBuff), type: "info" });
+      logCopy.push({ text: `${enemy.name}: ${formatBuffChange("Dodge buff", oldDodgeBuff, enemy.buffs.dodgeBuff)}`, type: "info" });
     }
 
-    // Enemy attacks
     logCopy.push({ text: `--- Round ${round}: Enemy Turn ---`, type: "info" });
     const damage = executeAttack(enemy, player, logCopy);
     setPlayer({ ...player });
 
     if (damage === 0) {
-      logCopy.push({ text: `Enemy attack dodged!`, type: "dodge" });
+      logCopy.push({ text: `Enemy attack esquivé!`, type: "dodge" });
       setLog(logCopy);
     } else if (player.currentHP <= 0) {
       logCopy.push({ text: `💀 DEFEAT!`, type: "defeat" });
       setLog(logCopy);
       setPhase("complete");
     } else {
-      logCopy.push({ text: `--- End Round ${round} ---`, type: "info" });
+      logCopy.push({ text: `--- Fin round ${round} ---`, type: "info" });
       setLog(logCopy);
       setRound((prev) => prev + 1);
       setTurn("player");
-      setPlayerAction(null);
     }
   };
 
@@ -256,6 +244,7 @@ export default function BattlePage() {
               onLevelChange={setPlayerLevel}
               rank={playerRank}
               onRankChange={setPlayerRank}
+              previewStats={playerPreviewStats}
               accent="blue"
             />
 
@@ -268,6 +257,7 @@ export default function BattlePage() {
               onLevelChange={setEnemyLevel}
               rank={enemyRank}
               onRankChange={setEnemyRank}
+              previewStats={enemyPreviewStats}
               accent="red"
             />
           </div>
@@ -291,7 +281,7 @@ export default function BattlePage() {
                 <h2 className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-4">
                   🎮 {turn === "player" ? "YOUR TURN" : "WAITING"}
                 </h2>
-                <BattleCreatureDisplay creature={player} />
+                <BattleCreatureDisplay creature={player} isPlayer={true} />
               </div>
             )}
 
@@ -308,8 +298,14 @@ export default function BattlePage() {
                     onClick={handleSkill}
                     className="px-8 py-6 bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xl font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
                   >
-                    ✨ SKILL
+                    ✨ SKILL: {player.creature.skill.name}
                   </button>
+                )}
+                {player?.creature.skill &&
+                 Object.entries(player.skillCooldowns).some(([k, v]) => k === player.creature.skill?.name && v > 0) && (
+                  <div className="text-xs text-red-600 dark:text-red-400 mt-2">
+                    Skill en cooldown
+                  </div>
                 )}
               </div>
             )}
@@ -319,7 +315,7 @@ export default function BattlePage() {
                 <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">
                   ⚔️ ENEMY
                 </h2>
-                <BattleCreatureDisplay creature={enemy} />
+                <BattleCreatureDisplay creature={enemy} isPlayer={false} />
               </div>
             )}
           </div>
@@ -341,7 +337,6 @@ export default function BattlePage() {
               setLog([]);
               setRound(1);
               setTurn("player");
-              setPlayerAction(null);
             }}
           />
         )}
@@ -350,11 +345,21 @@ export default function BattlePage() {
   );
 }
 
-function BattleCreatureDisplay({ creature }: { creature: BattleCreature }) {
+function BattleCreatureDisplay({
+  creature,
+  isPlayer,
+}: {
+  creature: BattleCreature;
+  isPlayer: boolean;
+}) {
   const maxHP = creature.stats.hp;
   const hpPercent = (creature.currentHP / maxHP) * 100;
   const defenseBuffActive = creature.buffs.defenseBuff > 0;
   const dodgeBuffActive = creature.buffs.dodgeBuff > 0;
+
+  const skillOnCooldown = creature.creature.skill
+    ? Object.entries(creature.skillCooldowns).some(([k, v]) => k === creature.creature.skill?.name && v > 0)
+    : false;
 
   return (
     <div className="space-y-4">
@@ -399,6 +404,18 @@ function BattleCreatureDisplay({ creature }: { creature: BattleCreature }) {
       {creature.creature.skill && (
         <div className="pt-2 border-t">
           <div className="text-xs mb-1">Skill: {creature.creature.skill.name}</div>
+          <div className="text-xs">
+            {skillOnCooldown ? (
+              <div className="text-red-500 font-semibold">
+                ❌ CD: {Object.entries(creature.skillCooldowns)
+                  .filter(([k, v]) => v > 0)
+                  .map(([k, v]) => `${v}t`)
+                  .join(", ")}
+              </div>
+            ) : (
+              <div className="text-green-500">✅ Ready</div>
+            )}
+          </div>
         </div>
       )}
 
@@ -507,6 +524,7 @@ function CreatureSelector({
   onLevelChange,
   rank,
   onRankChange,
+  previewStats,
   accent,
 }: {
   label: string;
@@ -517,6 +535,7 @@ function CreatureSelector({
   onLevelChange: (level: number) => void;
   rank: Rank;
   onRankChange: (rank: Rank) => void;
+  previewStats: { hp: number; attack: number; defense: number; speed: number; crit: number };
   accent: "blue" | "red";
 }) {
   const accentColors = {
@@ -567,7 +586,7 @@ function CreatureSelector({
         />
       </div>
 
-      <div>
+      <div className="mb-4">
         <label className="block text-sm font-semibold mb-2">Rank:</label>
         <div className="flex flex-wrap gap-2">
           {RANKS.map((r) => (
@@ -575,7 +594,9 @@ function CreatureSelector({
               key={r}
               onClick={() => onRankChange(r as Rank)}
               className={`px-4 py-2 rounded-lg font-bold transition-all ${
-                rank === r ? `bg-${accent === "blue" ? "blue" : "red"}-600 text-white` : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300"
+                rank === r
+                  ? `bg-${accent === "blue" ? "blue" : "red"}-600 text-white`
+                  : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300"
               }`}
             >
               {r}
@@ -584,8 +605,8 @@ function CreatureSelector({
         </div>
       </div>
 
-      <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-        <h3 className="font-bold mb-2">Stats</h3>
+      <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+        <h3 className="font-bold mb-2">Stats (Base)</h3>
         <div className="text-sm space-y-1">
           <div>HP: {creature.baseStats.hp}</div>
           <div>ATK: {creature.baseStats.attack}</div>
@@ -593,16 +614,29 @@ function CreatureSelector({
           <div>SPD: {creature.baseStats.speed}</div>
           <div>CRIT: {creature.baseStats.crit}</div>
         </div>
-        {creature.skill && (
-          <div className="mt-3 pt-3 border-t">
-            <h4 className="font-bold mb-1">Skill</h4>
-            <div className="text-sm">
-              <div className="font-semibold">{creature.skill.name}</div>
-              <div className="text-xs">{creature.skill.description}</div>
-            </div>
-          </div>
-        )}
       </div>
+
+      <div className="p-4 bg-blue-50 dark:bg-blue-900 rounded-lg">
+        <h3 className="font-bold mb-2 text-blue-900 dark:text-blue-100">Stats (Final)</h3>
+        <div className="text-sm space-y-1">
+          <div><span className="font-bold">HP:</span> {previewStats.hp}</div>
+          <div><span className="font-bold">ATK:</span> {previewStats.attack}</div>
+          <div><span className="font-bold">DEF:</span> {previewStats.defense}</div>
+          <div><span className="font-bold">SPD:</span> {previewStats.speed}</div>
+          <div><span className="font-bold">CRIT:</span> {previewStats.crit}</div>
+        </div>
+      </div>
+
+      {creature.skill && (
+        <div className="mt-4 pt-2 border-t">
+          <h4 className="font-bold mb-1">Skill</h4>
+          <div className="text-sm">
+            <div className="font-semibold">{creature.skill.name}</div>
+            <div className="text-xs">{creature.skill.description}</div>
+            <div className="text-xs mt-1">Cooldown: {creature.skill.cooldown} tours</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
