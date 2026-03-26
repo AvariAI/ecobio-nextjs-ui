@@ -1,5 +1,3 @@
-// @ts-nocheck - Force TypeScript skip check for this file to bypass cache
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,17 +5,10 @@ import { CREATURES, Rank, Creature } from "@/lib/database";
 import { getVarianceRange, BattleStats } from "@/lib/battle";
 import Link from "next/link";
 
-// FORCE RECOMPILE: File touched 2026-03-26 14:58 ET
-
 type HuntingPhase = "ready" | "spawned" | "viewing";
 
-type RarityRank = "E" | "D" | "C" | "B" | "A" | "S" | "S+";
-
-type SortBy = "name" | "rank" | "hp" | "attack" | "defense" | "speed" | "crit";
-type SortOrder = "asc" | "desc";
-
 interface HuntedCreature extends Creature {
-  id: string;
+  id: string; // Unique ID per occurrence
   finalStats: BattleStats;
   varianceBreakdown: {
     hp: { base: number; variance: number; final: number };
@@ -26,10 +17,12 @@ interface HuntedCreature extends Creature {
     spd: { base: number; variance: number; final: number };
     crit: { base: number; variance: number; final: number };
   };
-  feedCount: number;
-  feedStat: "hp" | "atk" | "def" | "spd" | "crit" | null;
-  createdAt: number;
+  feedCount: number; // Nourriture count
+  feedStat: "hp" | "atk" | "def" | "spd" | "crit" | null; // Stat boosted by feeding
+  createdAt: number; // Timestamp
 }
+
+type RarityRank = "E" | "D" | "C" | "B" | "A" | "S" | "S+";
 
 function rollRarity(): RarityRank {
   const dist: { rank: RarityRank; weight: number }[] = [
@@ -52,11 +45,15 @@ function rollRarity(): RarityRank {
 }
 
 function spawnCreature(): HuntedCreature {
+  // Random 50/50 between Ant and Fly
   const creatureId = Math.random() < 0.5 ? "ant" : "housefly";
   const creature: Creature = CREATURES[creatureId];
+
+  // Roll random rank with distribution
   const rank: Rank = rollRarity();
   const [minVar, maxVar] = getVarianceRange(rank);
 
+  // Generate individual variance per stat
   const hpVariance = minVar + Math.random() * (maxVar - minVar);
   const atkVariance = minVar + Math.random() * (maxVar - minVar);
   const defVariance = minVar + Math.random() * (maxVar - minVar);
@@ -78,11 +75,31 @@ function spawnCreature(): HuntedCreature {
     id: `cre_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     finalStats,
     varianceBreakdown: {
-      hp: { base: creature.baseStats.hp, variance: (hpVariance - 1) * 100, final: finalStats.hp },
-      atk: { base: creature.baseStats.attack, variance: (atkVariance - 1) * 100, final: finalStats.attack },
-      def: { base: creature.baseStats.defense, variance: (defVariance - 1) * 100, final: finalStats.defense },
-      spd: { base: creature.baseStats.speed, variance: (spdVariance - 1) * 100, final: finalStats.speed },
-      crit: { base: creature.baseStats.crit, variance: (critVariance - 1) * 100, final: finalStats.crit },
+      hp: {
+        base: creature.baseStats.hp,
+        variance: (hpVariance - 1) * 100,
+        final: finalStats.hp,
+      },
+      atk: {
+        base: creature.baseStats.attack,
+        variance: (atkVariance - 1) * 100,
+        final: finalStats.attack,
+      },
+      def: {
+        base: creature.baseStats.defense,
+        variance: (defVariance - 1) * 100,
+        final: finalStats.defense,
+      },
+      spd: {
+        base: creature.baseStats.speed,
+        variance: (spdVariance - 1) * 100,
+        final: finalStats.speed,
+      },
+      crit: {
+        base: creature.baseStats.crit,
+        variance: (critVariance - 1) * 100,
+        final: finalStats.crit,
+      },
     },
     feedCount: 0,
     feedStat: null,
@@ -90,17 +107,14 @@ function spawnCreature(): HuntedCreature {
   };
 }
 
-const RANK_VALUE: Record<Rank, number> = { E: 1, D: 2, C: 3, B: 4, A: 5, S: 6, "S+": 7 };
-
 export default function HuntingPage() {
   const [phase, setPhase] = useState<HuntingPhase>("ready");
   const [huntedCreature, setHuntedCreature] = useState<HuntedCreature | null>(null);
   const [collection, setCollection] = useState<HuntedCreature[]>([]);
   const [selectedCreature, setSelectedCreature] = useState<HuntedCreature | null>(null);
   const [feedChoice, setFeedChoice] = useState<"hp" | "atk" | "def" | "spd" | "crit" | null>(null);
-  const [sortBy, setSortBy] = useState<SortBy>("rank");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
+  // Load from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem("ecobio-collection");
     if (saved) {
@@ -108,11 +122,12 @@ export default function HuntingPage() {
         const parsed = JSON.parse(saved);
         setCollection(parsed);
       } catch (e) {
-        console.error("Failed load collection", e);
+        console.error("Failed to load collection:", e);
       }
     }
   }, []);
 
+  // Save to localStorage whenever collection changes
   useEffect(() => {
     if (collection.length > 0) {
       localStorage.setItem("ecobio-collection", JSON.stringify(collection));
@@ -120,24 +135,6 @@ export default function HuntingPage() {
       localStorage.removeItem("ecobio-collection");
     }
   }, [collection]);
-
-  const sortedCollection = [...collection].sort((a, b) => {
-    let comparison = 0;
-    switch (sortBy) {
-      case "name": comparison = a.name.localeCompare(b.name); break;
-      case "rank": comparison = RANK_VALUE[a.finalStats.rank] - RANK_VALUE[b.finalStats.rank]; break;
-      case "hp": comparison = a.finalStats.hp - b.finalStats.hp; break;
-      case "attack": comparison = a.finalStats.attack - b.finalStats.attack; break;
-      case "defense": comparison = a.finalStats.defense - b.finalStats.defense; break;
-      case "speed": comparison = a.finalStats.speed - b.finalStats.speed; break;
-      case "crit": comparison = a.finalStats.crit - b.finalStats.crit; break;
-    }
-    if (sortOrder === "desc") comparison *= -1;
-    if (sortBy === "rank" && comparison === 0) return a.name.localeCompare(b.name);
-    return comparison;
-  });
-
-  const handleAutoSort = () => { setSortBy("rank"); setSortOrder("desc"); };
 
   const handleSpawn = () => {
     const spawned = spawnCreature();
@@ -155,7 +152,10 @@ export default function HuntingPage() {
     }
   };
 
-  const handleReleaseSpawn = () => { setHuntedCreature(null); setPhase("ready"); };
+  const handleReleaseSpawn = () => {
+    setHuntedCreature(null);
+    setPhase("ready");
+  };
 
   const handleViewCreature = (creature: HuntedCreature) => {
     setSelectedCreature(creature);
@@ -172,16 +172,23 @@ export default function HuntingPage() {
     }
   };
 
-  const handleFeedSelect = (stat: "hp" | "atk" | "def" | "spd" | "crit") => { setFeedChoice(stat); };
+  const handleFeedSelect = (stat: "hp" | "atk" | "def" | "spd" | "crit") => {
+    setFeedChoice(stat);
+  };
 
   const handleFeedConfirm = () => {
     if (selectedCreature && feedChoice) {
-      const statKey: "hp" | "attack" | "defense" | "speed" | "crit" =
-        feedChoice === "atk" ? "attack" : feedChoice === "def" ? "defense" : feedChoice === "spd" ? "speed" : "crit";
+      const statKey: "hp" | "attack" | "defense" | "speed" | "crit" = 
+        feedChoice === "atk" ? "attack" : 
+        feedChoice === "def" ? "defense" :
+        feedChoice === "spd" ? "speed" :
+        feedChoice;
+
       const boosted = { ...selectedCreature };
       boosted.feedCount += 1;
       boosted.feedStat = feedChoice;
       boosted.finalStats[statKey] = Math.floor(boosted.finalStats[statKey] * 1.10);
+
       const updated = collection.map(c => c.id === boosted.id ? boosted : c);
       setCollection(updated);
       setSelectedCreature(boosted);
@@ -189,7 +196,10 @@ export default function HuntingPage() {
     }
   };
 
-  const formatVariance = (variance: number) => { const sign = variance >= 0 ? "+" : ""; return `${sign}${variance.toFixed(1)}%`; };
+  const formatVariance = (variance: number) => {
+    const sign = variance >= 0 ? "+" : "";
+    return `${sign}${variance.toFixed(1)}%`;
+  };
 
   const getVarianceColor = (variance: number) => {
     if (variance >= 20) return "text-yellow-400 font-bold";
@@ -212,11 +222,23 @@ export default function HuntingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-900 to-green-950 p-6">
       <div className="max-w-5xl mx-auto">
-        <Link href="/" className="text-green-300 hover:text-green-200 mb-6 inline-block">← Retour</Link>
-        <h1 className="text-4xl font-bold text-green-100 mb-2">🏹 Chasse Créatures</h1>
-        <p className="text-green-200 mb-8">Spawn RNG et build ta collection!</p>
+        <Link href="/" className="text-green-300 hover:text-green-200 mb-6 inline-block">
+          ← Retour à l'accueil
+        </Link>
 
-        {phase === "ready" && <button onClick={handleSpawn} className="w-full bg-gradient-to-r from-green-700 to-green-600 hover:from-green-600 hover:to-green-500 text-white rounded-lg p-4 text-xl font-bold shadow-lg transition-all duration-200">🎯 Spawn</button>}
+        <h1 className="text-4xl font-bold text-green-100 mb-2">🏹 Chasse Créatures</h1>
+        <p className="text-green-200 mb-8">
+          Spawn des créatures RNG-optimisées et build ta collection unique!
+        </p>
+
+        {phase === "ready" && (
+          <button
+            onClick={handleSpawn}
+            className="w-full bg-gradient-to-r from-green-700 to-green-600 hover:from-green-600 hover:to-green-500 text-white rounded-lg p-4 text-xl font-bold shadow-lg transition-all duration-200"
+          >
+            🎯 Spawn Nouvelle Créature
+          </button>
+        )}
 
         {phase === "spawned" && huntedCreature && (
           <div className="bg-gradient-to-br from-green-800 to-green-900 rounded-xl p-6 shadow-xl border border-green-700">
@@ -224,138 +246,212 @@ export default function HuntingPage() {
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h2 className="text-3xl font-bold text-green-100">{huntedCreature.name}</h2>
-                  <span className={`text-2xl font-bold ${getRankBadgeColor(huntedCreature.finalStats.rank)} text-white px-3 py-1 rounded-full`}>{huntedCreature.finalStats.rank}</span>
+                  <span className={`text-2xl font-bold ${getRankBadgeColor(huntedCreature.finalStats.rank)} text-white px-3 py-1 rounded-full`}>
+                    {huntedCreature.finalStats.rank}
+                  </span>
                 </div>
                 <p className="text-green-200 mb-4">{huntedCreature.desc}</p>
+
                 {huntedCreature.skill && (
                   <div className="bg-green-700 bg-opacity-50 rounded-lg p-3 mb-4">
                     <h3 className="font-bold text-green-100">🎯 Compétence</h3>
                     <div className="text-sm text-green-200">
                       <p><strong>{huntedCreature.skill.name}</strong>: {huntedCreature.skill.description}</p>
-                      <p className="text-xs text-green-300 mt-1">CD: {huntedCreature.skill.cooldown}t | Durée: {huntedCreature.skill.duration}t</p>
+                      <p className="text-xs text-green-300 mt-1">Cooldown: {huntedCreature.skill.cooldown} tours | Durée: {huntedCreature.skill.duration} tours</p>
                     </div>
                   </div>
                 )}
               </div>
             </div>
+
             <h3 className="text-xl font-bold text-green-100 mb-4">📊 Stats RNG</h3>
             <div className="grid grid-cols-2 gap-3 mb-6">
               {Object.entries(huntedCreature.varianceBreakdown).map(([statName, data]) => {
-                const labelMap: Record<string, string> = { hp: "HP", atk: "ATK", def: "DEF", spd: "SPD", crit: "CRIT" };
+                const labelMap: Record<string, string> = {
+                  hp: "HP",
+                  atk: "ATK",
+                  def: "DEF",
+                  spd: "SPD",
+                  crit: "CRIT",
+                };
                 return (
                   <div key={statName} className="bg-green-950 rounded-lg p-3 flex justify-between items-center">
-                    <div><p className="text-green-200 font-semibold">{labelMap[statName]}</p><p className="text-xs text-green-400">Base: {data.base}</p></div>
+                    <div>
+                      <p className="text-green-200 font-semibold">{labelMap[statName]}</p>
+                      <p className="text-xs text-green-400">Base: {data.base}</p>
+                    </div>
                     <div className="text-right">
-                      <p className={`text-2xl font-bold ${getVarianceColor(data.variance)}`}>{data.final}</p>
-                      <p className={`text-sm ${getVarianceColor(data.variance)}`}>{formatVariance(data.variance)}</p>
+                      <p className={`text-2xl font-bold ${getVarianceColor(data.variance)}`}>
+                        {data.final}
+                      </p>
+                      <p className={`text-sm ${getVarianceColor(data.variance)}`}>
+                        {formatVariance(data.variance)}
+                      </p>
                     </div>
                   </div>
                 );
               })}
             </div>
+
             <div className="flex gap-3">
-              <button onClick={handleKeep} className="flex-1 bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white rounded-lg p-3 font-bold shadow-lg">♻️ Ajouter</button>
-              <button onClick={handleReleaseSpawn} className="flex-1 bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white rounded-lg p-3 font-bold shadow-lg">❌ Relâcher</button>
+              <button
+                onClick={handleKeep}
+                className="flex-1 bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white rounded-lg p-3 font-bold shadow-lg"
+              >
+                ♻️ Ajouter à Collection
+              </button>
+              <button
+                onClick={handleReleaseSpawn}
+                className="flex-1 bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white rounded-lg p-3 font-bold shadow-lg"
+              >
+                ❌ Relâcher
+              </button>
             </div>
           </div>
         )}
 
         {phase === "viewing" && selectedCreature && (
           <div className="bg-gradient-to-br from-green-800 to-green-900 rounded-xl p-6 shadow-xl border border-green-700">
-            <button onClick={() => setPhase("ready")} className="text-green-300 hover:text-green-200 mb-4 inline-block font-semibold">← Retour</button>
+            <button
+              onClick={() => setPhase("ready")}
+              className="text-green-300 hover:text-green-200 mb-4 inline-block font-semibold"
+            >
+              ← Retour à Collection
+            </button>
+
             <div className="flex items-start gap-6 mb-6">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h2 className="text-3xl font-bold text-green-100">{selectedCreature.name}</h2>
-                  <span className={`text-2xl font-bold ${getRankBadgeColor(selectedCreature.finalStats.rank)} text-white px-3 py-1 rounded-full`}>{selectedCreature.finalStats.rank}</span>
+                  <span className={`text-2xl font-bold ${getRankBadgeColor(selectedCreature.finalStats.rank)} text-white px-3 py-1 rounded-full`}>
+                    {selectedCreature.finalStats.rank}
+                  </span>
                 </div>
                 <p className="text-green-200 mb-4">{selectedCreature.desc}</p>
+
                 {selectedCreature.skill && (
                   <div className="bg-green-700 bg-opacity-50 rounded-lg p-3 mb-4">
                     <h3 className="font-bold text-green-100">🎯 Compétence</h3>
                     <div className="text-sm text-green-200">
                       <p><strong>{selectedCreature.skill.name}</strong>: {selectedCreature.skill.description}</p>
-                      <p className="text-xs text-green-300 mt-1">CD: {selectedCreature.skill.cooldown}t | Durée: {selectedCreature.skill.duration}t</p>
+                      <p className="text-xs text-green-300 mt-1">Cooldown: {selectedCreature.skill.cooldown} tours | Durée: {selectedCreature.skill.duration} tours</p>
                     </div>
                   </div>
                 )}
-                {selectedCreature.feedCount > 0 && <div className="bg-yellow-600 bg-opacity-50 rounded-lg p-3 mb-4"><p className="font-bold text-yellow-100">🍎 Nourri {selectedCreature.feedCount}x</p>{selectedCreature.feedStat && <p className="text-sm text-yellow-200">Stat: {selectedCreature.feedStat.toUpperCase()}</p>}</div>}
+
+                {selectedCreature.feedCount > 0 && (
+                  <div className="bg-yellow-600 bg-opacity-50 rounded-lg p-3 mb-4">
+                    <p className="font-bold text-yellow-100">🍎 Nourri {selectedCreature.feedCount} fois</p>
+                    {selectedCreature.feedStat && <p className="text-sm text-yellow-200">Stat boostée: {selectedCreature.feedStat.toUpperCase()}</p>}
+                  </div>
+                )}
               </div>
             </div>
-            <h3 className="text-xl font-bold text-green-100 mb-4">📊 Stats</h3>
+
+            <h3 className="text-xl font-bold text-green-100 mb-4">📊 Stats Actuelles</h3>
             <div className="grid grid-cols-2 gap-3 mb-6">
-              {(["hp", "attack", "defense", "speed", "crit"] as const).map(stat => {
-                return (
-                  <div key={stat} className="bg-green-950 rounded-lg p-3">
-                    <p className="text-green-200 font-semibold">{stat.toUpperCase()}</p>
-                    <p className="text-2xl font-bold text-green-100">{selectedCreature.finalStats[stat]}</p>
-                  </div>
-                );
-              })}
+              <div className="bg-green-950 rounded-lg p-3">
+                <p className="text-green-200 font-semibold">HP</p>
+                <p className="text-2xl font-bold text-green-100">{selectedCreature.finalStats.hp}</p>
+              </div>
+              <div className="bg-green-950 rounded-lg p-3">
+                <p className="text-green-200 font-semibold">ATK</p>
+                <p className="text-2xl font-bold text-green-100">{selectedCreature.finalStats.attack}</p>
+              </div>
+              <div className="bg-green-950 rounded-lg p-3">
+                <p className="text-green-200 font-semibold">DEF</p>
+                <p className="text-2xl font-bold text-green-100">{selectedCreature.finalStats.defense}</p>
+              </div>
+              <div className="bg-green-950 rounded-lg p-3">
+                <p className="text-green-200 font-semibold">SPD</p>
+                <p className="text-2xl font-bold text-green-100">{selectedCreature.finalStats.speed}</p>
+              </div>
+              <div className="bg-green-950 rounded-lg p-3 col-span-2">
+                <p className="text-green-200 font-semibold">CRIT</p>
+                <p className="text-2xl font-bold text-green-100">{selectedCreature.finalStats.crit}</p>
+              </div>
             </div>
+
             <div className="border-t border-green-700 pt-6">
-              <h3 className="text-xl font-bold text-green-100 mb-4">🍎 Nourrir</h3>
+              <h3 className="text-xl font-bold text-green-100 mb-4">🍎 Nourrir ( +10% à la stat )</h3>
               {!feedChoice ? (
                 <div className="grid grid-cols-5 gap-2 mb-4">
                   {(["hp", "atk", "def", "spd", "crit"] as const).map(stat => (
-                    <button key={stat} onClick={() => handleFeedSelect(stat)} className="bg-gradient-to-r from-green-700 to-green-600 hover:from-green-600 hover:to-green-500 text-white rounded-lg p-2 font-bold">{stat.toUpperCase()}</button>
+                    <button
+                      key={stat}
+                      onClick={() => handleFeedSelect(stat)}
+                      className="bg-gradient-to-r from-green-700 to-green-600 hover:from-green-600 hover:to-green-500 text-white rounded-lg p-2 font-bold"
+                    >
+                      {stat.toUpperCase()}
+                    </button>
                   ))}
                 </div>
               ) : (
                 <div className="flex items-center gap-3 mb-4">
                   <p className="text-green-200">Nourrir <strong>{feedChoice.toUpperCase()}</strong> (+10%)?</p>
-                  <button onClick={handleFeedConfirm} className="bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white rounded-lg px-4 py-2 font-bold">✅ OK</button>
-                  <button onClick={() => setFeedChoice(null)} className="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-lg px-4 py-2 font-bold">❌ Annuler</button>
+                  <button
+                    onClick={handleFeedConfirm}
+                    className="bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white rounded-lg px-4 py-2 font-bold"
+                  >
+                    ✅ Confirmer
+                  </button>
+                  <button
+                    onClick={() => setFeedChoice(null)}
+                    className="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-lg px-4 py-2 font-bold"
+                  >
+                    ❌ Annuler
+                  </button>
                 </div>
               )}
-              <button onClick={handleReleaseCreature} className="w-full bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white rounded-lg p-3 mt-4 font-bold shadow-lg">❌ Relâcher</button>
+
+              <button
+                onClick={handleReleaseCreature}
+                className="w-full bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white rounded-lg p-3 mt-4 font-bold shadow-lg"
+              >
+                ❌ Relâcher Créature
+              </button>
             </div>
           </div>
         )}
 
         {phase === "ready" && collection.length > 0 && (
           <div className="mt-8">
-            {/* TRI FILTERS */}
-            <div className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-4 mb-4 border border-green-700">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <label htmlFor="sortBy" className="text-green-200 font-semibold">Trier:</label>
-                  <select id="sortBy" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)} className="bg-green-950 text-green-100 rounded px-3 py-2 border border-green-600 focus:outline-none focus:border-green-500">
-                    <option value="name">Alpha</option>
-                    <option value="rank">Rang</option>
-                    <option value="hp">HP</option>
-                    <option value="attack">ATK</option>
-                    <option value="defense">DEF</option>
-                    <option value="speed">VIT</option>
-                    <option value="crit">CRIT</option>
-                  </select>
-                </div>
-                <div className="flex items-center gap-2">
-                  <label htmlFor="sortOrder" className="text-green-200 font-semibold">Ordre:</label>
-                  <select id="sortOrder" value={sortOrder} onChange={(e) => setSortOrder(e.target.value as SortOrder)} className="bg-green-950 text-green-100 rounded px-3 py-2 border border-green-600 focus:outline-none focus:border-green-500">
-                    <option value="asc">↑</option>
-                    <option value="desc">↓</option>
-                  </select>
-                </div>
-                <button onClick={handleAutoSort} className="bg-gradient-to-r from-purple-700 to-purple-600 hover:from-purple-600 hover:to-purple-500 text-white rounded px-4 py-2 font-bold">⚡ Auto (Top-Rank + Alpha)</button>
-              </div>
-            </div>
-
-            <h2 className="text-2xl font-bold text-green-100 mb-4">📦 Collection ({collection.length})</h2>
+            <h2 className="text-2xl font-bold text-green-100 mb-4">📦 Ta Collection ({collection.length})</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sortedCollection.map(c => (
-                <div key={c.id} onClick={() => handleViewCreature(c)} className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-4 border border-green-700 hover:border-green-600 cursor-pointer hover:scale-105 transition-all duration-200 relative">
+              {collection.map(c => (
+                <div
+                  key={c.id}
+                  onClick={() => handleViewCreature(c)}
+                  className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-4 border border-green-700 hover:border-green-600 cursor-pointer hover:scale-105 transition-all duration-200 relative"
+                >
                   <div className="flex items-center justify-between">
                     <h3 className="text-xl font-bold text-green-100">{c.name}</h3>
-                    <span className={`font-bold ${getRankBadgeColor(c.finalStats.rank)} text-white px-2 py-1 rounded-full text-sm`}>{c.finalStats.rank}</span>
+                    <span className={`font-bold ${getRankBadgeColor(c.finalStats.rank)} text-white px-2 py-1 rounded-full text-sm`}>
+                      {c.finalStats.rank}
+                    </span>
                   </div>
                   {c.feedCount > 0 && <p className="text-yellow-300 text-sm mt-1">Nourri {c.feedCount}x</p>}
                   <div className="grid grid-cols-5 gap-1 mt-3 text-center text-xs pointer-events-none">
-                    <div className="bg-green-950 rounded p-1"><p className="text-green-200">HP</p><p className="text-green-100 font-bold">{c.finalStats.hp}</p></div>
-                    <div className="bg-green-950 rounded p-1"><p className="text-green-200">ATK</p><p className="text-green-100 font-bold">{c.finalStats.attack}</p></div>
-                    <div className="bg-green-950 rounded p-1"><p className="text-green-200">DEF</p><p className="text-green-100 font-bold">{c.finalStats.defense}</p></div>
-                    <div className="bg-green-950 rounded p-1"><p className="text-green-200">SPD</p><p className="text-green-100 font-bold">{c.finalStats.speed}</p></div>
-                    <div className="bg-green-950 rounded p-1"><p className="text-green-200">CRIT</p><p className="text-green-100 font-bold">{c.finalStats.crit}</p></div>
+                    <div className="bg-green-950 rounded p-1">
+                      <p className="text-green-200">HP</p>
+                      <p className="text-green-100 font-bold">{c.finalStats.hp}</p>
+                    </div>
+                    <div className="bg-green-950 rounded p-1">
+                      <p className="text-green-200">ATK</p>
+                      <p className="text-green-100 font-bold">{c.finalStats.attack}</p>
+                    </div>
+                    <div className="bg-green-950 rounded p-1">
+                      <p className="text-green-200">DEF</p>
+                      <p className="text-green-100 font-bold">{c.finalStats.defense}</p>
+                    </div>
+                    <div className="bg-green-950 rounded p-1">
+                      <p className="text-green-200">SPD</p>
+                      <p className="text-green-100 font-bold">{c.finalStats.speed}</p>
+                    </div>
+                    <div className="bg-green-950 rounded p-1">
+                      <p className="text-green-200">CRIT</p>
+                      <p className="text-green-100 font-bold">{c.finalStats.crit}</p>
+                    </div>
                   </div>
                 </div>
               ))}
