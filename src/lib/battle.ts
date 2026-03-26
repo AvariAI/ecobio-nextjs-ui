@@ -97,31 +97,15 @@ export function calculateFinalStats(
  * Damage = (ATK × 1.5) - DEF
  * Min damage: 1
  */
-export function calculateDamage(attacker: BattleCreature, defender: BattleCreature): number;
-
-/**
- * Legacy calculateDamage for battle-retro compatibility
- * Damage = (ATK × 1.5) - DEF
- * Min damage: 1
- */
 export function calculateDamage(
-  attacker: Creature,
-  defender: Creature,
-  attackerStats: BattleStats,
-  defenderStats: BattleStats,
-  damageType?: DamageType
-): number;
-
-export function calculateDamage(
-  attackerOrCreature: Creature | BattleCreature,
-  defenderOrCreature: Creature | BattleCreature,
-  attackerStatsArg?: BattleStats,
-  defenderStatsArg?: BattleStats,
-  damageType?: DamageType
+  attacker: BattleCreature,
+  defender: BattleCreature
 ): number {
-  // Overload for new BattleCreature interface
-  if ("stats" in attackerOrCreature && "stats" in defenderOrCreature) {
-    const attacker = attackerOrCreature;
+  const baseDamage = attacker.stats.attack * 1.5;
+  const defense = defender.stats.defense * (1 + defender.buffs.defenseBuff);
+  const damage = baseDamage - defense;
+  return Math.max(1, Math.floor(damage));
+}
     const defender = defenderOrCreature;
     const baseDamage = attacker.stats.attack * 1.5;
     const defense = defender.stats.defense * (1 + defender.buffs.defenseBuff);
