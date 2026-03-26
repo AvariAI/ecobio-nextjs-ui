@@ -1,6 +1,6 @@
 /**
  * ÉcoBio Battle System - Overhaul Version
- * With Ant/Fly mechanics, dodge formulas, crit system, skills, cooldowns
+ * With Ant/Fly mechanics, dodge, crit, skills, cooldowns, RNG, rarity
  */
 
 import { Creature, BaseStats, Rank, RANK_MULTIPLIERS } from "./database";
@@ -42,6 +42,68 @@ export interface BattleResult {
   log: BattleLogEntry[];
 }
 
+/**
+ * Get variance range by rank (corrected per user requirements)
+ * E: ±10% (0.80-1.10)
+ * D: ±15% (0.85-1.15)
+ * C: ±20% (0.90-1.20)
+ * B: ±25% (0.95-1.25) - mutants avec floor 0.95 minimum
+ * A: +10% à +30% (1.10-1.40) - épiques avec floor 1.10 minimum
+ * S: +15% à +35% (1.15-1.50) - légendaires puissants
+ * S+: +20% à +40% (1.20-1.60) - ultra légendaires
+ */
+export function getVarianceRange(rank: Rank): [number, number] {
+  const ranges: Record<Rank, [number, number]> = {
+    E: [0.80, 1.10],         // ±10%
+    D: [0.85, 1.15],         // ±15%
+    C: [0.90, 1.20],         // ±20%
+    B: [0.95, 1.25],         // ±25% avec floor 0.95 minimum
+    A: [1.10, 1.40],         // +10% à +30%
+    S: [1.15, 1.50],         // +15% à +35%
+    "S+": [1.20, 1.60],       // +20% à +40%
+  };
+  return ranges[rank];
+}
+
+/**
+ * Generate RNG individual stats with rank-based variance
+ * E: ±10% (0.90-1.10), D: ±15% (0.85-1.15), C: ±20% (0.90-1.20)
+ * B: ±25% (0.75-1.25) - Rare outliers with negatives allowed
+ * A: +10% à +30% (1.10-1.40) - Epics with floor
+ * S: +15% à +35% (1.15-1.50)
+ * S+: +20% à +40% (1.20-1.60) - Legendaries
+ */
+export function generateIndividualStats(
+  baseStats: BaseStats,
+  rank: Rank = "E"
+): BattleStats {
+  const rankMult = getRankMultiplier(rank);
+
+  const [minVar, maxVar] = getVarianceRange(rank);
+
+  // Individual variance per stat (independent)
+  const hpVariance = minVar + Math.random() * (maxVar - minVar);
+  const atkVariance = minVar + Math.random() * (maxVar - minVar);
+  const defVariance = minVar + Math.random() * (maxVar - minVar);
+  const spdVariance = minVar + Math.random() * (maxVar - minVar);
+  const critVariance = minVar + Math.random() * (maxVar - minVar);
+
+  const hp = Math.floor(baseStats.hp * (1 + hpVariance));
+  const attack = Math.floor(baseStats.attack * (1 + atkVariance));
+  const defense = Math.floor(baseStats.defense * (1 + defVariance));
+  const speed = Math.floor(baseStats.speed * (1 + spdVariance));
+  const crit = Math.floor(baseStats.crit * (1 + critVariance));
+
+  return {
+    hp: Math.max(1, Math.floor(baseStats.hp * rankMult)),
+    attack: Math.max(1, Math.floor(baseStats.attack * rankMult)),
+    defense: Math.max(1, Math.floor(baseStats.defense * rankMult)),
+    speed: Math.max(1, Math.floor(baseStats.speed * rankMult)),
+    crit: Math.max(1, Math.floor(baseStats.crit * rankMult)),
+    rank,
+  };
+}
+
 export function getRankMultiplier(rank: Rank): number {
   return RANK_MULTIPLIERS[rank] || 1.0;
 }
@@ -54,28 +116,28 @@ export function calculateFinalStats(
   const rankMult = getRankMultiplier(rank);
 
   // Level 1 → ×1.0, Level 50 → ×2.0 (power multiplier)
-  const powerMult = 1 + ((level - 1) / 49);
+  const levelMult = 1 + ((level - 1) / 49);
 
-  // Level scaling: (1 + (level - 1) × coeff) for HP/stats, so Level 1 = 1.0
+  // Level scaling: (1 + (level - 1) × coeff) so Level 1 = 1.0
   const hpScale = 1 + (level - 1) * 0.3;
   const statScale = 1 + (level - 1) * 0.16;
 
   const hp = Math.floor(
-    creature.baseStats.hp * hpScale * powerMult * rankMult
+    creature.baseStats.hp * hpScale * levelMult * rankMult
   );
 
   const attack = Math.floor(
-    creature.baseStats.attack * statScale * powerMult * rankMult
+    creature.baseStats.attack * statScale * levelMult * rankMult
   );
   const defense = Math.floor(
-    creature.baseStats.defense * statScale * powerMult * rankMult
+    creature.baseStats.defense * statScale * levelMult * rankMult
   );
   const speed = Math.floor(
-    creature.baseStats.speed * statScale * powerMult * rankMult
+    creature.baseStats.speed * statScale * levelMult * rankMult
   );
 
   const crit = Math.floor(
-    creature.baseStats.crit * statScale * powerMult * rankMult
+    creature.baseStats.crit * statScale * levelMult * rankMult
   );
 
   return {
@@ -88,10 +150,16 @@ export function calculateFinalStats(
   };
 }
 
+/**
+ * Calculate damage with percentage-based defense reduction
+ * Damage = (ATK × 1.5) × (1 - DEF / 250)
+ * Capped at 50% reduction (DEF 125)
+ */
 export function calculateDamage(attacker: BattleCreature, defender: BattleCreature): number {
   const baseDamage = attacker.stats.attack * 1.5;
   const defense = defender.stats.defense * (1 + defender.buffs.defenseBuff);
-  const damage = baseDamage - defense;
+  const reduction = defense / 250;
+  const damage = baseDamage * (1 - Math.min(0.5, reduction));
   return Math.max(1, Math.floor(damage));
 }
 
