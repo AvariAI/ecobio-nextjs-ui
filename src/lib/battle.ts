@@ -91,50 +91,30 @@ export function generateIndividualStats(
   const crit = Math.floor(baseStats.crit * (1 + critVariance));
 
   return {
-    hp: Math.max(1, Math.floor(baseStats.hp * rankMult)),
-    attack: Math.max(1, Math.floor(baseStats.attack * rankMult)),
-    defense: Math.max(1, Math.floor(baseStats.defense * rankMult)),
-    speed: Math.max(1, Math.floor(baseStats.speed * rankMult)),
-    crit: Math.max(1, Math.floor(baseStats.crit * rankMult)),
-    rank,
-  };
-}
-
-export function getRankMultiplier(rank: Rank): number {
-  return RANK_MULTIPLIERS[rank] || 1.0;
-}
-
-export function calculateFinalStats(
-  creature: Creature,
-  level: number,
+/**
+ * Generate RNG individual stats with rank-based variance
+ * NO rank multiplier - only variance applied
+ * Final = Base × Variance
+ */
+export function generateIndividualStats(
+  baseStats: BaseStats,
   rank: Rank = "E"
 ): BattleStats {
-  const rankMult = getRankMultiplier(rank);
+  const [minVar, maxVar] = getVarianceRange(rank);
 
-  // Level 1 → ×1.0, Level 50 → ×2.0 (power multiplier)
-  const levelMult = 1 + ((level - 1) / 49);
+  // Individual variance per stat (independent)
+  const hpVariance = minVar + Math.random() * (maxVar - minVar);
+  const atkVariance = minVar + Math.random() * (maxVar - minVar);
+  const defVariance = minVar + Math.random() * (maxVar - minVar);
+  const spdVariance = minVar + Math.random() * (maxVar - minVar);
+  const critVariance = minVar + Math.random() * (maxVar - minVar);
 
-  // Level scaling: (1 + (level - 1) × coeff) so Level 1 = 1.0
-  const hpScale = 1 + (level - 1) * 0.3;
-  const statScale = 1 + (level - 1) * 0.16;
-
-  const hp = Math.floor(
-    creature.baseStats.hp * hpScale * levelMult * rankMult
-  );
-
-  const attack = Math.floor(
-    creature.baseStats.attack * statScale * levelMult * rankMult
-  );
-  const defense = Math.floor(
-    creature.baseStats.defense * statScale * levelMult * rankMult
-  );
-  const speed = Math.floor(
-    creature.baseStats.speed * statScale * levelMult * rankMult
-  );
-
-  const crit = Math.floor(
-    creature.baseStats.crit * statScale * levelMult * rankMult
-  );
+  // Final = Base × Variance (NO rankMult)
+  const hp = Math.floor(baseStats.hp * hpVariance);
+  const attack = Math.floor(baseStats.attack * atkVariance);
+  const defense = Math.floor(baseStats.defense * defVariance);
+  const speed = Math.floor(baseStats.speed * spdVariance);
+  const crit = Math.floor(baseStats.crit * critVariance);
 
   return {
     hp: Math.max(1, hp),
@@ -146,76 +126,10 @@ export function calculateFinalStats(
   };
 }
 
-/**
- * Calculate damage with percentage-based defense reduction
- * Damage = (ATK × 1.5) × (1 - DEF / 250)
- * Capped at 50% reduction (DEF 125)
- */
-export function calculateDamage(attacker: BattleCreature, defender: BattleCreature): number {
-  const baseDamage = attacker.stats.attack * 1.5;
-  const defense = defender.stats.defense * (1 + defender.buffs.defenseBuff);
-  const reduction = defense / 250;
-  const damage = baseDamage * (1 - Math.min(0.5, reduction));
-  return Math.max(1, Math.floor(damage));
+export function getRankMultiplier(rank: Rank): number {
+  // Kept for compatibility but NOT used in stat calculation anymore
+  return RANK_MULTIPLIERS[rank] || 1.0;
 }
-
-/**
- * Calculate dodge chance - defender faster than attacker
- * If defender is slower/equal: 0% dodge (no evade)
- * If defender is faster: (speedDiff / 200) + dodgeBuff (nerfed /200)
- * - Mouche (SPD 20) vs Fourmi (SPD 10) defends: speedDiff = 10 → 5% base dodge
- * - With +40% dodge buff: 45% total dodge
- * - Level 50 (×2): Mouche 40 vs Fourmi 20 → speedDiff = 20 → 50% dodge
- */
-export function calculateDodgeChance(
-  attackerSpeed: number,
-  defenderSpeed: number,
-  dodgeBuff: number = 0
-): number {
-  const speedDiff = defenderSpeed - attackerSpeed;
-  if (speedDiff <= 0) {
-    // Defender is slower or equal speed → no natural dodge
-    return Math.min(0.60, Math.max(0.0, dodgeBuff));
-  }
-  // Defender is faster → evade based on speed advantage (nerfed)
-  const dodgePercent = speedDiff / 200 + dodgeBuff;
-  return Math.min(0.60, Math.max(0.0, dodgePercent));
-}
-
-/**
- * Calculate crit chance AND crit damage multiplier
- * - Chance: crit / (crit + 200) - nerfed, less frequent (μa centrélsas)
- * - Damage: 1.3 + (crit / 100) - nerfed, smaller bonus from crit
- *
- * Examples (nerfed):
- * - Fourmi CRIT 10 → 4.76% chance, 1.40x damage
- * - Mouche CRIT 20 → 9.09% chance, 1.50x damage
- * - Level 50 CRIT 40 → 16.67% chance, 1.70x damage
- * - CRIT 100 (epic): 33.33% chance, 2.30x damage
- */
-export function calculateCritChance(stats: BattleStats): number {
-  return stats.crit / (stats.crit + 200);
-}
-
-export function calculateCritMultiplier(stats: BattleStats): number {
-  return 1.3 + (stats.crit / 100);
-}
-
-export function useSkill(
-  battleCreature: BattleCreature,
-  log: BattleLogEntry[]
-): boolean {
-  const skill = battleCreature.creature.skill;
-  if (!skill) return false;
-
-  const cooldownKey = skill.name;
-  const currentCooldown = battleCreature.skillCooldowns[cooldownKey] || 0;
-
-  if (currentCooldown > 0) {
-    log.push({
-      text: `${skill.name} en cooldown (${currentCooldown} tours restants)`,
-      type: "info",
-    });
     return false;
   }
 
