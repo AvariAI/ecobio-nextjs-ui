@@ -161,10 +161,10 @@ export function calculateDamage(attacker: BattleCreature, defender: BattleCreatu
 /**
  * Calculate dodge chance - defender faster than attacker
  * If defender is slower/equal: 0% dodge (no evade)
- * If defender is faster: (speedDiff / 100) + dodgeBuff
- * - Mouche (SPD 20) vs Fourmi (SPD 10) defends: speedDiff = 10 → 10% base dodge
- * - With +40% dodge buff: 50% total dodge
- * - Level 50 (×2): Mouche 40 vs Fourmi 20 → speedDiff = 20 → 60% dodge
+ * If defender is faster: (speedDiff / 200) + dodgeBuff (nerfed /200)
+ * - Mouche (SPD 20) vs Fourmi (SPD 10) defends: speedDiff = 10 → 5% base dodge
+ * - With +40% dodge buff: 45% total dodge
+ * - Level 50 (×2): Mouche 40 vs Fourmi 20 → speedDiff = 20 → 50% dodge
  */
 export function calculateDodgeChance(
   attackerSpeed: number,
@@ -174,31 +174,30 @@ export function calculateDodgeChance(
   const speedDiff = defenderSpeed - attackerSpeed;
   if (speedDiff <= 0) {
     // Defender is slower or equal speed → no natural dodge
-    return Math.min(0.75, Math.max(0.0, dodgeBuff));
+    return Math.min(0.60, Math.max(0.0, dodgeBuff));
   }
-  // Defender is faster → evade based on speed advantage
-  const dodgePercent = speedDiff / 100 + dodgeBuff;
-  return Math.min(0.75, Math.max(0.0, dodgePercent));
+  // Defender is faster → evade based on speed advantage (nerfed)
+  const dodgePercent = speedDiff / 200 + dodgeBuff;
+  return Math.min(0.60, Math.max(0.0, dodgePercent));
 }
 
 /**
  * Calculate crit chance AND crit damage multiplier
- * - Chance: crit / (crit + 150) - higher crit = more frequent
- * - Damage: 1.5 + (crit / 50) - higher crit = more bonus damage on crit
+ * - Chance: crit / (crit + 200) - nerfed, less frequent (μa centrélsas)
+ * - Damage: 1.3 + (crit / 100) - nerfed, smaller bonus from crit
  *
- * Examples:
- * - Fourmi CRIT 10 → 6.25% chance, 1.70x damage
- * - Mouche CRIT 20 → 11.76% chance, 1.90x damage
- * - Level 50 CRIT 40 → 21.05% chance, 2.30x damage (massive!)
- *
- * Tanks with high crit can hit harder, but DPS with crit annihilates
+ * Examples (nerfed):
+ * - Fourmi CRIT 10 → 4.76% chance, 1.40x damage
+ * - Mouche CRIT 20 → 9.09% chance, 1.50x damage
+ * - Level 50 CRIT 40 → 16.67% chance, 1.70x damage
+ * - CRIT 100 (epic): 33.33% chance, 2.30x damage
  */
 export function calculateCritChance(stats: BattleStats): number {
-  return stats.crit / (stats.crit + 150);
+  return stats.crit / (stats.crit + 200);
 }
 
 export function calculateCritMultiplier(stats: BattleStats): number {
-  return 1.5 + (stats.crit / 50);
+  return 1.3 + (stats.crit / 100);
 }
 
 export function useSkill(
