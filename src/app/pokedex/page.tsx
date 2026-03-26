@@ -132,26 +132,26 @@ function CreatureCard({ creature }: { creature: Creature }) {
             <StatCard label="Speed" value={creature.baseStats.speed} color="blue" />
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <StatCard label="Defense" value={creature.baseStats.defense} color="purple" />
-            <StatCard label="Crit" value={creature.baseStats.crit} color="pink" />
-          </div>
-
-          {creature.skill && (
+          {Object.keys(creature.typeBonus).length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Skill
+                Type Effectiveness
               </h3>
-              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3">
-                <div className="font-bold text-gray-800 dark:text-white">
-                  {creature.skill.name}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                  {creature.skill.description}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Cooldown: {creature.skill.cooldown} tours | Duration: {creature.skill.duration} tours
-                </div>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(creature.typeBonus).map(([type, bonus]) => (
+                  <span
+                    key={type}
+                    className={`px-3 py-1 rounded-full text-sm ${
+                      bonus > 1
+                        ? "bg-green-600 text-white"
+                        : bonus < 1
+                        ? "bg-red-600 text-white"
+                        : "bg-gray-600 text-white"
+                    }`}
+                  >
+                    {type}: {bonus}x
+                  </span>
+                ))}
               </div>
             </div>
           )}
