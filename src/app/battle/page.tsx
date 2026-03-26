@@ -295,17 +295,27 @@ export default function BattlePage() {
                 </button>
                 {player?.creature.skill && (
                   <button
-                    onClick={handleSkill}
-                    className="px-8 py-6 bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xl font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+                    onClick={() => {
+                      const skill = player.creature.skill;
+                      if (!skill) return;
+                      const cooldownKey = skill.name;
+                      const currentCooldown = player.skillCooldowns[cooldownKey] || 0;
+                      if (currentCooldown > 0 || phase !== "battle" || turn !== "player") return;
+                      handleSkill();
+                    }}
+                    disabled={
+                      !player ||
+                      !player.creature.skill ||
+                      (player.skillCooldowns[player.creature.skill.name] || 0) > 0
+                    }
+                    className={`px-8 py-6 bg-gradient-to-r text-white text-xl font-bold rounded-xl shadow-lg transition-all ${
+                      (player.skillCooldowns[player.creature.skill.name] || 0) > 0
+                        ? "from-gray-400 to-gray-500 cursor-not-allowed opacity-50"
+                        : "from-purple-500 to-purple-600 hover:shadow-xl transform hover:scale-105"
+                    }`}
                   >
                     ✨ SKILL: {player.creature.skill.name}
                   </button>
-                )}
-                {player?.creature.skill &&
-                 Object.entries(player.skillCooldowns).some(([k, v]) => k === player.creature.skill?.name && v > 0) && (
-                  <div className="text-xs text-red-600 dark:text-red-400 mt-2">
-                    Skill en cooldown
-                  </div>
                 )}
               </div>
             )}
