@@ -91,4 +91,5 @@ export const CREATURES: Record<string, Creature> = {
   },
 };
 
+export const CREATURE_TYPES: CreatureType[] = ["Insect"];
 export const RANKS: Rank[] = ["E", "D", "C", "B", "A", "S", "S+"];
