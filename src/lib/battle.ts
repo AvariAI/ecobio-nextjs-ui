@@ -52,23 +52,24 @@ export function calculateFinalStats(
   rank: Rank = "E"
 ): BattleStats {
   const rankMult = getRankMultiplier(rank);
+  const levelMult = 1 + (level / 50); // Level 1 → ×1.02, Level 50 → ×2.0
 
   const hp = Math.floor(
-    creature.baseStats.hp * (1 + level * 0.3) * 2.0 * rankMult
+    creature.baseStats.hp * (1 + level * 0.3) * levelMult * rankMult
   );
 
   const attack = Math.floor(
-    creature.baseStats.attack * (1 + level * 0.16) * 2.0 * rankMult
+    creature.baseStats.attack * (1 + level * 0.16) * levelMult * rankMult
   );
   const defense = Math.floor(
-    creature.baseStats.defense * (1 + level * 0.16) * 2.0 * rankMult
+    creature.baseStats.defense * (1 + level * 0.16) * levelMult * rankMult
   );
   const speed = Math.floor(
-    creature.baseStats.speed * (1 + level * 0.16) * 2.0 * rankMult
+    creature.baseStats.speed * (1 + level * 0.16) * levelMult * rankMult
   );
 
   const crit = Math.floor(
-    creature.baseStats.crit * (1 + level * 0.16) * 2.0 * rankMult
+    creature.baseStats.crit * (1 + level * 0.16) * levelMult * rankMult
   );
 
   return {
