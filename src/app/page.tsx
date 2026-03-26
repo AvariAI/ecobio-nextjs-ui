@@ -38,14 +38,14 @@ export default function Home() {
             </div>
           </Link>
 
-          <Link href="/battle-retro">
+          <Link href="/hunting">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-yellow-400">
-              <div className="text-6xl mb-4">🎮</div>
+              <div className="text-6xl mb-4">🏹</div>
               <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
-                Retro Battle
+                Chasse Créatures
               </h2>
               <p className="text-gray-600 dark:text-gray-300">
-                Classic GBA-style battle interface with turn-based combat.
+                Spawn RNG-optimisées et build ta collection unique.
               </p>
             </div>
           </Link>
