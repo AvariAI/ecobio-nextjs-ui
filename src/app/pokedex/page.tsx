@@ -4,6 +4,19 @@ import { useState } from "react";
 import { CREATURES, CREATURE_TYPES, Creature } from "@/lib/database";
 import Link from "next/link";
 
+function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className={`bg-${color}-100 dark:bg-${color}-900 rounded-lg p-3 text-center`}>
+      <div className={`text-xs text-${color}-600 dark:text-${color}-400 font-semibold mb-1`}>
+        {label}
+      </div>
+      <div className={`text-xl font-bold text-${color}-800 dark:text-${color}-200`}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
 export default function PokedexPage() {
   const [search, setSearch] = useState("");
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set(CREATURE_TYPES));
@@ -12,14 +25,11 @@ export default function PokedexPage() {
     const newTypes = new Set(selectedTypes);
 
     if (newTypes.has(type)) {
-      // Type is selected - try to deselect it
       newTypes.delete(type);
-      // If this would leave no filters selected, ensure at least one remains
       if (newTypes.size === 0) {
         newTypes.add(type);
       }
     } else {
-      // Type is not selected - select it
       newTypes.add(type);
     }
 
@@ -44,18 +54,17 @@ export default function PokedexPage() {
           </h1>
         </header>
 
-        {/* Filters */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
           <div className="mb-4">
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-              Search Creatures
+              Search creatures
             </label>
             <input
               type="text"
+              placeholder="Search by name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name..."
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
@@ -63,14 +72,14 @@ export default function PokedexPage() {
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               Filter by Type
             </label>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2">
               {CREATURE_TYPES.map((type) => (
                 <button
                   key={type}
                   onClick={() => toggleType(type)}
-                  className={`px-4 py-2 rounded-full font-medium transition-all ${
+                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${
                     selectedTypes.has(type)
-                      ? "bg-green-600 text-white shadow-lg"
+                      ? "bg-green-600 text-white hover:bg-green-700"
                       : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
                   }`}
                 >
@@ -81,97 +90,82 @@ export default function PokedexPage() {
           </div>
         </div>
 
-        {/* Creatures Grid */}
-        <div className="grid gap-6">
+        <div className="grid md:grid-cols-2 gap-6">
           {filteredCreatures.map((creature) => (
-            <CreatureCard key={creature.id} creature={creature} />
+            <div
+              key={creature.id}
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl hover:shadow-2xl transition-all border-2 border-transparent hover:border-green-400 overflow-hidden"
+            >
+              <div className="md:flex">
+                <div className="md:w-1/4 p-6 flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100 dark:from-green-900 dark:to-blue-900">
+                  <img
+                    src={creature.image}
+                    alt={creature.name}
+                    className="max-w-full h-auto rounded-lg shadow-lg"
+                    width={200}
+                    height={200}
+                  />
+                </div>
+
+                <div className="md:w-3/4 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-3xl font-bold text-gray-800 dark:text-white">
+                      {creature.name}
+                    </h2>
+                    <span className="px-4 py-1 rounded-full text-sm font-semibold bg-green-600 text-white">
+                      {creature.type}
+                    </span>
+                  </div>
+
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">{creature.desc}</p>
+
+                  <div className="grid grid-cols-3 gap-4 mb-4">
+                    <StatCard label="HP" value={creature.baseStats.hp} color="red" />
+                    <StatCard label="Attack" value={creature.baseStats.attack} color="orange" />
+                    <StatCard label="Speed" value={creature.baseStats.speed} color="blue" />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4 mb-4">
+                    <StatCard label="Defense" value={creature.baseStats.defense} color="purple" />
+                    <StatCard label="Crit" value={creature.baseStats.crit} color="pink" />
+                  </div>
+
+                  {creature.skill && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Skill
+                      </h3>
+                      <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3">
+                        <div className="font-bold text-gray-800 dark:text-white">
+                          {creature.skill.name}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                          {creature.skill.description}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Cooldown: {creature.skill.cooldown} tours | Duration: {creature.skill.duration} tours
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           ))}
         </div>
 
-        <footer className="text-center mt-12 text-gray-600 dark:text-gray-400">
-          <p>Showing {filteredCreatures.length} of {Object.values(CREATURES).length} creatures</p>
-        </footer>
+        {filteredCreatures.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">🔍</div>
+            <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">
+              No creatures found
+            </h3>
+            <p className="text-gray-500 dark:text-gray-500">
+              Try adjusting your filters or search term
+            </p>
+          </div>
+        )}
       </div>
     </main>
-  );
-}
-
-function CreatureCard({ creature }: { creature: Creature }) {
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl hover:shadow-2xl transition-all border-2 border-transparent hover:border-green-400 overflow-hidden">
-      <div className="md:flex">
-        <div className="md:w-1/4 p-6 flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100 dark:from-green-900 dark:to-blue-900">
-          <img
-            src={creature.image}
-            alt={creature.name}
-            className="max-w-full h-auto rounded-lg shadow-lg"
-            width={200}
-            height={200}
-          />
-        </div>
-
-        <div className="md:w-3/4 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-3xl font-bold text-gray-800 dark:text-white">
-              {creature.name}
-            </h2>
-            <span className={`px-4 py-1 rounded-full text-sm font-semibold ${
-              creature.type === 'Insect' ? 'bg-green-600 text-white' :
-              creature.type === 'Arachnid' ? 'bg-purple-600 text-white' :
-              'bg-yellow-600 text-white'
-            }`}>
-              {creature.type}
-            </span>
-          </div>
-
-          <p className="text-gray-600 dark:text-gray-300 mb-4">{creature.desc}</p>
-
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <StatCard label="HP" value={creature.baseStats.hp} color="red" />
-            <StatCard label="Attack" value={creature.baseStats.attack} color="orange" />
-            <StatCard label="Speed" value={creature.baseStats.speed} color="blue" />
-          </div>
-
-          {Object.keys(creature.typeBonus).length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Type Effectiveness
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(creature.typeBonus).map(([type, bonus]) => (
-                  <span
-                    key={type}
-                    className={`px-3 py-1 rounded-full text-sm ${
-                      bonus > 1
-                        ? "bg-green-600 text-white"
-                        : bonus < 1
-                        ? "bg-red-600 text-white"
-                        : "bg-gray-600 text-white"
-                    }`}
-                  >
-                    {type}: {bonus}x
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
-  const colorClass = {
-    red: "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200",
-    orange: "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200",
-    blue: "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200",
-  }[color];
-
-  return (
-    <div className={`${colorClass} rounded-lg p-4 text-center`}>
-      <div className="text-2xl font-bold">{value}</div>
-      <div className="text-sm font-medium">{label}</div>
-    </div>
   );
 }
