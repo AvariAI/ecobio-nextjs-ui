@@ -43,30 +43,36 @@ export interface BattleResult {
 }
 
 /**
- * Get variance range by rank (corrected per user requirements)
- * E: ±10% (0.80-1.10)
+ * Get variance range by rank (symétrique autour de 1.0)
+ * E: ±10% (0.90-1.10) - fluctuation autour du rank default
  * D: ±15% (0.85-1.15)
- * C: ±20% (0.90-1.20)
- * B: ±25% (0.95-1.25) - mutants avec floor 0.95 minimum
- * A: +10% à +30% (1.10-1.40) - épiques avec floor 1.10 minimum
- * S: +15% à +35% (1.15-1.50) - légendaires puissants
- * S+: +20% à +40% (1.20-1.60) - ultra légendaires
+ * C: ±20% (0.80-1.20)
+ * B: ±25% (0.75-1.25)
+ * A: +10% à +30% (1.10-1.40) - always bonus
+ * S: +15% à +35% (1.15-1.50) - always bonus
+ * S+: +20% à +40% (1.20-1.60) - always bonus
+ *
+ * IMPORTANT: Ces variances s'appliquent SUR la valeur par défaut du rang
+ * Ex: Fourmi HP 100 × rankMult (E×1.0 = 100, B×1.6 = 160)
+ * puis × varianceMultiplier (E 0.90-1.10, B 0.75-1.25)
+ * Résultat: E HP 90-110, B HP 120-200
  */
 export function getVarianceRange(rank: Rank): [number, number] {
   const ranges: Record<Rank, [number, number]> = {
-    E: [0.80, 1.10],         // ±10%
+    E: [0.90, 1.10],         // ±10%
     D: [0.85, 1.15],         // ±15%
-    C: [0.90, 1.20],         // ±20%
-    B: [0.95, 1.25],         // ±25% avec floor 0.95 minimum
-    A: [1.10, 1.40],         // +10% à +30%
+    C: [0.80, 1.20],         // ±20%
+    B: [0.75, 1.25],         // ±25%
+    A: [1.10, 1.40],         // +10% à +30% (seulement bonus)
     S: [1.15, 1.50],         // +15% à +35%
-    "S+": [1.20, 1.60],       // +20% à +40%
+    "S+": [1.20, 1.60],      // +20% à +40%
   };
   return ranges[rank];
 }
 
 /**
  * Generate RNG individual stats with rank-based variance
+ * Variance symétrique autour de 1.0: fluctuation ± autour du rank default
  */
 export function generateIndividualStats(
   baseStats: BaseStats,
