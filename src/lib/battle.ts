@@ -3,7 +3,7 @@
  * With Ant/Fly mechanics, dodge formulas, crit system, skills, cooldowns
  */
 
-import { Creature, BaseStats, DamageType, Rank, RANK_MULTIPLIERS } from "./database";
+import { Creature, BaseStats, Rank, RANK_MULTIPLIERS } from "./database";
 
 export interface BattleStats extends BaseStats {
   rank: Rank;
