@@ -5,6 +5,21 @@
 
 import { Creature, BaseStats, Rank, RANK_MULTIPLIERS } from "./database";
 
+export interface BattleElement {
+  creature: BattleCreature;
+  team: "player" | "enemy" | "attacker" | "defender";
+  name: string;
+}
+
+/**
+ * Get round order for multiple creatures based on speed
+ * Lower speed = attacks FIRST (turn-based order)
+ * @returns BattleElement[] sorted by speed ASCENDING (slowest to fastest)
+ */
+export function getRoundOrder(creatures: BattleElement[]): BattleElement[] {
+  return [...creatures].sort((a, b) => a.creature.stats.speed - b.creature.stats.speed);
+}
+
 export interface BattleStats extends BaseStats {
   rank: Rank;
 }
@@ -168,6 +183,27 @@ export function tickCooldownsAndBuffs(battleCreature: BattleCreature): void {
       battleCreature.buffs.dodgeBuff = 0;
     }
   }
+}
+
+/**
+ * Calculate critical strike chance from crit stat
+ * CAPPED at 40% to prevent absurd crit rates at high levels
+ * Formula: crit / 100, max 0.40 (40%)
+ */
+export function calculateCritChance(stats: BaseStats): number {
+  const rawChance = stats.crit / 100;
+  return Math.min(rawChance, 0.40);
+}
+
+/**
+ * Calculate critical strike multiplier from crit stat
+ * CAPPED at 1.75x to prevent one-shot kills
+ * Formula: 1.5x + (crit / 100) * 0.25, max 1.75x
+ */
+export function calculateCritMultiplier(stats: BaseStats): number {
+  const baseMult = 1.5;
+  const bonusMult = (stats.crit / 100) * 0.25;
+  return Math.min(baseMult + bonusMult, 1.75);
 }
 
 export function executeAttack(
