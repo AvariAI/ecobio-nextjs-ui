@@ -52,7 +52,7 @@ export function getRankMultiplier(rank: Rank): number {
 /**
  * Calculate final stats with level scaling and rank multiplier
  * Level Scaling Option 4:
- * - HP: Base × (1 + level × 0.3) × 3.0 × rankMult
+ * - HP: Base × (1 + level × 0.3) × 2.0 × rankMult (harmonisé avec ATK/DEF/SPD)
  * - ATK/DEF/SPD: Base × (1 + level × 0.16) × 2.0 × rankMult
  * - Crit: Base × rankMult
  */
@@ -63,9 +63,9 @@ export function calculateFinalStats(
 ): BattleStats {
   const rankMult = getRankMultiplier(rank);
 
-  // HP scaling: ×3.0 (level × 0.3)
+  // HP scaling: ×2.0 (level × 0.3) - harmonisé pour des combats plus courts
   const hp = Math.floor(
-    creature.baseStats.hp * (1 + level * 0.3) * 3.0 * rankMult
+    creature.baseStats.hp * (1 + level * 0.3) * 2.0 * rankMult
   );
 
   // ATK/DEF/SPD scaling: ×2.0 (level × 0.16)
@@ -97,9 +97,46 @@ export function calculateFinalStats(
  * Damage = (ATK × 1.5) - DEF
  * Min damage: 1
  */
-export function calculateDamage(attacker: BattleCreature, defender: BattleCreature): number {
-  const baseDamage = attacker.stats.attack * 1.5;
-  const defense = defender.stats.defense * (1 + defender.buffs.defenseBuff);
+export function calculateDamage(attacker: BattleCreature, defender: BattleCreature): number;
+
+/**
+ * Legacy calculateDamage for battle-retro compatibility
+ * Damage = (ATK × 1.5) - DEF
+ * Min damage: 1
+ */
+export function calculateDamage(
+  attacker: Creature,
+  defender: Creature,
+  attackerStats: BattleStats,
+  defenderStats: BattleStats,
+  damageType?: DamageType
+): number;
+
+export function calculateDamage(
+  attackerOrCreature: Creature | BattleCreature,
+  defenderOrCreature: Creature | BattleCreature,
+  attackerStatsArg?: BattleStats,
+  defenderStatsArg?: BattleStats,
+  damageType?: DamageType
+): number {
+  // Overload for new BattleCreature interface
+  if ("stats" in attackerOrCreature && "stats" in defenderOrCreature) {
+    const attacker = attackerOrCreature;
+    const defender = defenderOrCreature;
+    const baseDamage = attacker.stats.attack * 1.5;
+    const defense = defender.stats.defense * (1 + defender.buffs.defenseBuff);
+    const damage = baseDamage - defense;
+    return Math.max(1, Math.floor(damage));
+  }
+
+  // Overload for legacy Creature interface
+  const attacker = attackerOrCreature as Creature;
+  const defender = defenderOrCreature as Creature;
+  const attackerStats = attackerStatsArg || { attack: 50, defense: 25, speed: 50 };
+  const defenderStats = defenderStatsArg || { attack: 50, defense: 25, speed: 50 };
+
+  const baseDamage = (attackerStats?.attack || 50) * 1.5;
+  const defense = defenderStats?.defense || 25;
   const damage = baseDamage - defense;
   return Math.max(1, Math.floor(damage));
 }
@@ -323,7 +360,7 @@ export function simulateBattle(
     text: `HP: ${enemy.currentHP} | ATK: ${enemy.stats.attack} | DEF: ${enemy.stats.defense} | SPD: ${enemy.stats.speed}`,
     type: "info",
   });
-  log.push({ text: "—" * 40, type: "info" });
+  log.push({ text: "—".repeat(40), type: "info" });
 
   // Combat loop
   let round = 1;
