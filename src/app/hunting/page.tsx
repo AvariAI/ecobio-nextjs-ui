@@ -56,14 +56,15 @@ function spawnCreature(): HuntedCreature {
   const spdVariance = minVar + Math.random() * (maxVar - minVar);
   const critVariance = minVar + Math.random() * (maxVar - minVar);
 
-  // Final stats with rank multiplier
+  // FINAL STATS: base stats × rank multiplier × individual variance
+  // Variance is APPLIED ON TOP of rank multiplier, not separately
   const rankMult = { E: 1.0, D: 1.2, C: 1.4, B: 1.6, A: 1.8, S: 2.0, "S+": 2.2 }[rank];
   const finalStats: BattleStats = {
-    hp: Math.max(1, Math.floor(creature.baseStats.hp * rankMult)),
-    attack: Math.max(1, Math.floor(creature.baseStats.attack * rankMult)),
-    defense: Math.max(1, Math.floor(creature.baseStats.defense * rankMult)),
-    speed: Math.max(1, Math.floor(creature.baseStats.speed * rankMult)),
-    crit: Math.max(1, Math.floor(creature.baseStats.crit * rankMult)),
+    hp: Math.max(1, Math.floor(creature.baseStats.hp * rankMult * (1 + hpVariance))),
+    attack: Math.max(1, Math.floor(creature.baseStats.attack * rankMult * (1 + atkVariance))),
+    defense: Math.max(1, Math.floor(creature.baseStats.defense * rankMult * (1 + defVariance))),
+    speed: Math.max(1, Math.floor(creature.baseStats.speed * rankMult * (1 + spdVariance))),
+    crit: Math.max(1, Math.floor(creature.baseStats.crit * rankMult * (1 + critVariance))),
     rank,
   };
 
@@ -73,27 +74,27 @@ function spawnCreature(): HuntedCreature {
     varianceBreakdown: {
       hp: {
         base: creature.baseStats.hp,
-        variance: ((1 + hpVariance) - 1) * 100,
+        variance: hpVariance * 100,
         final: finalStats.hp,
       },
       atk: {
         base: creature.baseStats.attack,
-        variance: ((1 + atkVariance) - 1) * 100,
+        variance: atkVariance * 100,
         final: finalStats.attack,
       },
       def: {
         base: creature.baseStats.defense,
-        variance: ((1 + defVariance) - 1) * 100,
+        variance: defVariance * 100,
         final: finalStats.defense,
       },
       spd: {
         base: creature.baseStats.speed,
-        variance: ((1 + spdVariance) - 1) * 100,
+        variance: spdVariance * 100,
         final: finalStats.speed,
       },
       crit: {
         base: creature.baseStats.crit,
-        variance: ((1 + critVariance) - 1) * 100,
+        variance: critVariance * 100,
         final: finalStats.crit,
       },
     },
