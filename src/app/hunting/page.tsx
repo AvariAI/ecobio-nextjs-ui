@@ -207,9 +207,21 @@ function getCreatureImage(creatureId: string, rank: Rank): string {
     return `/ecobio-nextjs-ui/creatures/ant_rank_${rankSuffix}.png`;
   }
   if (creatureId === "honeybee") {
-    return "/ecobio-nextjs-ui/images/bee.png";
+    const rankSuffix = rank === "S+" ? "S+" : rank;
+    return `/ecobio-nextjs-ui/creatures/bee-rank-${rankSuffix}.png`;
   }
   return "/ecobio-nextjs-ui/images/giant_fly.png";
+}
+
+// Fallback image exists checker
+function imageExists(imagePath: string): boolean {
+  try {
+    // This won't work in browser without a fetch, so we'll just return true
+    // In production, use a list of known images or an API check
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export default function HuntingPage() {
