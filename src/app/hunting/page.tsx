@@ -25,6 +25,7 @@ interface HuntedCreature extends Creature {
   feedCount: number;
   feedStat: "hp" | "atk" | "def" | "spd" | "crit" | null;
   createdAt: number;
+  creatureId: string;
 }
 
 function rollRarity(): RarityRank {
@@ -82,10 +83,22 @@ function spawnCreature(): HuntedCreature {
     feedCount: 0,
     feedStat: null,
     createdAt: Date.now(),
+    creatureId,
   };
 }
 
 const RANK_VALUE: Record<Rank, number> = { E: 1, D: 2, C: 3, B: 4, A: 5, S: 6, "S+": 7 };
+
+function getCreatureImage(creatureId: string, rank: Rank): string {
+  if (creatureId === "housefly") {
+    const rankSuffix = rank === "S+" ? "S+" : rank;
+    return `/images/fly-rank-${rankSuffix}.png`;
+  }
+  if (creatureId === "ant") {
+    return "/images/caterpillar.png";
+  }
+  return "/images/giant_fly.png";
+}
 
 export default function HuntingPage() {
   const [phase, setPhase] = useState<HuntingPhase>("ready");
@@ -96,6 +109,7 @@ export default function HuntingPage() {
   const [sortBy, setSortBy] = useState<SortBy>("rank");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [confirmReleaseAll, setConfirmReleaseAll] = useState(false);
+  const [selectedRank, setSelectedRank] = useState<Rank | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("ecobio-collection");
@@ -155,6 +169,7 @@ export default function HuntingPage() {
 
   const handleViewCreature = (creature: HuntedCreature) => {
     setSelectedCreature(creature);
+    setSelectedRank(creature.finalStats.rank);
     setPhase("viewing");
     setFeedChoice(null);
   };
@@ -175,6 +190,10 @@ export default function HuntingPage() {
     } else {
       setConfirmReleaseAll(true);
     }
+  };
+
+  const handleRankChange = (newRank: Rank) => {
+    setSelectedRank(newRank);
   };
 
   const handleFeedSelect = (stat: "hp" | "atk" | "def" | "spd" | "crit") => { setFeedChoice(stat); };
@@ -226,6 +245,13 @@ export default function HuntingPage() {
         {phase === "spawned" && huntedCreature && (
           <div className="bg-gradient-to-br from-green-800 to-green-900 rounded-xl p-6 shadow-xl border border-green-700">
             <div className="flex items-start gap-6 mb-6">
+              <div className="w-48 h-48 flex-shrink-0">
+                <img
+                  src={getCreatureImage(huntedCreature.creatureId, huntedCreature.finalStats.rank)}
+                  alt={huntedCreature.name}
+                  className="w-full h-full object-cover rounded-lg border-2 border-green-600"
+                />
+              </div>
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h2 className="text-3xl font-bold text-green-100">{huntedCreature.name}</h2>
@@ -267,14 +293,42 @@ export default function HuntingPage() {
 
         {phase === "viewing" && selectedCreature && (
           <div className="bg-gradient-to-br from-green-800 to-green-900 rounded-xl p-6 shadow-xl border border-green-700">
-            <button onClick={() => setPhase("ready")} className="text-green-300 hover:text-green-200 mb-4 inline-block font-semibold">← Retour</button>
+            <button onClick={() => { setPhase("ready"); setSelectedRank(null); }} className="text-green-300 hover:text-green-200 mb-4 inline-block font-semibold">← Retour</button>
             <div className="flex items-start gap-6 mb-6">
+              <div className="w-48 h-48 flex-shrink-0">
+                <img
+                  src={getCreatureImage(selectedCreature.creatureId, selectedRank || selectedCreature.finalStats.rank)}
+                  alt={selectedCreature.name}
+                  className="w-full h-full object-cover rounded-lg border-2 border-green-600"
+                />
+              </div>
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h2 className="text-3xl font-bold text-green-100">{selectedCreature.name}</h2>
                   <span className={`text-2xl font-bold ${getRankBadgeColor(selectedCreature.finalStats.rank)} text-white px-3 py-1 rounded-full`}>{selectedCreature.finalStats.rank}</span>
                 </div>
                 <p className="text-green-200 mb-4">{selectedCreature.desc}</p>
+                <div className="mb-4">
+                  <p className="text-green-200 font-semibold mb-2">🎭 Voir par rang:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(["E", "D", "C", "B", "A", "S", "S+"] as Rank[]).map(rank => (
+                      <button
+                        key={rank}
+                        onClick={() => handleRankChange(rank)}
+                        className={`px-3 py-1 rounded-full font-bold text-sm ${
+                          selectedRank === rank
+                            ? `${getRankBadgeColor(rank)} ring-2 ring-white`
+                            : `${getRankBadgeColor(rank)} opacity-60 hover:opacity-100`
+                        }`}
+                      >
+                        {rank}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedRank && selectedRank !== selectedCreature.finalStats.rank && (
+                    <p className="text-yellow-300 text-sm mt-2">Affichage: rang {selectedRank} (créature rang {selectedCreature.finalStats.rank})</p>
+                  )}
+                </div>
                 {selectedCreature.skill && (
                   <div className="bg-green-700 bg-opacity-50 rounded-lg p-3 mb-4">
                     <h3 className="font-bold text-green-100">🎯 Compétence</h3>
@@ -356,9 +410,20 @@ export default function HuntingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {sortedCollection.map(c => (
                 <div key={c.id} onClick={() => handleViewCreature(c)} className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-4 border border-green-700 hover:border-green-600 cursor-pointer hover:scale-105 transition-all duration-200 relative">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-bold text-green-100">{c.name}</h3>
-                    <span className={`font-bold ${getRankBadgeColor(c.finalStats.rank)} text-white px-2 py-1 rounded-full text-sm`}>{c.finalStats.rank}</span>
+                  <div className="flex items-start gap-3 mb-2">
+                    <div className="w-16 h-16 flex-shrink-0">
+                      <img
+                        src={getCreatureImage(c.creatureId, c.finalStats.rank)}
+                        alt={c.name}
+                        className="w-full h-full object-cover rounded border border-green-700"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xl font-bold text-green-100">{c.name}</h3>
+                        <span className={`font-bold ${getRankBadgeColor(c.finalStats.rank)} text-white px-2 py-1 rounded-full text-sm`}>{c.finalStats.rank}</span>
+                      </div>
+                    </div>
                   </div>
                   {c.feedCount > 0 && <p className="text-yellow-300 text-sm mt-1">Nourri {c.feedCount}x</p>}
                   <div className="grid grid-cols-5 gap-1 mt-3 text-center text-xs pointer-events-none">
