@@ -161,6 +161,26 @@ export default function FormulasPage() {
           </p>
         </header>
 
+        <div className="bg-red-100 dark:bg-red-900 rounded-xl shadow-lg p-6 mb-8 border-2 border-red-500">
+          <h2 className="text-3xl font-bold text-red-700 dark:text-red-400 mb-4">
+            ⚠️ RÈGLE SUR les Formules
+          </h2>
+          <div className="space-y-3">
+            <p className="text-gray-800 dark:text-gray-200 font-semibold">
+              <strong className="text-red-600 dark:text-red-400">IMPORTANT :</strong> Toute modification (ajouter, modifier, supprimer) d'une formule DOIT être reportée sur cette page.
+            </p>
+            <p className="text-gray-700 dark:text-gray-300">
+              <strong className="text-purple-600 dark:text-purple-400">Ou modifier :</strong> hunting/page.tsx, battle.ts, database.ts
+            </p>
+            <p className="text-gray-700 dark:text-gray-300">
+              <strong className="text-blue-600 dark:text-blue-400">Sur cette page :</strong> Mettre a jour la/les formule(s) correspondante(s)
+            </p>
+            <p className="text-gray-700 dark:text-gray-300">
+              <strong className="text-green-600 dark:text-green-400">Verification :</strong> Sang rappellera a chaque fois et verifiera que tout est synchrone
+            </p>
+          </div>
+        </div>
+
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
           <h2 className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-4">
             📚 Comment Lire Ces Formules
