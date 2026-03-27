@@ -48,11 +48,11 @@ function FormulaCard({ section }: { section: FormulaSection }) {
 export default function FormulasPage() {
   const spawnFormulas: FormulaSection[] = [
     {
-      title: "🎲 Rank Rarities",
-      description: "Probabilites de spawn pour chaque rang. On utilise un systeme de roll.",
-      formula: "roll_8arity():\n  LOW (25%) = Range: 0.00-0.25 = Rank E (très courant)\n  MID (50%) = Range: 0.25-0.75 = Random: 37.5% D, 37.5% C, 25% B\n  HIGH (25%) = Range: 0.75-1.00 = Random: 40% A, 40% S, 20% S+",
-      example: "rank = roll_8arity()\n  Math.random() = 0.85 = > 0.75 (HIGH) = Random(40% A, 40% S, 20% S+) = S",
-      result: "Creature rank S avec spawn rate moyen"
+      title: "🎲 Rank Rarities (VRAIES PROBABILITÉS)",
+      description: "Probabilites de spawn BASE sur le systeme de weights pondere. Le code cree une distribution ponderee avec Math.random().",
+      formula: "SYSTEME DE WEIGHTS (hunting/page.tsx lignes 35-42):\n  E   : weight 8,175 = 81.75%\n  D   : weight 1,000 = 10.00%\n  C   : weight   600 =  6.00%\n  B   : weight   150 =  1.50%\n  A   : weight    50 =  0.50%\n  S   : weight    20 =  0.20%\n  S+  : weight     5 =  0.05%\n\nTOTAL WEIGHTS : 10,000\n\nf_ionroll = Math.random() * totalWeight",
+      example: "1 spawn :\n  Math.random() × 10000 = 8251\n  8251 > 8175 (cumul E) = SUITE = D car 8175 < 8251 < 9175\n\n  Math.random() × 10000 = 8500\n  8500 > 9775 (cumul D + C) = SUITE = B car 9775 < 8500 < 9925",
+      result: "Probabilite REELLE = Rank A (0.5% = 1 sur 200 spawns)"
     },
     {
       title: "⚔️ Variance par Rang",
