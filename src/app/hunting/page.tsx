@@ -192,7 +192,6 @@ export default function HuntingPage() {
   const [huntedCreature, setHuntedCreature] = useState<HuntedCreature | null>(null);
   const [collection, setCollection] = useState<HuntedCreature[]>([]);
   const [selectedCreature, setSelectedCreature] = useState<HuntedCreature | null>(null);
-  const [feedChoice, setFeedChoice] = useState<"hp" | "atk" | "def" | "spd" | "crit" | null>(null);
   const [feedMode, setFeedMode] = useState(false);
   const [selectedFoodIds, setSelectedFoodIds] = useState<Set<string>>(new Set());
   const [previewMode, setPreviewMode] = useState(false);
@@ -243,8 +242,6 @@ export default function HuntingPage() {
     const spawned = spawnCreature();
     setHuntedCreature(spawned);
     setPhase("spawned");
-    setFeedChoice(null);
-  };
 
   const handleKeep = () => {
     if (huntedCreature) {
@@ -261,11 +258,7 @@ export default function HuntingPage() {
     setSelectedCreature(creature);
     setSelectedRank(creature.finalStats.rank);
     setPhase("viewing");
-    setFeedChoice(null);
-  };
 
-  const handleReleaseCreature = () => {
-    if (selectedCreature) {
       const updated = collection.filter(c => c.id !== selectedCreature.id);
       setCollection(updated);
       setSelectedCreature(null);
@@ -287,62 +280,9 @@ export default function HuntingPage() {
   };
 
   const handleFeedSelect = (stat: "hp" | "atk" | "def" | "spd" | "crit") => { setFeedChoice(stat); };
-
-  // Toggle selection de créature comme nourriture
-  const toggleFoodCreature = (creatureId: string) => {
-    const newSelection = new Set(selectedFoodIds);
-    if (newSelection.has(creatureId)) {
-      newSelection.delete(creatureId);
-    } else {
-      newSelection.add(creatureId);
-    }
-    setSelectedFoodIds(newSelection);
-  };
-
-  // Calculer XP total des créatures sélectionnées
-  const calculateTotalXP = () => {
-    let total = 0;
-    selectedFoodIds.forEach(id => {
-      const creature = collection.find(c => c.id === id);
-      if (creature) {
-        total += calculateRankXP(creature.finalStats.rank, creature.level, creature.finalStats);
-      }
-    });
-    return total;
-  };
-
-  // Simuler what would happen on feeding
-  const simulateFeeding = () => {
-    if (!selectedCreature) return null;
-    const totalXP = calculateTotalXP();
-    const result = feedCreature(selectedCreature, totalXP);
-    return result;
-  };
-
-  // Mode sans preview: ancien système de nourrissage par stat
-  const handleFeedOldSystem = () => {
-    if (selectedCreature && feedChoice) {
-      const statKey: "hp" | "attack" | "defense" | "speed" | "crit" = 
-        feedChoice === "atk" ? "attack" : feedChoice === "def" ? "defense" : feedChoice === "spd" ? "speed" : "crit";
-      const boosted = { ...selectedCreature };
-      boosted.feedCount += 1;
-      boosted.feedStat = feedChoice;
-      boosted.finalStats[statKey] = Math.floor(boosted.finalStats[statKey] * 1.10);
-      const updated = collection.map(c => c.id === boosted.id ? boosted : c);
-      setCollection(updated);
-      setSelectedCreature(boosted);
-      setFeedChoice(null);
-    }
-  };
-
-  const handleFeedNewSystem = () => {
-    if (!selectedCreature || selectedFoodIds.size === 0) return;
     
     const totalXP = calculateTotalXP();
     const result = feedCreature(selectedCreature, totalXP);
-    
-    // Retirer les créatures mangées de la collection
-    const otherCreatures = collection.filter(c => !selectedFoodIds.has(c.id));
     
     // Mettre à jour la créature nourrie
     const updated = otherCreatures.map(c => c.id === selectedCreature.id ? result.creature : c);
@@ -353,6 +293,15 @@ export default function HuntingPage() {
     setSelectedFoodIds(new Set());
     setFeedMode(false);
     setPreviewMode(false);
+  };
+
+  const handleReleaseSingle = () => {
+    if (!selectedCreature) return;
+    const updated = collection.filter(c => c.id !== selectedCreature.id);
+    setCollection(updated);
+    setSelectedCreature(null);
+    setPhase("ready");
+    setSelectedRank(null);
   };
 
   const formatVariance = (variance: number) => { const sign = variance >= 0 ? "+" : ""; return `${sign}${variance.toFixed(1)}%`; };
@@ -503,31 +452,13 @@ export default function HuntingPage() {
             <div className="border-t border-green-700 pt-6">
               <h3 className="text-xl font-bold text-green-100 mb-4">🍎 Nourrir</h3>
               
-              {!feedMode ? (
-                <>
-                  <button 
-                    onClick={() => setFeedMode(true)}
-                    className="w-full bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white rounded-lg p-3 font-bold mb-4"
-                  >
-                    🌱 Nourrir avec d'autres créatures
-                  </button>
-                  
-                  <div className="text-center text-green-300 mb-4">OU</div>
-                  
-                  {!feedChoice ? (
-                    <div className="grid grid-cols-5 gap-2 mb-4">
-                      {(["hp", "atk", "def", "spd", "crit"] as const).map(stat => (
-                        <button key={stat} onClick={() => handleFeedSelect(stat)} className="bg-gradient-to-r from-green-700 to-green-600 hover:from-green-600 hover:to-green-500 text-white rounded-lg p-2 font-bold">{stat.toUpperCase()}</button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3 mb-4">
-                      <p className="text-green-200">Nourrir <strong>{feedChoice.toUpperCase()}</strong> (+10%)?</p>
-                      <button onClick={handleFeedOldSystem} className="bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white rounded-lg px-4 py-2 font-bold">✅ OK</button>
-                      <button onClick={() => setFeedChoice(null)} className="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-lg px-4 py-2 font-bold">❌ Annuler</button>
-                    </div>
-                  )}
-                </>
+{!feedMode ? (
+                <button 
+                  onClick={() => setFeedMode(true)}
+                  className="w-full bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white rounded-lg p-3 font-bold"
+                >
+                  🌱 Nourrir avec d'autres créatures
+                </button>
               ) : (
                 <>
                   <div className="flex items-center gap-3 mb-4">
