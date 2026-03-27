@@ -15,13 +15,13 @@ import Link from "next/link";
 function getCreatureImage(creatureId: string, rank: Rank): string {
   if (creatureId === "housefly") {
     const rankSuffix = rank === "S+" ? "S+" : rank;
-    return `creatures/fly-rank-${rankSuffix}.png`;
+    return `/ecobio-nextjs-ui/creatures/fly-rank-${rankSuffix}.png`;
   }
   if (creatureId === "ant") {
     const rankSuffix = rank === "S+" ? "S+" : rank;
-    return `creatures/ant_rank_${rankSuffix}.png`;
+    return `/ecobio-nextjs-ui/creatures/ant_rank_${rankSuffix}.png`;
   }
-  return "images/giant_fly.png";
+  return "/ecobio-nextjs-ui/images/giant_fly.png";
 }
 
 type BattlePhase = "setup" | "battle" | "complete";
