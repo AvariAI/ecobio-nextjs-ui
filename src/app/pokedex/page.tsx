@@ -20,10 +20,15 @@ function StatCard({ label, value, color }: { label: string; value: number; color
 }
 
 function getCreatureRankImage(creatureId: string, rank: Rank): string {
-  // File names use dash "-" not "_" between rank and image name
-  const rankSuffix = rank === "S+" ? "S+" : rank;
-  const imagePrefix = creatureId === "housefly" ? "fly" : creatureId;
-  return `creatures/${imagePrefix}-rank-${rankSuffix}.png`;
+  if (creatureId === "housefly") {
+    const rankSuffix = rank === "S+" ? "S+" : rank;
+    return `creatures/fly-rank-${rankSuffix}.png`;
+  }
+  if (creatureId === "ant") {
+    const rankSuffix = rank === "S+" ? "S+" : rank;
+    return `creatures/ant_rank_${rankSuffix}.png`;
+  }
+  return "images/giant_fly.png";
 }
 
 function getRankBadgeColor(rank: Rank): string {
