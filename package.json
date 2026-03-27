@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "mkdir -p out && next build && touch out/.nojekyll",
+    "build": "mkdir -p out && next build && mkdir -p out/_next/static/chunks/pages && mkdir -p out/creatures && cp -r public/creatures/* out/creatures/ && touch out/.nojekyll",
     "start": "next start",
     "lint": "next lint"
   },
