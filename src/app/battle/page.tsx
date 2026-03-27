@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CREATURES, Rank, RANKS } from "@/lib/database";
+import { CREATURES, Rank, RANKS, Creature } from "@/lib/database";
 import {
   BattleCreature,
   calculateFinalStats,
@@ -11,7 +11,34 @@ import {
   tickCooldownsAndBuffs,
   BattleLogEntry,
 } from "@/lib/battle";
+import { getTraitsByIds } from "@/lib/traits";
 import Link from "next/link";
+
+type HuntingPhase = "ready" | "spawned" | "viewing";
+
+type RarityRank = "E" | "D" | "C" | "B" | "A" | "S" | "S+";
+
+interface HuntedCreature extends Creature {
+  id: string;
+  finalStats: {
+    hp: number;
+    attack: number;
+    defense: number;
+    speed: number;
+    crit: number;
+    rank: Rank;
+  };
+  customStats: any;
+  level: number;
+  currentXP: number;
+  xpToNextLevel: number;
+  varianceBreakdown: any;
+  feedCount: number;
+  feedStat: "hp" | "atk" | "def" | "spd" | "crit" | null;
+  createdAt: number;
+  creatureId: string;
+  traits: string[];
+}
 
 function getCreatureImage(creatureId: string, rank: Rank): string {
   if (creatureId === "housefly") {
@@ -42,6 +69,10 @@ function formatBuffChange(
 }
 
 export default function BattlePage() {
+  // Mode: "test" (default, brute stats) or "collection" (use hunting creatures)
+  const [battleMode, setBattleMode] = useState<"test" | "collection">("test");
+
+  // Test mode state
   const [playerCreatureId, setPlayerCreatureId] = useState("ant");
   const [playerLevel, setPlayerLevel] = useState(10);
   const [playerRank, setPlayerRank] = useState<Rank>("E");
@@ -49,6 +80,12 @@ export default function BattlePage() {
   const [enemyLevel, setEnemyLevel] = useState(10);
   const [enemyRank, setEnemyRank] = useState<Rank>("E");
 
+  // Collection mode state
+  const [collection, setCollection] = useState<HuntedCreature[]>([]);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [selectedEnemyId, setSelectedEnemyId] = useState<string | null>(null);
+
+  // Battle state
   const [phase, setPhase] = useState<BattlePhase>("setup");
   const [player, setPlayer] = useState<BattleCreature | null>(null);
   const [enemy, setEnemy] = useState<BattleCreature | null>(null);
@@ -56,8 +93,24 @@ export default function BattlePage() {
   const [turn, setTurn] = useState<"player" | "enemy">("player");
   const [round, setRound] = useState(1);
 
+  // Load collection from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("ecobio-collection");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setCollection(parsed);
+      } catch (e) {
+        console.error("Failed to load collection", e);
+      }
+    }
+  }, []);
+
   const playerCreature = CREATURES[playerCreatureId];
   const enemyCreature = CREATURES[enemyCreatureId];
+
+  const selectedPlayer = collection.find(c => c.id === selectedPlayerId);
+  const selectedEnemy = collection.find(c => c.id === selectedEnemyId);
 
   // Calculate stats with level scaling BUT NO RNG variance (deterministic for testing)
   const playerBattleStats = calculateScaledStats(playerCreature, playerLevel, playerRank);
@@ -78,39 +131,99 @@ export default function BattlePage() {
   }, [phase, turn]);
 
   const startBattle = () => {
-    const p: BattleCreature = {
-      creature: playerCreature,
-      stats: playerBattleStats,
-      currentHP: playerBattleStats.hp,
-      skillCooldowns: {},
-      buffs: {
-        defenseBuff: 0,
-        dodgeBuff: 0,
-        attackBuff: 0,
-        defenseBuffTurns: 0,
-        dodgeBuffTurns: 0,
-        attackBuffTurns: 0,
-      },
-      name: `${playerCreature.name} (R${playerRank} L${playerLevel})`,
-      traits: [],  // TODO: Pass traits from hunting/selection when battle integration is complete
-    };
+    let p: BattleCreature;
+    let e: BattleCreature;
 
-    const e: BattleCreature = {
-      creature: enemyCreature,
-      stats: enemyBattleStats,
-      currentHP: enemyBattleStats.hp,
-      skillCooldowns: {},
-      buffs: {
-        defenseBuff: 0,
-        dodgeBuff: 0,
-        attackBuff: 0,
-        defenseBuffTurns: 0,
-        dodgeBuffTurns: 0,
-        attackBuffTurns: 0,
-      },
-      name: `${enemyCreature.name} (R${enemyRank} L${enemyLevel})`,
-      traits: [],  // TODO: Pass traits from hunting/selection when battle integration is complete
-    };
+    // Test mode: Calculate stats with level scaling (deterministic)
+    if (battleMode === "test") {
+      p = {
+        creature: playerCreature,
+        stats: playerBattleStats,
+        currentHP: playerBattleStats.hp,
+        skillCooldowns: {},
+        buffs: {
+          defenseBuff: 0,
+          dodgeBuff: 0,
+          attackBuff: 0,
+          defenseBuffTurns: 0,
+          dodgeBuffTurns: 0,
+          attackBuffTurns: 0,
+        },
+        name: `${playerCreature.name} (R${playerRank} L${playerLevel})`,
+        traits: [],  // Test mode: no traits
+      };
+
+      e = {
+        creature: enemyCreature,
+        stats: enemyBattleStats,
+        currentHP: enemyBattleStats.hp,
+        skillCooldowns: {},
+        buffs: {
+          defenseBuff: 0,
+          dodgeBuff: 0,
+          attackBuff: 0,
+          defenseBuffTurns: 0,
+          dodgeBuffTurns: 0,
+          attackBuffTurns: 0,
+        },
+        name: `${enemyCreature.name} (R${enemyRank} L${enemyLevel})`,
+        traits: [],  // Test mode: no traits
+      };
+    } else {
+      // Collection mode: Use hunting creatures with RNG stats and traits
+      if (!selectedPlayer || !selectedEnemy) {
+        alert("Sélectionnez deux créatures de votre collection!");
+        return;
+      }
+
+      p = {
+        creature: CREATURES[selectedPlayer.creatureId],
+        stats: {
+          hp: selectedPlayer.finalStats.hp,
+          attack: selectedPlayer.finalStats.attack,
+          defense: selectedPlayer.finalStats.defense,
+          speed: selectedPlayer.finalStats.speed,
+          crit: selectedPlayer.finalStats.crit,
+          rank: selectedPlayer.finalStats.rank,
+        },
+        currentHP: selectedPlayer.finalStats.hp,
+        skillCooldowns: {},
+        buffs: {
+          defenseBuff: 0,
+          dodgeBuff: 0,
+          attackBuff: 0,
+          defenseBuffTurns: 0,
+          dodgeBuffTurns: 0,
+          attackBuffTurns: 0,
+        },
+        name: `${selectedPlayer.name} (R${selectedPlayer.finalStats.rank} L${selectedPlayer.level})`,
+        traits: selectedPlayer.traits || [],  // Pass traits!
+      };
+
+      e = {
+        creature: CREATURES[selectedEnemy.creatureId],
+        stats: {
+          hp: selectedEnemy.finalStats.hp,
+          attack: selectedEnemy.finalStats.attack,
+          defense: selectedEnemy.finalStats.defense,
+          speed: selectedEnemy.finalStats.speed,
+          crit: selectedEnemy.finalStats.crit,
+          rank: selectedEnemy.finalStats.rank,
+        },
+        currentHP: selectedEnemy.finalStats.hp,
+        skillCooldowns: {},
+        buffs: {
+          defenseBuff: 0,
+          dodgeBuff: 0,
+          attackBuff: 0,
+          defenseBuffTurns: 0,
+          dodgeBuffTurns: 0,
+          attackBuffTurns: 0,
+        },
+        name: `${selectedEnemy.name} (R${selectedEnemy.finalStats.rank} L${selectedEnemy.level})`,
+        traits: selectedEnemy.traits || [],  // Pass traits!
+      };
+    }
 
         setPlayer(p);
     setEnemy(e);
@@ -272,9 +385,34 @@ export default function BattlePage() {
           <h1 className="text-5xl font-bold bg-gradient-to-r from-red-600 to-purple-600 bg-clip-text text-transparent mb-4">
             ⚔️ Battle Arena
           </h1>
+
+          {/* Mode Toggle */}
+          <div className="flex gap-4 mb-6 items-center">
+            <span className="text-gray-700 font-semibold">Mode:</span>
+            <button
+              onClick={() => setBattleMode("test")}
+              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                battleMode === "test"
+                  ? "bg-blue-600 text-white shadow-lg"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              🧪 Test Brut
+            </button>
+            <button
+              onClick={() => setBattleMode("collection")}
+              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                battleMode === "collection"
+                  ? "bg-purple-600 text-white shadow-lg"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              📦 Collection ({collection.length})
+            </button>
+          </div>
         </header>
 
-        {phase === "setup" && (
+        {phase === "setup" && battleMode === "test" && (
           <div className="grid md:grid-cols-2 gap-8 mb-8">
             <CreatureSelector
               label="🔵 Your Creature"
@@ -304,11 +442,32 @@ export default function BattlePage() {
           </div>
         )}
 
+        {phase === "setup" && battleMode === "collection" && (
+          <div className="grid md:grid-cols-2 gap-8 mb-8">
+            <CollectionSelector
+              label="🔵 Your Creature"
+              collection={collection}
+              selectedId={selectedPlayerId}
+              onSelect={setSelectedPlayerId}
+              accent="blue"
+            />
+
+            <CollectionSelector
+              label="🔴 Enemy Creature"
+              collection={collection}
+              selectedId={selectedEnemyId}
+              onSelect={setSelectedEnemyId}
+              accent="red"
+            />
+          </div>
+        )}
+
         {phase === "setup" && (
           <div className="text-center mb-8">
             <button
               onClick={startBattle}
-              className="px-12 py-4 bg-gradient-to-r from-red-600 to-purple-600 text-white text-2xl font-bold rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all"
+              disabled={battleMode === "collection" && (!selectedPlayerId || !selectedEnemyId)}
+              className="px-12 py-4 bg-gradient-to-r from-red-600 to-purple-600 text-white text-2xl font-bold rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               ⚔️ START BATTLE!
             </button>
@@ -688,6 +847,136 @@ function CreatureSelector({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function CollectionSelector({
+  label,
+  collection,
+  selectedId,
+  onSelect,
+  accent,
+}: {
+  label: string;
+  collection: HuntedCreature[];
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
+  accent: "blue" | "red";
+}) {
+  const accentColors = {
+    blue: "border-blue-400 hover:border-blue-600",
+    red: "border-red-400 hover:border-red-600",
+  };
+
+  const accentBg = {
+    blue: "from-blue-100 to-cyan-100 dark:from-blue-900 dark:to-cyan-900",
+    red: "from-red-100 to-orange-100 dark:from-red-900 dark:to-orange-900",
+  };
+
+  const selectedCreature = collection.find(c => c.id === selectedId);
+
+  const RANK_BADGE_COLORS: Record<Rank, string> = {
+    E: "bg-gray-600",
+    D: "bg-blue-600",
+    C: "bg-green-600",
+    B: "bg-orange-600",
+    A: "bg-red-600",
+    S: "bg-yellow-600",
+    "S+": "bg-purple-600",
+  };
+
+  return (
+    <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-2 ${accentColors[accent]} hover:shadow-2xl transition-all`}>
+      <h2 className="text-3xl font-bold mb-4">{label}</h2>
+
+      <div className={`bg-gradient-to-br ${accentBg[accent]} rounded-xl p-4 mb-4 min-h-64 overflow-y-auto max-h-96`}>
+        {!selectedCreature && (
+          <p className="text-center text-gray-500 italic">Sélectionnez une créature...</p>
+        )}
+
+        {!selectedCreature && collection.length === 0 && (
+          <p className="text-center text-gray-500 italic">Collection vide. Allez au chasseur! 🏹</p>
+        )}
+
+        <div className="space-y-3">
+          {collection.map((creature) => (
+            <button
+              key={creature.id}
+              onClick={() => onSelect(creature.id === selectedId ? null : creature.id)}
+              className={`w-full text-left rounded-lg p-3 transition-all ${
+                creature.id === selectedId
+                  ? "ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-800 bg-white dark:bg-gray-700 shadow-md"
+                  : "bg-white/50 dark:bg-gray-700/50 hover:bg-white dark:hover:bg-gray-700"
+              }`}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <img
+                    src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
+                    alt={creature.name}
+                    className="w-12 h-12 object-cover rounded"
+                  />
+                  <div>
+                    <p className="font-bold">{creature.name}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded ${RANK_BADGE_COLORS[creature.finalStats.rank]} text-white`}>
+                      R{creature.finalStats.rank} L{creature.level}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-sm font-semibold">
+                  {creature.id === selectedId ? "✓" : "○"}
+                </p>
+              </div>
+
+              {creature.id === selectedId && (
+                <>
+                  <div className="grid grid-cols-5 gap-1 mt-3 text-center text-xs">
+                    <div className="bg-gray-100 dark:bg-gray-800 rounded p-1">
+                      <p className="text-gray-500">HP</p>
+                      <p className="font-bold">{creature.finalStats.hp}</p>
+                    </div>
+                    <div className="bg-gray-100 dark:bg-gray-800 rounded p-1">
+                      <p className="text-gray-500">ATK</p>
+                      <p className="font-bold">{creature.finalStats.attack}</p>
+                    </div>
+                    <div className="bg-gray-100 dark:bg-gray-800 rounded p-1">
+                      <p className="text-gray-500">DEF</p>
+                      <p className="font-bold">{creature.finalStats.defense}</p>
+                    </div>
+                    <div className="bg-gray-100 dark:bg-gray-800 rounded p-1">
+                      <p className="text-gray-500">SPD</p>
+                      <p className="font-bold">{creature.finalStats.speed}</p>
+                    </div>
+                    <div className="bg-gray-100 dark:bg-gray-800 rounded p-1">
+                      <p className="text-gray-500">CRIT</p>
+                      <p className="font-bold">{creature.finalStats.crit}</p>
+                    </div>
+                  </div>
+
+                  {creature.traits && creature.traits.length > 0 && (
+                    <div className="mt-3 pt-2 border-t">
+                      <p className="text-xs font-bold text-purple-600 mb-1">Traits ({creature.traits.length}):</p>
+                      <div className="flex flex-wrap gap-1">
+                        {getTraitsByIds(creature.traits).slice(0, 3).map(trait => (
+                          <span key={trait.id} className="text-xs px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
+                            {trait.name}
+                          </span>
+                        ))}
+                        {creature.traits.length > 3 && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-200 dark:bg-purple-800 text-purple-600 dark:text-purple-400">
+                            +{creature.traits.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
