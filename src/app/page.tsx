@@ -13,7 +13,7 @@ export default function Home() {
           </p>
         </header>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-8 mb-8">
           <Link href="/pokedex">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-green-400">
               <div className="text-6xl mb-4">📚</div>
@@ -46,6 +46,32 @@ export default function Home() {
               </h2>
               <p className="text-gray-600 dark:text-gray-300">
                 Spawn RNG-optimisées et build ta collection unique.
+              </p>
+            </div>
+          </Link>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-8 mb-8 max-w-4xl mx-auto">
+          <Link href="/formulas">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-blue-400">
+              <div className="text-6xl mb-4">🧮</div>
+              <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
+                Formules
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                Découvrez toutes les formules du jeu: variance de stats, scaling de niveau, dégâts, critiques.
+              </p>
+            </div>
+          </Link>
+
+          <Link href="/traits">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-purple-400">
+              <div className="text-6xl mb-4">✨</div>
+              <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
+                Traits
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                Liste complète des traits passifs et conditionnels avec leurs effets et rarités.
               </p>
             </div>
           </Link>
