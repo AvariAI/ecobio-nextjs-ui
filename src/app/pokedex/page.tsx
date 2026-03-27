@@ -76,7 +76,12 @@ export default function PokedexPage() {
     }));
   };
 
-  const filteredCreatures = Object.values(CREATURES).filter(
+  // Filter only base creature types, not captured instances
+  const baseCreatures = Object.values(CREATURES).filter(
+    (creature) => ["ant", "housefly", "honeybee"].includes(creature.id)
+  );
+
+  const filteredCreatures = baseCreatures.filter(
     (creature) =>
       selectedTypes.has("Insect") &&
       creature.name.toLowerCase().includes(search.toLowerCase())

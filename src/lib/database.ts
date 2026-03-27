@@ -82,52 +82,8 @@ export const CREATURES: Record<string, Creature> = {
       cooldown: 3,
     },
   },
-  f4c7a9e8: {
-    id: "f4c7a9e8",
-    name: "Mouche",
-    rank: "E",
-    baseStats: {
-      hp: 250,
-      attack: 100,
-      defense: 50,
-      speed: 100,
-      crit: 100,
-    },
-    desc: "Insecte volant agile avec yeux composés et vol rapide",
-    image: "/images/giant_fly.png",
-    skill: {
-      name: "Esquive Aérienne",
-      description: "Esquive +40% pendant 2 tours",
-      effect: "dodge",
-      value: 0.40,
-      duration: 2,
-      cooldown: 3,
-    },
-  },
-  a1b2c3d4: {
-    id: "a1b2c3d4",
-    name: "Fourmi",
-    rank: "E",
-    baseStats: {
-      hp: 500,
-      attack: 50,
-      defense: 150,
-      speed: 50,
-      crit: 50,
-    },
-    desc: "Fourmi robuste avec defenses élevées",
-    image: "/images/caterpillar.png",
-    skill: {
-      name: "Carapace Renforcée",
-      description: "DEF +50% pendant 2 tours",
-      effect: "defense",
-      value: 0.50,
-      duration: 2,
-      cooldown: 3,
-    },
-  },
-  b2e3f4g5: {
-    id: "b2e3f4g5",
+  honeybee: {
+    id: "honeybee",
     name: "Abeille",
     rank: "E",
     baseStats: {
@@ -138,6 +94,7 @@ export const CREATURES: Record<string, Creature> = {
       crit: 60,
     },
     desc: "Abeille ouvrière avec rôle de support, boostée l'attaque ou la défense des alliés",
+    image: "/images/giant_fly.png", // Placeholder temporaire
     skill: {
       name: "Essaim Stimulant",
       description: "Buff random ATK ou DEF (+40%) sur un allié pendant 2 tours",
@@ -146,7 +103,6 @@ export const CREATURES: Record<string, Creature> = {
       duration: 2,
       cooldown: 3,
     },
-    image: "/images/giant_fly.png", // Placeholder temporaire
   },
 };
 
