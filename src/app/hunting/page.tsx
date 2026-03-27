@@ -206,6 +206,9 @@ function getCreatureImage(creatureId: string, rank: Rank): string {
     const rankSuffix = rank === "S+" ? "S+" : rank;
     return `/ecobio-nextjs-ui/creatures/ant_rank_${rankSuffix}.png`;
   }
+  if (creatureId === "honeybee") {
+    return "/ecobio-nextjs-ui/images/bee.png";
+  }
   return "/ecobio-nextjs-ui/images/giant_fly.png";
 }
 
