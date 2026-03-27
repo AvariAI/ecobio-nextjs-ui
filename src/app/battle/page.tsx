@@ -12,6 +12,18 @@ import {
 } from "@/lib/battle";
 import Link from "next/link";
 
+function getCreatureImage(creatureId: string, rank: Rank): string {
+  if (creatureId === "housefly") {
+    const rankSuffix = rank === "S+" ? "S+" : rank;
+    return `creatures/fly-rank-${rankSuffix}.png`;
+  }
+  if (creatureId === "ant") {
+    const rankSuffix = rank === "S+" ? "S+" : rank;
+    return `creatures/ant_rank_${rankSuffix}.png`;
+  }
+  return "images/giant_fly.png";
+}
+
 type BattlePhase = "setup" | "battle" | "complete";
 
 function formatBuffChange(
@@ -563,8 +575,8 @@ function CreatureSelector({
 
       <div className={`bg-gradient-to-br ${accentBg[accent]} rounded-xl p-6 mb-4`}>
         <img
-          src={creature.image}
-          alt={creature.name}
+          src={getCreatureImage(creatureId, rank)}
+          alt={`${creature.name} Rank ${rank}`}
           className="w-full max-h-48 object-contain mx-auto rounded-lg"
         />
       </div>
