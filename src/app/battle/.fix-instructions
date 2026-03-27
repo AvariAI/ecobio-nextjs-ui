@@ -1,0 +1,1 @@
+Crash fix for enemy freeze: enemyTurn defined before useEffect
