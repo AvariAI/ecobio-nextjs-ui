@@ -2,9 +2,14 @@
 const nextConfig = {
   output: 'export',
   basePath: '/ecobio-nextjs-ui',
-  // Removing assetPrefix as it may cause issues with GitHub Pages deployment
   images: {
     unoptimized: true,
+  },
+  // Experimental: Force static export to work properly
+  experimental: {
+    outputFileTracingExcludes: {
+      '*': ['./node_modules/@swc/core-linux-x64-gnu'],
+    },
   },
 };
 
