@@ -220,7 +220,16 @@ export default function BattlePage() {
           attackBuffTurns: 0,
         },
         name: `${selectedPlayer.name} (R${selectedPlayer.finalStats.rank} L${selectedPlayer.level})`,
-        traits: selectedPlayer.traits || [],  // Pass traits!
+        traits: selectedPlayer.traits || [],
+        baseStats: {
+          hp: selectedPlayer.finalStats.hp,
+          attack: selectedPlayer.finalStats.attack,
+          defense: selectedPlayer.finalStats.defense,
+          speed: selectedPlayer.finalStats.speed,
+          crit: selectedPlayer.finalStats.crit,
+          rank: selectedPlayer.finalStats.rank,
+        },
+        statModifiers: playerStatMods.breakdown,
       };
 
       e = {
@@ -244,7 +253,16 @@ export default function BattlePage() {
           attackBuffTurns: 0,
         },
         name: `${selectedEnemy.name} (R${selectedEnemy.finalStats.rank} L${selectedEnemy.level})`,
-        traits: selectedEnemy.traits || [],  // Pass traits!
+        traits: selectedEnemy.traits || [],
+        baseStats: {
+          hp: selectedEnemy.finalStats.hp,
+          attack: selectedEnemy.finalStats.attack,
+          defense: selectedEnemy.finalStats.defense,
+          speed: selectedEnemy.finalStats.speed,
+          crit: selectedEnemy.finalStats.crit,
+          rank: selectedEnemy.finalStats.rank,
+        },
+        statModifiers: enemyStatMods.breakdown,
       };
     }
 
