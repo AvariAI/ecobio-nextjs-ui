@@ -82,8 +82,10 @@ export default function BattlePage() {
       buffs: {
         defenseBuff: 0,
         dodgeBuff: 0,
+        attackBuff: 0,
         defenseBuffTurns: 0,
         dodgeBuffTurns: 0,
+        attackBuffTurns: 0,
       },
       name: `${playerCreature.name} (R${playerRank} L${playerLevel})`,
     };
@@ -96,8 +98,10 @@ export default function BattlePage() {
       buffs: {
         defenseBuff: 0,
         dodgeBuff: 0,
+        attackBuff: 0,
         defenseBuffTurns: 0,
         dodgeBuffTurns: 0,
+        attackBuffTurns: 0,
       },
       name: `${enemyCreature.name} (R${enemyRank} L${enemyLevel})`,
     };

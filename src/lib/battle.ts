@@ -31,8 +31,10 @@ export interface SkillCooldowns {
 export interface ActiveBuffs {
   defenseBuff: number;
   dodgeBuff: number;
+  attackBuff: number;
   defenseBuffTurns: number;
   dodgeBuffTurns: number;
+  attackBuffTurns: number;
 }
 
 export interface BattleCreature {
@@ -158,6 +160,11 @@ export function calculateDamage(attacker: BattleCreature, defender: BattleCreatu
 
   let damage = atk * (atk / (atk + def));
 
+  // Apply attack buff
+  if (attacker.buffs.attackBuff > 0) {
+    damage = damage * (1 + attacker.buffs.attackBuff);
+  }
+
   // Apply defense buff
   if (defender.buffs.defenseBuff > 0) {
     damage = damage * (1 - defender.buffs.defenseBuff);
@@ -210,6 +217,9 @@ export function useSkill(
   } else if (skill.effect === "dodge") {
     battleCreature.buffs.dodgeBuff = skill.value;
     battleCreature.buffs.dodgeBuffTurns = skill.duration;
+  } else if (skill.effect === "attack") {
+    battleCreature.buffs.attackBuff = skill.value;
+    battleCreature.buffs.attackBuffTurns = skill.duration;
   }
 
   battleCreature.skillCooldowns[cooldownKey] = skill.cooldown;
@@ -240,6 +250,12 @@ export function tickCooldownsAndBuffs(battleCreature: BattleCreature): void {
     battleCreature.buffs.dodgeBuffTurns--;
     if (battleCreature.buffs.dodgeBuffTurns === 0) {
       battleCreature.buffs.dodgeBuff = 0;
+    }
+  }
+  if (battleCreature.buffs.attackBuffTurns > 0) {
+    battleCreature.buffs.attackBuffTurns--;
+    if (battleCreature.buffs.attackBuffTurns === 0) {
+      battleCreature.buffs.attackBuff = 0;
     }
   }
 }
@@ -345,8 +361,10 @@ export function createBattleCreature(
     buffs: {
       defenseBuff: 0,
       dodgeBuff: 0,
+      attackBuff: 0,
       defenseBuffTurns: 0,
       dodgeBuffTurns: 0,
+      attackBuffTurns: 0,
     },
     name: name || creature.name,
   };
