@@ -92,7 +92,7 @@ const RANK_VALUE: Record<Rank, number> = { E: 1, D: 2, C: 3, B: 4, A: 5, S: 6, "
 function getCreatureImage(creatureId: string, rank: Rank): string {
   if (creatureId === "housefly") {
     const rankSuffix = rank === "S+" ? "S+" : rank;
-    return `/images/fly-rank-${rankSuffix}.png`;
+    return `/creatures/fly-rank-${rankSuffix}.png`;
   }
   if (creatureId === "ant") {
     const rankSuffix = rank === "S+" ? "S+" : rank;
