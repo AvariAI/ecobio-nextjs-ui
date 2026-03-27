@@ -348,22 +348,6 @@ export function createBattleCreature(
 }
 
 /**
- * Level scaling formulas
- * hpLevel: 1.0 at level 1, scales to ~15.7 at level 50
- * atkLevel/defLevel/spdLevel/critLevel: 1.0 at level 1, scales to ~8.4 at level 50
- */
-function getLevelScale(level: number, stat: "hp" | "other"): number {
-  const baseRatio = level / 50;
-  const sqrtRatio = Math.sqrt(baseRatio);
-
-  if (stat === "hp") {
-    return 1 + baseRatio * 14.7;
-  } else {
-    return 1 + sqrtRatio * 7.4;
-  }
-}
-
-/**
  * Calculate stats with level scaling BUT NO RNG variance
  * Used for Battle page testing - pure level scaling only
  * Final = Base × LevelScale (no variance, no rank multiplier)
@@ -389,9 +373,22 @@ export function calculateScaledStats(
 
 /**
  * Level scaling formulas
- * hpLevel: 1.0 at level 1, scales to ~15.7 at level 50
- * atkLevel/defLevel/spdLevel/critLevel: 1.0 at level 1, scales to ~8.4 at level 50
+ * Level 1 = 1.0 (stats de base), Level 50 = max scaling
+ * HP: 1.0 → ~15.7x at lvl 50
+ * Other stats: 1.0 → ~8.4x at lvl 50
  */
+function getLevelScale(level: number, stat: "hp" | "other"): number {
+  // Map level 1-50 to 0-1 scale
+  const normalizedLevel = (level - 1) / 49;
+
+  if (stat === "hp") {
+    // HP scales linearly: 1.0 at lvl 1 to ~15.7 at lvl 50
+    return 1.0 + normalizedLevel * 14.7;
+  } else {
+    // Other stats scale with sqrt: 1.0 at lvl 1 to ~8.4 at lvl 50
+    return 1.0 + Math.sqrt(normalizedLevel) * 7.4;
+  }
+}
 
 /**
  * Calculate final stats for a creature with level and rank
