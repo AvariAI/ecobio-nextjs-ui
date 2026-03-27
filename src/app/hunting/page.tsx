@@ -91,8 +91,12 @@ function spawnCreature(): HuntedCreature {
 
   const creatureWithSkill = skillOverride ? { ...creature, skill: skillOverride } : creature;
 
+  // Générer un ID unique pour chaque créature spawnée
+  const uniqueId = `cre_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
   return {
     ...creatureWithSkill,
+    id: uniqueId,  // ID unique pour cette créature spécifique
     finalStats,
     level: 1, // Start at level 1
     currentXP: 0,
