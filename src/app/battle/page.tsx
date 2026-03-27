@@ -54,14 +54,17 @@ export default function BattlePage() {
   const enemyCreature = CREATURES[enemyCreatureId];
 
   // Use base stats without RNG variation - for testing raw creatures
-  const playerPreviewStats = {
+  const playerBattleStats = {
     ...playerCreature.baseStats,
     rank: playerRank,
   };
-  const enemyPreviewStats = {
+  const enemyBattleStats = {
     ...enemyCreature.baseStats,
     rank: enemyRank,
   };
+
+  const playerPreviewStats = playerBattleStats;
+  const enemyPreviewStats = enemyBattleStats;
 
   const startBattle = () => {
     const p: BattleCreature = {
