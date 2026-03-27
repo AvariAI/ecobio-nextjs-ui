@@ -55,15 +55,9 @@ export default function BattlePage() {
   const playerCreature = CREATURES[playerCreatureId];
   const enemyCreature = CREATURES[enemyCreatureId];
 
-  // Use base stats only - ignore level and rank for testing
-  const playerBattleStats = {
-    ...playerCreature.baseStats,
-    rank: playerRank,
-  };
-  const enemyBattleStats = {
-    ...enemyCreature.baseStats,
-    rank: enemyRank,
-  };
+  // Calculate stats with level scaling BUT NO RNG variance (deterministic for testing)
+  const playerBattleStats = calculateScaledStats(playerCreature, playerLevel, playerRank);
+  const enemyBattleStats = calculateScaledStats(enemyCreature, enemyLevel, enemyRank);
 
   const playerPreviewStats = playerBattleStats;
   const enemyPreviewStats = enemyBattleStats;
