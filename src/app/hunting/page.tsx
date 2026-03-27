@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { CREATURES, Rank, Creature } from "@/lib/database";
 import { getVarianceRange, BattleStats } from "@/lib/battle";
+import { rollRandomTraits, getTraitsByIds } from "@/lib/traits";
 import Link from "next/link";
 
 type HuntingPhase = "ready" | "spawned" | "viewing";
@@ -30,6 +31,7 @@ interface HuntedCreature extends Creature {
   feedStat: "hp" | "atk" | "def" | "spd" | "crit" | null;
   createdAt: number;
   creatureId: string;
+  traits: string[];  // Trait IDs
 }
 
 function rollRarity(): RarityRank {
@@ -75,6 +77,9 @@ function spawnCreature(): HuntedCreature {
   const rank: Rank = rollRarity();
   const [minVar, maxVar] = getVarianceRange(rank);
 
+  // Roll random traits based on rank
+  const traits = rollRandomTraits(rank);
+
   const hpVariance = minVar + Math.random() * (maxVar - minVar);
   const atkVariance = minVar + Math.random() * (maxVar - minVar);
   const defVariance = minVar + Math.random() * (maxVar - minVar);
@@ -114,6 +119,7 @@ function spawnCreature(): HuntedCreature {
     feedStat: null,
     createdAt: Date.now(),
     creatureId,
+    traits,  // Random traits based on rank
   };
 }
 
@@ -448,6 +454,18 @@ export default function HuntingPage() {
                     </div>
                   </div>
                 )}
+                {huntedCreature.traits && huntedCreature.traits.length > 0 && (
+                  <div className="bg-purple-700 bg-opacity-50 rounded-lg p-3 mb-4">
+                    <h3 className="font-bold text-purple-100">✨ Traits ({huntedCreature.traits.length})</h3>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {getTraitsByIds(huntedCreature.traits).map(trait => (
+                        <span key={trait.id} className="px-2 py-1 text-xs rounded-full bg-purple-600 text-white font-semibold">
+                          {trait.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <h3 className="text-xl font-bold text-green-100 mb-4">📊 Stats RNG</h3>
@@ -522,12 +540,24 @@ export default function HuntingPage() {
                 <div className="bg-purple-600 bg-opacity-50 rounded-lg p-3 mb-4">
                   <p className="text-purple-100 font-bold">⬆️ Level {selectedCreature.level} | XP: {selectedCreature.currentXP}/{selectedCreature.xpToNextLevel}</p>
                   <div className="w-full bg-purple-950 rounded-full h-2 mt-2">
-                    <div 
-                      className="bg-purple-400 h-2 rounded-full" 
+                    <div
+                      className="bg-purple-400 h-2 rounded-full"
                       style={{ width: `${(selectedCreature.currentXP / selectedCreature.xpToNextLevel) * 100}%` }}
                     />
                   </div>
                 </div>
+                {selectedCreature.traits && selectedCreature.traits.length > 0 && (
+                  <div className="bg-purple-700 bg-opacity-50 rounded-lg p-3 mb-4">
+                    <h3 className="font-bold text-purple-100">✨ Traits ({selectedCreature.traits.length})</h3>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {getTraitsByIds(selectedCreature.traits).map(trait => (
+                        <span key={trait.id} className="px-2 py-1 text-xs rounded-full bg-purple-600 text-white font-semibold">
+                          {trait.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <h3 className="text-xl font-bold text-green-100 mb-4">📊 Stats</h3>
@@ -716,6 +746,20 @@ export default function HuntingPage() {
                         <span className={`font-bold ${getRankBadgeColor(c.finalStats.rank)} text-white px-2 py-1 rounded-full text-sm`}>{c.finalStats.rank}</span>
                       </div>
                       <p className="text-yellow-300 text-sm mt-1">Level {c.level}</p>
+                      {c.traits && c.traits.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {getTraitsByIds(c.traits).slice(0, 2).map(trait => (
+                            <span key={trait.id} className="px-1 py-0.5 text-xs rounded bg-purple-700 text-white">
+                              {trait.name}
+                            </span>
+                          ))}
+                          {c.traits.length > 2 && (
+                            <span className="px-1 py-0.5 text-xs rounded bg-purple-900 text-purple-200">
+                              +{c.traits.length - 2}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   {c.feedCount > 0 && <p className="text-yellow-300 text-sm mt-1">Nourri {c.feedCount}x</p>}
