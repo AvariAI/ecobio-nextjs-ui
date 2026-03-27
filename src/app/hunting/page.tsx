@@ -713,6 +713,7 @@ export default function HuntingPage() {
                         <h3 className="text-xl font-bold text-green-100">{c.name}</h3>
                         <span className={`font-bold ${getRankBadgeColor(c.finalStats.rank)} text-white px-2 py-1 rounded-full text-sm`}>{c.finalStats.rank}</span>
                       </div>
+                      <p className="text-yellow-300 text-sm mt-1">Level {c.level}</p>
                     </div>
                   </div>
                   {c.feedCount > 0 && <p className="text-yellow-300 text-sm mt-1">Nourri {c.feedCount}x</p>}
