@@ -123,7 +123,7 @@ export default function BattlePage() {
   useEffect(() => {
     if (phase === "battle" && turn === "enemy" && enemy && player) {
       const timer = setTimeout(() => {
-        executeAttack(enemy, player, [...log]);
+        enemyTurn();
       }, 1500);
       
       return () => clearTimeout(timer);
