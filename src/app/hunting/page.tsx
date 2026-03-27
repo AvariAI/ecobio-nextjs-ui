@@ -15,6 +15,9 @@ type SortOrder = "asc" | "desc";
 interface HuntedCreature extends Creature {
   id: string;
   finalStats: BattleStats;
+  level: number;
+  currentXP: number;
+  xpToNextLevel: number;
   varianceBreakdown: {
     hp: { base: number; variance: number; final: number };
     atk: { base: number; variance: number; final: number };
@@ -73,6 +76,9 @@ function spawnCreature(): HuntedCreature {
     ...creature,
     id: `cre_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     finalStats,
+    level: 1, // Start at level 1
+    currentXP: 0,
+    xpToNextLevel: calculateXPToNextLevel(1),
     varianceBreakdown: {
       hp: { base: creature.baseStats.hp, variance: (hpVariance - 1) * 100, final: finalStats.hp },
       atk: { base: creature.baseStats.attack, variance: (atkVariance - 1) * 100, final: finalStats.attack },
@@ -88,6 +94,86 @@ function spawnCreature(): HuntedCreature {
 }
 
 const RANK_VALUE: Record<Rank, number> = { E: 1, D: 2, C: 3, B: 4, A: 5, S: 6, "S+": 7 };
+
+// XP donné par rang (en tant que nourriture)
+const RANK_XP: Record<Rank, number> = { 
+  E: 50, 
+  D: 100, 
+  C: 200, 
+  B: 400, 
+  A: 800, 
+  S: 1600, 
+  "S+": 3200 
+};
+
+// XP requis pour level up (exponential)
+function calculateXPToNextLevel(level: number): number {
+  return Math.floor(100 * level * Math.pow(1.1, level - 1));
+}
+
+// Calculer XP que donne une créature comme nourriture
+function calculateRankXP(rank: Rank, level: number, baseStats: BattleStats): number {
+  const rankXP = RANK_XP[rank];
+  // Bonus XP pour higher level
+  const levelBonus = 1 + (level - 1) * 0.1;
+  return Math.floor(rankXP * levelBonus);
+}
+
+// Level scaling pour stats
+function getLevelScale(level: number, stat: "hp" | "other"): number {
+  if (level === 1) return 1.0;
+  const normalizedLevel = (level - 1) / 49;
+  if (stat === "hp") {
+    return 1.0 + normalizedLevel * 14.7;
+  } else {
+    return 1.0 + Math.sqrt(normalizedLevel) * 7.4;
+  }
+}
+
+// Nourrir une créature et calculer XP/level up
+function feedCreature(creature: HuntedCreature, foodXP: number): { creature: HuntedCreature; levelUps: number; totalGained: number } {
+  let currentCreature = { ...creature };
+  let levelUps = 0;
+  let totalGained = 0;
+  let remainingXP = foodXP;
+  
+  while (remainingXP > 0 && currentCreature.xpToNextLevel > 0) {
+    if (remainingXP >= currentCreature.xpToNextLevel) {
+      // Level up!
+      remainingXP -= currentCreature.xpToNextLevel;
+      totalGained += currentCreature.xpToNextLevel;
+      
+      const oldLevel = currentCreature.level;
+      const oldStats = { ...currentCreature.finalStats };
+      
+      currentCreature = {
+        ...currentCreature,
+        level: oldLevel + 1,
+        currentXP: 0,
+        xpToNextLevel: calculateXPToNextLevel(oldLevel + 1),
+        finalStats: {
+          ...currentCreature.finalStats,
+          hp: Math.floor(currentCreature.baseStats.hp * getLevelScale(oldLevel + 1, "hp")),
+          attack: Math.floor(currentCreature.baseStats.attack * getLevelScale(oldLevel + 1, "other")),
+          defense: Math.floor(currentCreature.baseStats.defense * getLevelScale(oldLevel + 1, "other")),
+          speed: Math.floor(currentCreature.baseStats.speed * getLevelScale(oldLevel + 1, "other")),
+          crit: Math.floor(currentCreature.baseStats.crit * getLevelScale(oldLevel + 1, "other")),
+        },
+      };
+      
+      levelUps++;
+    } else {
+      // Juste XP, pas de level up
+      totalGained += remainingXP;
+      remainingXP = 0;
+    }
+  }
+  
+  currentCreature.currentXP += totalGained;
+  
+  return { creature: currentCreature, levelUps, totalGained };
+}
+
 
 function getCreatureImage(creatureId: string, rank: Rank): string {
   if (creatureId === "housefly") {
@@ -107,6 +193,9 @@ export default function HuntingPage() {
   const [collection, setCollection] = useState<HuntedCreature[]>([]);
   const [selectedCreature, setSelectedCreature] = useState<HuntedCreature | null>(null);
   const [feedChoice, setFeedChoice] = useState<"hp" | "atk" | "def" | "spd" | "crit" | null>(null);
+  const [feedMode, setFeedMode] = useState(false);
+  const [selectedFoodIds, setSelectedFoodIds] = useState<Set<string>>(new Set());
+  const [previewMode, setPreviewMode] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("rank");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [confirmReleaseAll, setConfirmReleaseAll] = useState(false);
@@ -199,9 +288,41 @@ export default function HuntingPage() {
 
   const handleFeedSelect = (stat: "hp" | "atk" | "def" | "spd" | "crit") => { setFeedChoice(stat); };
 
-  const handleFeedConfirm = () => {
+  // Toggle selection de créature comme nourriture
+  const toggleFoodCreature = (creatureId: string) => {
+    const newSelection = new Set(selectedFoodIds);
+    if (newSelection.has(creatureId)) {
+      newSelection.delete(creatureId);
+    } else {
+      newSelection.add(creatureId);
+    }
+    setSelectedFoodIds(newSelection);
+  };
+
+  // Calculer XP total des créatures sélectionnées
+  const calculateTotalXP = () => {
+    let total = 0;
+    selectedFoodIds.forEach(id => {
+      const creature = collection.find(c => c.id === id);
+      if (creature) {
+        total += calculateRankXP(creature.finalStats.rank, creature.level, creature.finalStats);
+      }
+    });
+    return total;
+  };
+
+  // Simuler what would happen on feeding
+  const simulateFeeding = () => {
+    if (!selectedCreature) return null;
+    const totalXP = calculateTotalXP();
+    const result = feedCreature(selectedCreature, totalXP);
+    return result;
+  };
+
+  // Mode sans preview: ancien système de nourrissage par stat
+  const handleFeedOldSystem = () => {
     if (selectedCreature && feedChoice) {
-      const statKey: "hp" | "attack" | "defense" | "speed" | "crit" =
+      const statKey: "hp" | "attack" | "defense" | "speed" | "crit" = 
         feedChoice === "atk" ? "attack" : feedChoice === "def" ? "defense" : feedChoice === "spd" ? "speed" : "crit";
       const boosted = { ...selectedCreature };
       boosted.feedCount += 1;
@@ -212,6 +333,26 @@ export default function HuntingPage() {
       setSelectedCreature(boosted);
       setFeedChoice(null);
     }
+  };
+
+  const handleFeedNewSystem = () => {
+    if (!selectedCreature || selectedFoodIds.size === 0) return;
+    
+    const totalXP = calculateTotalXP();
+    const result = feedCreature(selectedCreature, totalXP);
+    
+    // Retirer les créatures mangées de la collection
+    const otherCreatures = collection.filter(c => !selectedFoodIds.has(c.id));
+    
+    // Mettre à jour la créature nourrie
+    const updated = otherCreatures.map(c => c.id === selectedCreature.id ? result.creature : c);
+    setCollection(updated);
+    setSelectedCreature(result.creature);
+    
+    // Reset
+    setSelectedFoodIds(new Set());
+    setFeedMode(false);
+    setPreviewMode(false);
   };
 
   const formatVariance = (variance: number) => { const sign = variance >= 0 ? "+" : ""; return `${sign}${variance.toFixed(1)}%`; };
@@ -339,7 +480,15 @@ export default function HuntingPage() {
                     </div>
                   </div>
                 )}
-                {selectedCreature.feedCount > 0 && <div className="bg-yellow-600 bg-opacity-50 rounded-lg p-3 mb-4"><p className="font-bold text-yellow-100">🍎 Nourri {selectedCreature.feedCount}x</p>{selectedCreature.feedStat && <p className="text-sm text-yellow-200">Stat: {selectedCreature.feedStat.toUpperCase()}</p>}</div>}
+                <div className="bg-purple-600 bg-opacity-50 rounded-lg p-3 mb-4">
+                  <p className="text-purple-100 font-bold">⬆️ Level {selectedCreature.level} | XP: {selectedCreature.currentXP}/{selectedCreature.xpToNextLevel}</p>
+                  <div className="w-full bg-purple-950 rounded-full h-2 mt-2">
+                    <div 
+                      className="bg-purple-400 h-2 rounded-full" 
+                      style={{ width: `${(selectedCreature.currentXP / selectedCreature.xpToNextLevel) * 100}%` }}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
             <h3 className="text-xl font-bold text-green-100 mb-4">📊 Stats</h3>
@@ -353,18 +502,121 @@ export default function HuntingPage() {
             </div>
             <div className="border-t border-green-700 pt-6">
               <h3 className="text-xl font-bold text-green-100 mb-4">🍎 Nourrir</h3>
-              {!feedChoice ? (
-                <div className="grid grid-cols-5 gap-2 mb-4">
-                  {(["hp", "atk", "def", "spd", "crit"] as const).map(stat => (
-                    <button key={stat} onClick={() => handleFeedSelect(stat)} className="bg-gradient-to-r from-green-700 to-green-600 hover:from-green-600 hover:to-green-500 text-white rounded-lg p-2 font-bold">{stat.toUpperCase()}</button>
-                  ))}
-                </div>
+              
+              {!feedMode ? (
+                <>
+                  <button 
+                    onClick={() => setFeedMode(true)}
+                    className="w-full bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white rounded-lg p-3 font-bold mb-4"
+                  >
+                    🌱 Nourrir avec d'autres créatures
+                  </button>
+                  
+                  <div className="text-center text-green-300 mb-4">OU</div>
+                  
+                  {!feedChoice ? (
+                    <div className="grid grid-cols-5 gap-2 mb-4">
+                      {(["hp", "atk", "def", "spd", "crit"] as const).map(stat => (
+                        <button key={stat} onClick={() => handleFeedSelect(stat)} className="bg-gradient-to-r from-green-700 to-green-600 hover:from-green-600 hover:to-green-500 text-white rounded-lg p-2 font-bold">{stat.toUpperCase()}</button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 mb-4">
+                      <p className="text-green-200">Nourrir <strong>{feedChoice.toUpperCase()}</strong> (+10%)?</p>
+                      <button onClick={handleFeedOldSystem} className="bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white rounded-lg px-4 py-2 font-bold">✅ OK</button>
+                      <button onClick={() => setFeedChoice(null)} className="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-lg px-4 py-2 font-bold">❌ Annuler</button>
+                    </div>
+                  )}
+                </>
               ) : (
-                <div className="flex items-center gap-3 mb-4">
-                  <p className="text-green-200">Nourrir <strong>{feedChoice.toUpperCase()}</strong> (+10%)?</p>
-                  <button onClick={handleFeedConfirm} className="bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white rounded-lg px-4 py-2 font-bold">✅ OK</button>
-                  <button onClick={() => setFeedChoice(null)} className="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-lg px-4 py-2 font-bold">❌ Annuler</button>
-                </div>
+                <>
+                  <div className="flex items-center gap-3 mb-4">
+                    <button onClick={() => setFeedMode(false)} className="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-lg px-3 py-2">← Annuler</button>
+                    <div className="flex-1 text-center">
+                      <p className="text-green-200 font-semibold">
+                        {selectedFoodIds.size} créature{selectedFoodIds.size > 1 ? 's' : ''} sélectionnée{selectedFoodIds.size > 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    {!previewMode && (
+                      <>
+                        <button 
+                          onClick={() => setPreviewMode(true)}
+                          disabled={selectedFoodIds.size === 0}
+                          className="bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white rounded-lg px-4 py-2 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          👁️ Afficher
+                        </button>
+                        <button 
+                          onClick={handleFeedNewSystem}
+                          disabled={selectedFoodIds.size === 0}
+                          className="bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white rounded-lg px-4 py-2 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          ✅ Nourrir
+                        </button>
+                      </>
+                    )}
+                    {previewMode && (
+                      <button onClick={() => setPreviewMode(false)} className="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-lg px-4 py-2 font-bold">✏️ Modifier</button>
+                    )}
+                  </div>
+                  
+                  {previewMode && selectedCreature && (
+                    <div className="bg-blue-900 bg-opacity-50 rounded-lg p-4 mb-4 border-2 border-blue-600">
+                      <h4 className="text-blue-200 font-bold mb-2">🔮 Prévision</h4>
+                      <p className="text-blue-100">Total XP: <strong>{calculateTotalXP()}</strong></p>
+                      {(() => {
+                        const sim = simulateFeeding();
+                        if (sim && sim.levelUps > 0) {
+                          return (
+                            <div className="mt-2">
+                              <p className="text-yellow-300 font-semibold">⬆️ Level up! {selectedCreature.level} → {sim.creature.level}</p>
+                              <p className="text-blue-200 text-sm">{sim.levelUps} level up{sim.levelUps > 1 ? 's' : ''}</p>
+                            </div>
+                          );
+                        }
+                        return <p className="text-blue-200 text-sm">Pas de level up ({selectedCreature.level} → {selectedCreature.level})</p>;
+                      })()}
+                    </div>
+                  )}
+                  
+                  <div className="max-h-64 overflow-y-auto border-2 border-green-700 rounded-lg p-2">
+                    {collection.filter(c => c.id !== selectedCreature?.id).map(creature => (
+                      <div 
+                        key={creature.id}
+                        onClick={() => !previewMode && toggleFoodCreature(creature.id)}
+                        className={`flex items-center gap-3 p-2 rounded-lg mb-2 cursor-pointer transition-colors ${
+                          selectedFoodIds.has(creature.id) ? 'bg-yellow-700 bg-opacity-50' : 'hover:bg-green-700 bg-opacity-30'
+                        } ${previewMode ? 'cursor-not-allowed' : ''}`}
+                      >
+                        <input 
+                          type="checkbox"
+                          checked={selectedFoodIds.has(creature.id)}
+                          onChange={() => !previewMode && toggleFoodCreature(creature.id)}
+                          disabled={previewMode}
+                          className="w-5 h-5"
+                        />
+                        <img 
+                          src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
+                          alt={creature.name}
+                          className="w-12 h-12 object-cover rounded"
+                        />
+                        <div className="flex-1">
+                          <p className="text-green-100 font-semibold text-sm">{creature.name}</p>
+                          <p className="text-green-300 text-xs">
+                            Level {creature.level} | Rang {creature.finalStats.rank}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-yellow-300 font-bold">+{calculateRankXP(creature.finalStats.rank, creature.level, creature.finalStats)}</p>
+                          <p className="text-green-400 text-xs">XP</p>
+                        </div>
+                      </div>
+                    ))}
+                    {collection.filter(c => c.id !== selectedCreature?.id).length === 0 && (
+                      <p className="text-center text-green-400 py-4">Aucune autre créature disponible pour nourrir</p>
+                    )}
+                  </div>
+                </>
               )}
               <button onClick={handleReleaseCreature} className="w-full bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white rounded-lg p-3 mt-4 font-bold shadow-lg">❌ Relâcher</button>
             </div>
