@@ -94,7 +94,7 @@ export const CREATURES: Record<string, Creature> = {
       crit: 60,
     },
     desc: "Abeille ouvrière avec rôle de support, boostée l'attaque ou la défense des alliés",
-    image: "/images/giant_fly.png", // Placeholder temporaire
+    image: "https://nips.im/_matrix/media/v3/download/nips.im/GYqTOrORDaNdoyJJQBXvUavR/bee.png",
     skill: {
       name: "Essaim Stimulant",
       description: "Buff random ATK ou DEF (+40%) sur un allié pendant 2 tours",
