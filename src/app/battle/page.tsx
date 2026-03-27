@@ -595,7 +595,16 @@ function BattleCreatureDisplay({
       <div>
         <div className="flex justify-between text-sm mb-1">
           <span className="font-bold">HP</span>
-          <span className="font-bold">{creature.currentHP} / {maxHP}</span>
+          {creature.statModifiers && creature.statModifiers.hpBonus !== 0 && creature.baseStats ? (
+            <div>
+              <span className="font-bold">{creature.currentHP} / {maxHP}</span>
+              <span className="text-xs text-purple-600 ml-1">
+                 max ({creature.baseStats.hp} {creature.statModifiers.hpBonus > 0 ? "+" : ""}{creature.statModifiers.hpBonus.toFixed(0)}%)
+              </span>
+            </div>
+          ) : (
+            <span className="font-bold">{creature.currentHP} / {maxHP}</span>
+          )}
         </div>
         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
           <div
@@ -608,7 +617,14 @@ function BattleCreatureDisplay({
       <div className="space-y-1 text-sm">
         <div className="flex justify-between">
           <span>ATK</span>
-          <span>{creature.stats.attack}</span>
+          {creature.statModifiers && creature.statModifiers.attackBonus !== 0 && creature.baseStats ? (
+            <div>
+              <span className="font-bold">{creature.stats.attack}</span>
+              <span className="text-xs text-purple-600 ml-1">({creature.baseStats.attack} +{creature.statModifiers.attackBonus > 0 ? "+" : ""}{creature.statModifiers.attackBonus.toFixed(0)}%)</span>
+            </div>
+          ) : (
+            <span>{creature.stats.attack}</span>
+          )}
         </div>
         {defenseBuffActive ? (
           <div className="flex justify-between">
@@ -621,12 +637,37 @@ function BattleCreatureDisplay({
         ) : (
           <div className="flex justify-between">
             <span>DEF</span>
-            <span>{creature.stats.defense}</span>
+            {creature.statModifiers && creature.statModifiers.defenseBonus !== 0 && creature.baseStats ? (
+              <div>
+                <span className="font-bold">{creature.stats.defense}</span>
+                <span className="text-xs text-purple-600 ml-1">({creature.baseStats.defense} +{creature.statModifiers.defenseBonus > 0 ? "+" : ""}{creature.statModifiers.defenseBonus.toFixed(0)}%)</span>
+              </div>
+            ) : (
+              <span>{creature.stats.defense}</span>
+            )}
           </div>
         )}
         <div className="flex justify-between">
           <span>SPD</span>
-          <span>{creature.stats.speed}</span>
+          {creature.statModifiers && creature.statModifiers.speedBonus !== 0 && creature.baseStats ? (
+            <div>
+              <span className="font-bold">{creature.stats.speed}</span>
+              <span className="text-xs text-purple-600 ml-1">({creature.baseStats.speed} +{creature.statModifiers.speedBonus > 0 ? "+" : ""}{creature.statModifiers.speedBonus.toFixed(0)}%)</span>
+            </div>
+          ) : (
+            <span>{creature.stats.speed}</span>
+          )}
+        </div>
+        <div className="flex justify-between">
+          <span>CRIT</span>
+          {creature.statModifiers && creature.statModifiers.critBonus !== 0 && creature.baseStats ? (
+            <div>
+              <span className="font-bold">{creature.stats.crit}</span>
+              <span className="text-xs text-purple-600 ml-1">({creature.baseStats.crit} +{creature.statModifiers.critBonus > 0 ? "+" : ""}{creature.statModifiers.critBonus.toFixed(0)}%)</span>
+            </div>
+          ) : (
+            <span>{creature.stats.crit}</span>
+          )}
         </div>
       </div>
 

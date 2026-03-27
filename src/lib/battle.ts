@@ -38,6 +38,14 @@ export interface ActiveBuffs {
   attackBuffTurns: number;
 }
 
+export interface StatModifiers {
+  hpBonus: number;  // Percentage bonus from traits (e.g., 20 for +20%)
+  attackBonus: number;
+  defenseBonus: number;
+  speedBonus: number;
+  critBonus: number;
+}
+
 export interface BattleCreature {
   creature: Creature;
   stats: BattleStats;
@@ -46,6 +54,8 @@ export interface BattleCreature {
   buffs: ActiveBuffs;
   name: string;
   traits: string[];  // Trait IDs
+  baseStats?: BattleStats;  // Original stats before trait modifications
+  statModifiers?: StatModifiers;  // Bonus breakdown from traits
 }
 
 export interface BattleLogEntry {
