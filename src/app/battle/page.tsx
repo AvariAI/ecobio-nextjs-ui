@@ -110,6 +110,11 @@ export default function BattlePage() {
     setPhase("battle");
     setTurn(firstAttacker as "player" | "enemy");
     setRound(1);
+    // Si l'ennemi a plus de vitesse, lance son tour automatiquement
+    if (firstAttacker === "enemy") {
+      const enemyTurnLog = [...log, { text: "Enemy attacks first because of higher speed!", type: "info" }];
+      setTimeout(() => enemyTurn(enemyTurnLog), 1500);
+    }
   };
 
   const handleAttack = () => {
