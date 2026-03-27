@@ -18,7 +18,7 @@ export enum TraitCategory {
 }
 
 export interface TraitEffect {
-  stat: "hp" | "attack" | "defense" | "speed" | " crit" | "damageDealt" | "damageReceived" | "critRate" | "critMult" | "dodge" | "regen";
+  stat: "hp" | "attack" | "defense" | "speed" | "crit" | "damageDealt" | "damageReceived" | "critRate" | "critMult" | "dodge" | "regen";
   value: number;  // Percentage multipler (e.g., 0.15 = +15%)
   // For hybrid traits with both positive and negative effects
   isNegative?: boolean;
@@ -395,6 +395,80 @@ export function getTraitsByIds(traitIds: string[]): Trait[] {
   return traitIds
     .map(id => getTraitById(id))
     .filter((trait): trait is Trait => trait !== undefined);
+}
+
+/**
+ * Apply trait stat modifiers to base stats for battle setup
+ * Returns modified stats and breakdown of bonuses/maluses
+ * @param baseStats Base stats from spawn
+ * @param traitIds Trait IDs to apply
+ * @returns { modifiedStats, breakdown } where breakdown shows trait contributions
+ */
+export function applyTraitStatModifiers(
+  baseStats: {
+    hp: number;
+    attack: number;
+    defense: number;
+    speed: number;
+    crit: number;
+  },
+  traitIds: string[]
+): {
+  modifiedStats: {
+    hp: number;
+    attack: number;
+    defense: number;
+    speed: number;
+    crit: number;
+  };
+  breakdown: {
+    hpBonus: number;
+    attackBonus: number;
+    defenseBonus: number;
+    speedBonus: number;
+    critBonus: number;
+  };
+} {
+  const traits = getTraitsByIds(traitIds);
+
+  let hpMult = 1.0;
+  let attackMult = 1.0;
+  let defenseMult = 1.0;
+  let speedMult = 1.0;
+  let critMult = 1.0;
+
+  for (const trait of traits) {
+    for (const effect of trait.effects) {
+      if (effect.stat === "hp") {
+        hpMult += effect.value;
+      } else if (effect.stat === "attack") {
+        attackMult += effect.value;
+      } else if (effect.stat === "defense") {
+        defenseMult += effect.value;
+      } else if (effect.stat === "speed") {
+        speedMult += effect.value;
+      } else if (effect.stat === "crit") {
+        critMult += effect.value;
+      }
+    }
+  }
+
+  return {
+    modifiedStats: {
+      hp: Math.max(1, Math.floor(baseStats.hp * hpMult)),
+      attack: Math.max(1, Math.floor(baseStats.attack * attackMult)),
+      defense: Math.max(1, Math.floor(baseStats.defense * defenseMult)),
+      speed: Math.max(1, Math.floor(baseStats.speed * speedMult)),
+      crit: Math.max(1, Math.floor(baseStats.crit * critMult)),
+    },
+    breakdown: {
+      hpBonus: (hpMult - 1) * 100,
+      attackBonus: (attackMult - 1) * 100,
+      defenseBonus: (defenseMult - 1) * 100,
+      speedBonus: (speedMult - 1) * 100,
+      critBonus: (critMult - 1) * 100,
+    },
+  };
 }
 
 /**

@@ -11,7 +11,7 @@ import {
   tickCooldownsAndBuffs,
   BattleLogEntry,
 } from "@/lib/battle";
-import { getTraitsByIds } from "@/lib/traits";
+import { getTraitsByIds, applyTraitStatModifiers } from "@/lib/traits";
 import Link from "next/link";
 
 type HuntingPhase = "ready" | "spawned" | "viewing";
@@ -176,17 +176,40 @@ export default function BattlePage() {
         return;
       }
 
-      p = {
-        creature: CREATURES[selectedPlayer.creatureId],
-        stats: {
+      // Apply trait stat modifiers to base stats
+      const playerStatMods = applyTraitStatModifiers(
+        {
           hp: selectedPlayer.finalStats.hp,
           attack: selectedPlayer.finalStats.attack,
           defense: selectedPlayer.finalStats.defense,
           speed: selectedPlayer.finalStats.speed,
           crit: selectedPlayer.finalStats.crit,
+        },
+        selectedPlayer.traits || []
+      );
+
+      const enemyStatMods = applyTraitStatModifiers(
+        {
+          hp: selectedEnemy.finalStats.hp,
+          attack: selectedEnemy.finalStats.attack,
+          defense: selectedEnemy.finalStats.defense,
+          speed: selectedEnemy.finalStats.speed,
+          crit: selectedEnemy.finalStats.crit,
+        },
+        selectedEnemy.traits || []
+      );
+
+      p = {
+        creature: CREATURES[selectedPlayer.creatureId],
+        stats: {
+          hp: playerStatMods.modifiedStats.hp,
+          attack: playerStatMods.modifiedStats.attack,
+          defense: playerStatMods.modifiedStats.defense,
+          speed: playerStatMods.modifiedStats.speed,
+          crit: playerStatMods.modifiedStats.crit,
           rank: selectedPlayer.finalStats.rank,
         },
-        currentHP: selectedPlayer.finalStats.hp,
+        currentHP: playerStatMods.modifiedStats.hp,
         skillCooldowns: {},
         buffs: {
           defenseBuff: 0,
@@ -203,14 +226,14 @@ export default function BattlePage() {
       e = {
         creature: CREATURES[selectedEnemy.creatureId],
         stats: {
-          hp: selectedEnemy.finalStats.hp,
-          attack: selectedEnemy.finalStats.attack,
-          defense: selectedEnemy.finalStats.defense,
-          speed: selectedEnemy.finalStats.speed,
-          crit: selectedEnemy.finalStats.crit,
+          hp: enemyStatMods.modifiedStats.hp,
+          attack: enemyStatMods.modifiedStats.attack,
+          defense: enemyStatMods.modifiedStats.defense,
+          speed: enemyStatMods.modifiedStats.speed,
+          crit: enemyStatMods.modifiedStats.crit,
           rank: selectedEnemy.finalStats.rank,
         },
-        currentHP: selectedEnemy.finalStats.hp,
+        currentHP: enemyStatMods.modifiedStats.hp,
         skillCooldowns: {},
         buffs: {
           defenseBuff: 0,
