@@ -92,6 +92,7 @@ export default function BattlePage() {
         attackBuffTurns: 0,
       },
       name: `${playerCreature.name} (R${playerRank} L${playerLevel})`,
+      traits: [],  // TODO: Pass traits from hunting/selection when battle integration is complete
     };
 
     const e: BattleCreature = {
@@ -108,6 +109,7 @@ export default function BattlePage() {
         attackBuffTurns: 0,
       },
       name: `${enemyCreature.name} (R${enemyRank} L${enemyLevel})`,
+      traits: [],  // TODO: Pass traits from hunting/selection when battle integration is complete
     };
 
         setPlayer(p);

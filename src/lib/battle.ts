@@ -1,9 +1,10 @@
 /**
  * ÉcoBio Battle System - Overhaul Version v2
- * Ant/Fly mechanics, dodge/crit overhaul, skills, cooldowns, RNG, rarity
+ * Ant/Fly mechanics, dodge/crit overhaul, skills, cooldowns, RNG, rarity, traits
  */
 
 import { Creature, BaseStats, Rank, RANK_MULTIPLIERS } from "./database";
+import { applyTraits as applyTraitEffects } from "./traits";
 
 export interface BattleElement {
   creature: BattleCreature;
@@ -44,6 +45,7 @@ export interface BattleCreature {
   skillCooldowns: SkillCooldowns;
   buffs: ActiveBuffs;
   name: string;
+  traits: string[];  // Trait IDs
 }
 
 export interface BattleLogEntry {
@@ -261,6 +263,31 @@ export function tickCooldownsAndBuffs(battleCreature: BattleCreature): void {
 }
 
 /**
+ * Apply trait regeneration during each turn
+ */
+export function applyTraitRegeneration(
+  battleCreature: BattleCreature,
+  log: BattleLogEntry[]
+): void {
+  const hpPercent = battleCreature.currentHP / battleCreature.stats.hp;
+  const traitMods = applyTraitModifiers(battleCreature, hpPercent);
+
+  if (traitMods.regenPerTurn > 0 && battleCreature.currentHP > 0) {
+    const regenAmount = Math.floor(battleCreature.stats.hp * traitMods.regenPerTurn);
+    const oldHP = battleCreature.currentHP;
+    battleCreature.currentHP = Math.min(battleCreature.stats.hp, battleCreature.currentHP + regenAmount);
+    const actualHeal = battleCreature.currentHP - oldHP;
+
+    if (actualHeal > 0) {
+      log.push({
+        text: `${battleCreature.name} se régénère (+${actualHeal} HP)`,
+        type: "info",
+      });
+    }
+  }
+}
+
+/**
  * Calculate critical strike chance from crit stat
  * CAPPED at 40% to prevent absurd crit rates at high levels
  * Formula: crit / 100, max 0.40 (40%)
@@ -282,6 +309,40 @@ export function calculateCritMultiplier(stats: BaseStats): number {
 }
 
 /**
+ * Apply trait effects to battle stats
+ */
+export function applyTraitModifiers(
+  creature: BattleCreature,
+  targetHpPercent?: number  // Target's HP for conditional traits
+): {
+  critRateBonus: number;
+  critMultBonus: number;
+  damageDealtMult: number;
+  damageReceivedMult: number;
+  dodgeBonus: number;
+  regenPerTurn: number;
+} {
+  const hpPercent = creature.currentHP / creature.stats.hp;
+
+  // Apply creature's traits with conditional context if available
+  let statsContext: any = {};
+  if (targetHpPercent !== undefined) {
+    statsContext.targetHpPercent = targetHpPercent;
+  }
+
+  const traitEffects = applyTraitEffects(creature.traits, hpPercent, statsContext);
+
+  return {
+    critRateBonus: traitEffects.critRateAdjustment,
+    critMultBonus: traitEffects.critMultAdjustment,
+    damageDealtMult: traitEffects.damageDealtMult,
+    damageReceivedMult: traitEffects.damageReceivedMult,
+    dodgeBonus: traitEffects.dodgeAdjustment,
+    regenPerTurn: traitEffects.regenPerTurn,
+  };
+}
+
+/**
  * Execute attack and handle dodge, crit, damage
  */
 export function executeAttack(
@@ -289,10 +350,18 @@ export function executeAttack(
   defender: BattleCreature,
   log: BattleLogEntry[]
 ): number {
+  // Get HP percentages for conditional trait evaluation
+  const attackerHpPercent = attacker.currentHP / attacker.stats.hp;
+  const defenderHpPercent = defender.currentHP / defender.stats.hp;
+
+  // Apply trait modifiers for both attacker and defender
+  const attackerMods = applyTraitModifiers(attacker, defenderHpPercent);
+  const defenderMods = applyTraitModifiers(defender, attackerHpPercent);
+
   const dodgeChance = calculateDodgeChance(
     attacker.stats.speed,
     defender.stats.speed,
-    defender.buffs.dodgeBuff
+    defender.buffs.dodgeBuff + defenderMods.dodgeBonus
   );
 
   if (Math.random() < dodgeChance) {
@@ -305,10 +374,13 @@ export function executeAttack(
 
   let damage = calculateDamage(attacker, defender);
 
-  const critChance = calculateCritChance(attacker.stats);
+  // Apply trait damage multipliers
+  damage = Math.floor(damage * attackerMods.damageDealtMult * defenderMods.damageReceivedMult);
+
+  const critChance = Math.min(calculateCritChance(attacker.stats) + attackerMods.critRateBonus, 0.40);  // Cap at 40%
   const isCrit = Math.random() < critChance;
   if (isCrit) {
-    const critMult = calculateCritMultiplier(attacker.stats);
+    const critMult = calculateCritMultiplier(attacker.stats) + attackerMods.critMultBonus;
     damage = Math.floor(damage * critMult);
     log.push({
       text: `CRITICAL HIT! Dégâts: ${damage} (${critMult.toFixed(2)}x)`,
@@ -351,7 +423,8 @@ export function getBattleWinner(player: BattleCreature, enemy: BattleCreature): 
 export function createBattleCreature(
   creature: Creature,
   stats: BattleStats,
-  name?: string
+  name?: string,
+  traits?: string[]
 ): BattleCreature {
   return {
     creature,
@@ -367,6 +440,7 @@ export function createBattleCreature(
       attackBuffTurns: 0,
     },
     name: name || creature.name,
+    traits: traits || [],
   };
 }
 
