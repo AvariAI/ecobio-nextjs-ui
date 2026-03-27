@@ -21,7 +21,9 @@ function StatCard({ label, value, color }: { label: string; value: number; color
 
 function getCreatureRankImage(creatureId: string, rank: Rank): string {
   const rankSuffix = rank === "S+" ? "S+" : rank;
-  return `creatures/${creatureId}_rank_${rankSuffix}.png`;
+  // Special case for housefly (files are named fly-rank- not housefly_rank_)
+  const imagePrefix = creatureId === "housefly" ? "fly" : creatureId;
+  return `creatures/${imagePrefix}_rank_${rankSuffix}.png`;
 }
 
 function getRankBadgeColor(rank: Rank): string {
