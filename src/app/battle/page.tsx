@@ -9,6 +9,7 @@ import {
   executeAttack,
   useSkill,
   tickCooldownsAndBuffs,
+  applyTraitRegeneration,
   BattleLogEntry,
 } from "@/lib/battle";
 import { getTraitsByIds, applyTraitStatModifiers } from "@/lib/traits";
@@ -290,6 +291,22 @@ export default function BattlePage() {
     const logCopy = [...log];
     logCopy.push({ text: `--- Round ${round}: Player Turn ---`, type: "info" });
 
+    // Apply trait regeneration at start of player's turn
+    const oldPlayerHP = player.currentHP;
+    const oldEnemyHP = enemy.currentHP;
+
+    applyTraitRegeneration(player, logCopy);
+    applyTraitRegeneration(enemy, logCopy);
+
+    if (player.currentHP !== oldPlayerHP && player.currentHP > oldPlayerHP) {
+      logCopy.push({ text: `💚 ${player.name} se régénère: +${player.currentHP - oldPlayerHP} HP`, type: "info" });
+      setPlayer({ ...player, currentHP: player.currentHP });
+    }
+    if (enemy.currentHP !== oldEnemyHP && enemy.currentHP > oldEnemyHP) {
+      logCopy.push({ text: `💚 ${enemy.name} se régénère: +${enemy.currentHP - oldEnemyHP} HP`, type: "info" });
+      setEnemy({ ...enemy, currentHP: enemy.currentHP });
+    }
+
     const oldDefenseBuff = player.buffs.defenseBuff;
     const oldDodgeBuff = player.buffs.dodgeBuff;
     tickCooldownsAndBuffs(player);
@@ -381,6 +398,22 @@ export default function BattlePage() {
     }
 
     const logCopy = [...currentLog];
+
+    // Apply trait regeneration at start of enemy's turn
+    const oldEnemyHP = enemy.currentHP;
+    const oldPlayerHP = player.currentHP;
+
+    applyTraitRegeneration(enemy, logCopy);
+    applyTraitRegeneration(player, logCopy);
+
+    if (enemy.currentHP !== oldEnemyHP && enemy.currentHP > oldEnemyHP) {
+      logCopy.push({ text: `💚 ${enemy.name} se régénère: +${enemy.currentHP - oldEnemyHP} HP`, type: "info" });
+      setEnemy({ ...enemy, currentHP: enemy.currentHP });
+    }
+    if (player.currentHP !== oldPlayerHP && player.currentHP > oldPlayerHP) {
+      logCopy.push({ text: `💚 ${player.name} se régénère: +${player.currentHP - oldPlayerHP} HP`, type: "info" });
+      setPlayer({ ...player, currentHP: player.currentHP });
+    }
 
     const oldDefenseBuff = enemy.buffs.defenseBuff;
     const oldDodgeBuff = enemy.buffs.dodgeBuff;
