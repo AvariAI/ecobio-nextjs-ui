@@ -129,8 +129,9 @@ export function getRankMultiplier(rank: Rank): number {
 
 /**
  * Calculate dodge chance based on speed difference and dodge buff
- * Formula: (speedDifference / (speedDifference + 100)) + dodgeBuff
- * Capped at 70% max dodge
+ * Formula: sqrt(speedDiff) / 15 (capped at 50% max)
+ * Reduced from previous formula to prevent broken high-level dodge rates
+ * Speed difference of 225 = 50% dodge max (instead of 100+ SPD = 70%)
  */
 export function calculateDodgeChance(
   attackerSpeed: number,
@@ -138,8 +139,12 @@ export function calculateDodgeChance(
   dodgeBuff: number = 0
 ): number {
   const speedDiff = defenderSpeed - attackerSpeed;
-  const baseChance = Math.max(0, speedDiff / (Math.abs(speedDiff) + 100));
-  const totalChance = Math.min(baseChance + dodgeBuff, 0.70);
+  if (speedDiff <= 0) {
+    return 0;
+  }
+
+  const baseChance = Math.min(Math.sqrt(speedDiff) / 15, 0.50);
+  const totalChance = Math.min(baseChance + dodgeBuff, 0.60);
   return totalChance;
 }
 
