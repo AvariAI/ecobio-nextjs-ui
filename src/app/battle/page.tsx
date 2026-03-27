@@ -66,7 +66,7 @@ export default function BattlePage() {
   useEffect(() => {
     if (phase === "battle" && turn === "enemy" && enemy && player) {
       const timer = setTimeout(() => {
-        enemyTurn([...log, { text: "Enemy attacks because they have higher speed!", type: "info" as const }]);
+        executeAttack(enemy, player, [...log]);
       }, 1500);
       
       return () => clearTimeout(timer);
