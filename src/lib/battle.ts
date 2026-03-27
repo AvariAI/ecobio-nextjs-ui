@@ -350,35 +350,42 @@ export function createBattleCreature(
 /**
  * Calculate stats with level scaling BUT NO RNG variance
  * Used for Battle page testing - pure level scaling only
- * Final = Base × LevelScale (no variance, no rank multiplier)
+ * Final = Base × LevelScale × RankMultiplier (no RNG variance)
  */
 export function calculateScaledStats(
   creature: Creature,
   level: number,
   rank: Rank
 ): BattleStats {
+  // Apply rank multiplier
+  const rankMultiplier = getRankMultiplier(rank);
+
   // Apply level scaling only - no variance
   const hpScale = getLevelScale(level, "hp");
   const statScale = getLevelScale(level, "other");
 
   return {
-    hp: Math.floor(creature.baseStats.hp * hpScale),
-    attack: Math.floor(creature.baseStats.attack * statScale),
-    defense: Math.floor(creature.baseStats.defense * statScale),
-    speed: Math.floor(creature.baseStats.speed * statScale),
-    crit: Math.floor(creature.baseStats.crit * statScale),
+    hp: Math.floor(creature.baseStats.hp * hpScale * rankMultiplier),
+    attack: Math.floor(creature.baseStats.attack * statScale * rankMultiplier),
+    defense: Math.floor(creature.baseStats.defense * statScale * rankMultiplier),
+    speed: Math.floor(creature.baseStats.speed * statScale * rankMultiplier),
+    crit: Math.floor(creature.baseStats.crit * statScale * rankMultiplier),
     rank,
   };
 }
 
 /**
  * Level scaling formulas
- * Level 1 = 1.0 (stats de base), Level 50 = max scaling
- * HP: 1.0 → ~15.7x at lvl 50
- * Other stats: 1.0 → ~8.4x at lvl 50
+ * Level 1 = 1.0 (stats de base - PAS de scaling), Level 50 = max scaling
+ * HP: Base → ~15.7x at lvl 50
+ * Other stats: Base → ~8.4x at lvl 50
  */
 function getLevelScale(level: number, stat: "hp" | "other"): number {
-  // Map level 1-50 to 0-1 scale
+  if (level === 1) {
+    return 1.0; // Level 1 = stats de base, pas de scaling
+  }
+
+  // Map level 2-50 to 0-1 scale for scaling
   const normalizedLevel = (level - 1) / 49;
 
   if (stat === "hp") {
