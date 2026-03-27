@@ -457,11 +457,15 @@ export default function HuntingPage() {
                 {huntedCreature.traits && huntedCreature.traits.length > 0 && (
                   <div className="bg-purple-700 bg-opacity-50 rounded-lg p-3 mb-4">
                     <h3 className="font-bold text-purple-100">✨ Traits ({huntedCreature.traits.length})</h3>
-                    <div className="flex flex-wrap gap-2 mt-2">
+                    <div className="mt-2 space-y-2">
                       {getTraitsByIds(huntedCreature.traits).map(trait => (
-                        <span key={trait.id} className="px-2 py-1 text-xs rounded-full bg-purple-600 text-white font-semibold">
-                          {trait.name}
-                        </span>
+                        <div key={trait.id} className="bg-purple-900 bg-opacity-50 rounded p-2">
+                          <p className="text-sm font-bold text-purple-100">{trait.name}</p>
+                          <p className="text-xs text-purple-200">{trait.description}</p>
+                          {trait.condition && (
+                            <p className="text-xs text-yellow-300 mt-1">Condition: {trait.condition}</p>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -549,11 +553,15 @@ export default function HuntingPage() {
                 {selectedCreature.traits && selectedCreature.traits.length > 0 && (
                   <div className="bg-purple-700 bg-opacity-50 rounded-lg p-3 mb-4">
                     <h3 className="font-bold text-purple-100">✨ Traits ({selectedCreature.traits.length})</h3>
-                    <div className="flex flex-wrap gap-2 mt-2">
+                    <div className="mt-2 space-y-2">
                       {getTraitsByIds(selectedCreature.traits).map(trait => (
-                        <span key={trait.id} className="px-2 py-1 text-xs rounded-full bg-purple-600 text-white font-semibold">
-                          {trait.name}
-                        </span>
+                        <div key={trait.id} className="bg-purple-900 bg-opacity-50 rounded p-2">
+                          <p className="text-sm font-bold text-purple-100">{trait.name}</p>
+                          <p className="text-xs text-purple-200">{trait.description}</p>
+                          {trait.condition && (
+                            <p className="text-xs text-yellow-300 mt-1">Condition: {trait.condition}</p>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </div>
