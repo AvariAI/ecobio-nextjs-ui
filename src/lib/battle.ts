@@ -364,6 +364,36 @@ function getLevelScale(level: number, stat: "hp" | "other"): number {
 }
 
 /**
+ * Calculate stats with level scaling BUT NO RNG variance
+ * Used for Battle page testing - pure level scaling only
+ * Final = Base × LevelScale (no variance, no rank multiplier)
+ */
+export function calculateScaledStats(
+  creature: Creature,
+  level: number,
+  rank: Rank
+): BattleStats {
+  // Apply level scaling only - no variance
+  const hpScale = getLevelScale(level, "hp");
+  const statScale = getLevelScale(level, "other");
+
+  return {
+    hp: Math.floor(creature.baseStats.hp * hpScale),
+    attack: Math.floor(creature.baseStats.attack * statScale),
+    defense: Math.floor(creature.baseStats.defense * statScale),
+    speed: Math.floor(creature.baseStats.speed * statScale),
+    crit: Math.floor(creature.baseStats.crit * statScale),
+    rank,
+  };
+}
+
+/**
+ * Level scaling formulas
+ * hpLevel: 1.0 at level 1, scales to ~15.7 at level 50
+ * atkLevel/defLevel/spdLevel/critLevel: 1.0 at level 1, scales to ~8.4 at level 50
+ */
+
+/**
  * Calculate final stats for a creature with level and rank
  * Final = (Base × Variance) × LevelScale
  * Unused: Rank multiplier (as per user request)

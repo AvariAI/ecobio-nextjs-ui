@@ -4,6 +4,8 @@ import { useState } from "react";
 import { CREATURES, Rank, RANKS } from "@/lib/database";
 import {
   BattleCreature,
+  calculateFinalStats,
+  calculateScaledStats,
   executeAttack,
   useSkill,
   tickCooldownsAndBuffs,
@@ -53,15 +55,10 @@ export default function BattlePage() {
   const playerCreature = CREATURES[playerCreatureId];
   const enemyCreature = CREATURES[enemyCreatureId];
 
-  // Use base stats without RNG variation - for testing raw creatures
-  const playerBattleStats = {
-    ...playerCreature.baseStats,
-    rank: playerRank,
-  };
-  const enemyBattleStats = {
-    ...enemyCreature.baseStats,
-    rank: enemyRank,
-  };
+  // Calculate stats with level scaling BUT NO RNG variance
+  // This allows testing high-level battles (e.g., S+ lvl 50) without randomness
+  const playerBattleStats = calculateScaledStats(playerCreature, playerLevel, playerRank);
+  const enemyBattleStats = calculateScaledStats(enemyCreature, enemyLevel, enemyRank);
 
   const playerPreviewStats = playerBattleStats;
   const enemyPreviewStats = enemyBattleStats;
