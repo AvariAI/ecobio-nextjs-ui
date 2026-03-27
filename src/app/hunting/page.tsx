@@ -15,6 +15,7 @@ type SortOrder = "asc" | "desc";
 interface HuntedCreature extends Creature {
   id: string;
   finalStats: BattleStats;
+  customStats: BattleStats;
   level: number;
   currentXP: number;
   xpToNextLevel: number;
@@ -98,6 +99,7 @@ function spawnCreature(): HuntedCreature {
     ...creatureWithSkill,
     id: uniqueId,  // ID unique pour cette créature spécifique
     finalStats,
+    customStats: finalStats,  // Stats POST-variance deviennent la base de cette créature
     level: 1, // Start at level 1
     currentXP: 0,
     xpToNextLevel: calculateXPToNextLevel(1),
@@ -175,11 +177,11 @@ function feedCreature(creature: HuntedCreature, foodXP: number): { creature: Hun
         xpToNextLevel: calculateXPToNextLevel(oldLevel + 1),
         finalStats: {
           ...currentCreature.finalStats,
-          hp: Math.floor(currentCreature.baseStats.hp * getLevelScale(oldLevel + 1, "hp")),
-          attack: Math.floor(currentCreature.baseStats.attack * getLevelScale(oldLevel + 1, "other")),
-          defense: Math.floor(currentCreature.baseStats.defense * getLevelScale(oldLevel + 1, "other")),
-          speed: Math.floor(currentCreature.baseStats.speed * getLevelScale(oldLevel + 1, "other")),
-          crit: Math.floor(currentCreature.baseStats.crit * getLevelScale(oldLevel + 1, "other")),
+          hp: Math.floor(currentCreature.customStats.hp * getLevelScale(oldLevel + 1, "hp")),
+          attack: Math.floor(currentCreature.customStats.attack * getLevelScale(oldLevel + 1, "other")),
+          defense: Math.floor(currentCreature.customStats.defense * getLevelScale(oldLevel + 1, "other")),
+          speed: Math.floor(currentCreature.customStats.speed * getLevelScale(oldLevel + 1, "other")),
+          crit: Math.floor(currentCreature.customStats.crit * getLevelScale(oldLevel + 1, "other")),
         },
       };
       
