@@ -1,11 +1,3 @@
-/**
- * ÉcoBio Creature Database - Battle Overhaul
- * Stable base stats avec RNG individuel (dans battle.ts)
- */
-
-export type CreatureType = "Insect";
-export type Rank = "E" | "D" | "C" | "B" | "A" | "S" | "S+";
-
 export interface BaseStats {
   hp: number;
   attack: number;
@@ -14,50 +6,51 @@ export interface BaseStats {
   crit: number;
 }
 
-export interface ActiveSkill {
-  name: string;
-  description: string;
-  effect: "defense" | "dodge";
-  value: number;
-  duration: number;
-  cooldown: number;
-}
-
 export interface Creature {
   id: string;
   name: string;
-  type: CreatureType;
-  image: string;
-  baseStats: BaseStats;
+  rank: Rank;
+  baseStats: {
+    hp: number;
+    attack: number;
+    defense: number;
+    speed: number;
+    crit: number;
+  };
   desc: string;
-  skill?: ActiveSkill;
+  image?: string;
+  skill: {
+    name: string;
+    description: string;
+    effect: "defense" | "dodge" | "attack";
+    value: number;
+    duration: number;
+    cooldown: number;
+  };
 }
 
-export const RANK_MULTIPLIERS: Record<Rank, number> = {
-  E: 1.0,
-  D: 1.2,
-  C: 1.4,
-  B: 1.6,
-  A: 1.8,
-  S: 2.0,
-  "S+": 2.2,
-};
+export interface CreatureType {
+  id: string;
+  name: string;
+  description: string;
+}
 
-// Battle Archetypes - Tank vs Speedster (3v3/5v5 compatible)
+export type Rank = "E" | "D" | "C" | "B" | "A" | "S" | "S+";
+
 export const CREATURES: Record<string, Creature> = {
   ant: {
     id: "ant",
     name: "Fourmi",
-    type: "Insect",
-    image: "/ecobio-nextjs-ui/images/ant.png",
+    rank: "E",
     baseStats: {
-      hp: 100,
-      attack: 10,
-      defense:  30,
-      speed: 10,
-      crit: 10,
+      hp: 500,
+      attack: 50,
+      defense: 150,
+      speed: 50,
+      crit: 50,
     },
-    desc: "Fourmi ouvrière avec force collective et carapace résistante",
+    desc: "Fourmi robuste avec defenses élevées",
+    image: "/images/caterpillar.png", // Placeholder
     skill: {
       name: "Carapace Renforcée",
       description: "DEF +50% pendant 2 tours",
@@ -70,16 +63,16 @@ export const CREATURES: Record<string, Creature> = {
   housefly: {
     id: "housefly",
     name: "Mouche",
-    type: "Insect",
-    image: "/ecobio-nextjs-ui/images/fly.png",
+    rank: "E",
     baseStats: {
-      hp: 50,
-      attack: 20,
-      defense: 10,
-      speed: 20,
-      crit: 20,
+      hp: 250,
+      attack: 100,
+      defense: 50,
+      speed: 100,
+      crit: 100,
     },
     desc: "Insecte volant agile avec yeux composés et vol rapide",
+    image: "/images/giant_fly.png", // Placeholder
     skill: {
       name: "Esquive Aérienne",
       description: "Esquive +40% pendant 2 tours",
@@ -89,7 +82,83 @@ export const CREATURES: Record<string, Creature> = {
       cooldown: 3,
     },
   },
+  f4c7a9e8: {
+    id: "f4c7a9e8",
+    name: "Mouche",
+    rank: "E",
+    baseStats: {
+      hp: 250,
+      attack: 100,
+      defense: 50,
+      speed: 100,
+      crit: 100,
+    },
+    desc: "Insecte volant agile avec yeux composés et vol rapide",
+    image: "/images/giant_fly.png",
+    skill: {
+      name: "Esquive Aérienne",
+      description: "Esquive +40% pendant 2 tours",
+      effect: "dodge",
+      value: 0.40,
+      duration: 2,
+      cooldown: 3,
+    },
+  },
+  a1b2c3d4: {
+    id: "a1b2c3d4",
+    name: "Fourmi",
+    rank: "E",
+    baseStats: {
+      hp: 500,
+      attack: 50,
+      defense: 150,
+      speed: 50,
+      crit: 50,
+    },
+    desc: "Fourmi robuste avec defenses élevées",
+    image: "/images/caterpillar.png",
+    skill: {
+      name: "Carapace Renforcée",
+      description: "DEF +50% pendant 2 tours",
+      effect: "defense",
+      value: 0.50,
+      duration: 2,
+      cooldown: 3,
+    },
+  },
+  b2e3f4g5: {
+    id: "b2e3f4g5",
+    name: "Abeille",
+    rank: "E",
+    baseStats: {
+      hp: 350,
+      attack: 75,
+      defense: 100,
+      speed: 90,
+      crit: 60,
+    },
+    desc: "Abeille ouvrière avec rôle de support, boostée l'attaque ou la défense des alliés",
+    skill: {
+      name: "Essaim Stimulant",
+      description: "Buff random ATK ou DEF (+40%) sur un allié pendant 2 tours",
+      effect: "defense",
+      value: 0.40,
+      duration: 2,
+      cooldown: 3,
+    },
+    image: "/images/giant_fly.png", // Placeholder temporaire
+  },
 };
 
-export const CREATURE_TYPES: CreatureType[] = ["Insect"];
+export const CREATURE_TYPES: string[] = ["Insect"];
 export const RANKS: Rank[] = ["E", "D", "C", "B", "A", "S", "S+"];
+
+export const RANK_MULTIPLIERS: Record<Rank, number> = {
+  E: 1.0,
+  D: 1.2,
+  C: 1.4,
+  B: 1.6,
+  A: 1.8,
+  S: 2.0,
+  "S+": 2.2,
+};

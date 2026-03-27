@@ -52,8 +52,25 @@ function rollRarity(): RarityRank {
 }
 
 function spawnCreature(): HuntedCreature {
-  const creatureId = Math.random() < 0.5 ? "ant" : "housefly";
+  const creaturePool = ["ant", "housefly", "honeybee"];
+  const creatureId = creaturePool[Math.floor(Math.random() * creaturePool.length)];
   const creature: Creature = CREATURES[creatureId];
+
+  // RNG buffer pour l'Abeille (50-50 ATK/DEF)
+  let skillOverride: any = null;
+  if (creatureId === "honeybee") {
+    const hasATKSkill = Math.random() > 0.5;
+    skillOverride = {
+      name: "Essaim Stimulant",
+      description: hasATKSkill
+        ? "Buff +40% ATK sur un allié pendant 2 tours"
+        : "Buff +40% DEF sur un allié pendant 2 tours",
+      effect: hasATKSkill ? "attack" : "defense",
+      value: 0.40,
+      duration: 2,
+      cooldown: 3,
+    };
+  }
   const rank: Rank = rollRarity();
   const [minVar, maxVar] = getVarianceRange(rank);
 
@@ -72,9 +89,10 @@ function spawnCreature(): HuntedCreature {
     rank,
   };
 
+  const creatureWithSkill = skillOverride ? { ...creature, skill: skillOverride } : creature;
+
   return {
-    ...creature,
-    id: `cre_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    ...creatureWithSkill,
     finalStats,
     level: 1, // Start at level 1
     currentXP: 0,

@@ -78,7 +78,7 @@ export default function PokedexPage() {
 
   const filteredCreatures = Object.values(CREATURES).filter(
     (creature) =>
-      selectedTypes.has(creature.type) &&
+      selectedTypes.has("Insect") &&
       creature.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -156,7 +156,7 @@ export default function PokedexPage() {
                         {creature.name}
                       </h2>
                       <span className="px-4 py-1 rounded-full text-sm font-semibold bg-green-600 text-white">
-                        {creature.type}
+                        Insect
                       </span>
                     </div>
 
