@@ -4,7 +4,6 @@ import { useState } from "react";
 import { CREATURES, Rank, RANKS } from "@/lib/database";
 import {
   BattleCreature,
-  calculateFinalStats,
   executeAttack,
   useSkill,
   tickCooldownsAndBuffs,
@@ -54,17 +53,21 @@ export default function BattlePage() {
   const playerCreature = CREATURES[playerCreatureId];
   const enemyCreature = CREATURES[enemyCreatureId];
 
-  const playerPreviewStats = calculateFinalStats(playerCreature, playerLevel, playerRank);
-  const enemyPreviewStats = calculateFinalStats(enemyCreature, enemyLevel, enemyRank);
+  // Use base stats without RNG variation - for testing raw creatures
+  const playerPreviewStats = {
+    ...playerCreature.baseStats,
+    rank: playerRank,
+  };
+  const enemyPreviewStats = {
+    ...enemyCreature.baseStats,
+    rank: enemyRank,
+  };
 
   const startBattle = () => {
-    const pStats = playerPreviewStats;
-    const eStats = enemyPreviewStats;
-
     const p: BattleCreature = {
       creature: playerCreature,
-      stats: pStats,
-      currentHP: pStats.hp,
+      stats: playerBattleStats,
+      currentHP: playerBattleStats.hp,
       skillCooldowns: {},
       buffs: {
         defenseBuff: 0,
@@ -77,8 +80,8 @@ export default function BattlePage() {
 
     const e: BattleCreature = {
       creature: enemyCreature,
-      stats: eStats,
-      currentHP: eStats.hp,
+      stats: enemyBattleStats,
+      currentHP: enemyBattleStats.hp,
       skillCooldowns: {},
       buffs: {
         defenseBuff: 0,
