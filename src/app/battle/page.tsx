@@ -55,10 +55,15 @@ export default function BattlePage() {
   const playerCreature = CREATURES[playerCreatureId];
   const enemyCreature = CREATURES[enemyCreatureId];
 
-  // Calculate stats with level scaling BUT NO RNG variance
-  // This allows testing high-level battles (e.g., S+ lvl 50) without randomness
-  const playerBattleStats = calculateScaledStats(playerCreature, playerLevel, playerRank);
-  const enemyBattleStats = calculateScaledStats(enemyCreature, enemyLevel, enemyRank);
+  // Use base stats only - ignore level and rank for testing
+  const playerBattleStats = {
+    ...playerCreature.baseStats,
+    rank: playerRank,
+  };
+  const enemyBattleStats = {
+    ...enemyCreature.baseStats,
+    rank: enemyRank,
+  };
 
   const playerPreviewStats = playerBattleStats;
   const enemyPreviewStats = enemyBattleStats;
