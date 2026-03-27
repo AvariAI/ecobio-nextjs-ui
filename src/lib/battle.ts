@@ -13,11 +13,11 @@ export interface BattleElement {
 
 /**
  * Get round order for multiple creatures based on speed
- * Lower speed = attacks FIRST (turn-based order)
- * @returns BattleElement[] sorted by speed ASCENDING (slowest to fastest)
+ * Higher speed = attacks FIRST (turn-based order)
+ * @returns BattleElement[] sorted by speed DESCENDING (fastest to slowest)
  */
 export function getRoundOrder(creatures: BattleElement[]): BattleElement[] {
-  return [...creatures].sort((a, b) => a.creature.stats.speed - b.creature.stats.speed);
+  return [...creatures].sort((a, b) => b.creature.stats.speed - a.creature.stats.speed);
 }
 
 export interface BattleStats extends BaseStats {

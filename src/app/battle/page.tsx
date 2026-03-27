@@ -92,8 +92,12 @@ export default function BattlePage() {
       name: `${enemyCreature.name} (R${enemyRank} L${enemyLevel})`,
     };
 
-    setPlayer(p);
+        setPlayer(p);
     setEnemy(e);
+
+    // Determine who starts based on speed - higher speed goes first
+    const firstAttacker = p.stats.speed >= e.stats.speed ? "player" : "enemy";
+
     setLog([
       { text: `⚔️ BATTLE START!`, type: "info" },
       { text: `—`.repeat(40), type: "info" },
@@ -102,9 +106,10 @@ export default function BattlePage() {
       { text: `${e.name}`, type: "info" },
       { text: `HP: ${e.currentHP} | ATK: ${e.stats.attack} | DEF: ${e.stats.defense} | SPD: ${e.stats.speed} | CRIT: ${e.stats.crit}`, type: "info" },
       { text: `—`.repeat(40), type: "info" },
+      { text: `C'est le tour de ${firstAttacker === "player" ? "Player" : "Enemy"} d'attaquer en premier!`, type: "info" },
     ]);
     setPhase("battle");
-    setTurn("player");
+    setTurn(firstAttacker as "player" | "enemy");
     setRound(1);
   };
 
