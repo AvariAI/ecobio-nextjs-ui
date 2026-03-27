@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CREATURES, Rank, RANKS } from "@/lib/database";
 import {
   BattleCreature,
@@ -62,6 +62,17 @@ export default function BattlePage() {
   const playerPreviewStats = playerBattleStats;
   const enemyPreviewStats = enemyBattleStats;
 
+  // Auto-trigger enemy turn when it's their turn and battle has started
+  useEffect(() => {
+    if (phase === "battle" && turn === "enemy" && enemy && player) {
+      const timer = setTimeout(() => {
+        enemyTurn([...log, { text: "Enemy attacks because they have higher speed!", type: "info" as const }]);
+      }, 1500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [phase, turn]);
+
   const startBattle = () => {
     const p: BattleCreature = {
       creature: playerCreature,
@@ -100,10 +111,6 @@ export default function BattlePage() {
     setLog([
       { text: `⚔️ BATTLE START!`, type: "info" },
       { text: `—`.repeat(40), type: "info" },
-      { text: `${p.name}`, type: "info" },
-      { text: `HP: ${p.currentHP} | ATK: ${p.stats.attack} | DEF: ${p.stats.defense} | SPD: ${p.stats.speed} | CRIT: ${p.stats.crit}`, type: "info" },
-      { text: `${e.name}`, type: "info" },
-      { text: `HP: ${e.currentHP} | ATK: ${e.stats.attack} | DEF: ${e.stats.defense} | SPD: ${e.stats.speed} | CRIT: ${e.stats.crit}`, type: "info" },
       { text: `—`.repeat(40), type: "info" },
       { text: `C'est le tour de ${firstAttacker === "player" ? "Player" : "Enemy"} d'attaquer en premier!`, type: "info" },
     ]);
