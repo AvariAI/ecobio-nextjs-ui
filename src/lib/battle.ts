@@ -57,6 +57,13 @@ export interface BattleResult {
   log: BattleLogEntry[];
 }
 
+export interface BattleConfig {
+  rounds: number;
+  playerHP: number;
+  enemyHP: number;
+  log: BattleLogEntry[];
+}
+
 /**
  * Variance ranges per rang (corrigé per user specs)
  * E: 0.75-1.10 (-25% à +10%, asymétrique, ±20% au maximum)
@@ -80,32 +87,6 @@ export function getVarianceRange(rank: Rank): [number, number] {
   return ranges[rank];
 }
 
-/**
- * Generate RNG individual stats with rank-based variance
- * Variance symétrique autour de 1.0: fluctuation ± autour du rank default
- */
-export function generateIndividualStats(
-  baseStats: BaseStats,
-  rank: Rank = "E"
-): BattleStats {
-  const rankMult = getRankMultiplier(rank);
-
-  const [minVar, maxVar] = getVarianceRange(rank);
-
-  // Individual variance per stat (independent)
-  const hpVariance = minVar + Math.random() * (maxVar - minVar);
-  const atkVariance = minVar + Math.random() * (maxVar - minVar);
-  const defVariance = minVar + Math.random() * (maxVar - minVar);
-  const spdVariance = minVar + Math.random() * (maxVar - minVar);
-  const critVariance = minVar + Math.random() * (maxVar - minVar);
-
-  const hp = Math.floor(baseStats.hp * (1 + hpVariance));
-  const attack = Math.floor(baseStats.attack * (1 + atkVariance));
-  const defense = Math.floor(baseStats.defense * (1 + defVariance));
-  const speed = Math.floor(baseStats.speed * (1 + spdVariance));
-  const crit = Math.floor(baseStats.crit * (1 + critVariance));
-
-  return {
 /**
  * Generate RNG individual stats with rank-based variance
  * NO rank multiplier - only variance applied
@@ -145,6 +126,76 @@ export function getRankMultiplier(rank: Rank): number {
   // Kept for compatibility but NOT used in stat calculation anymore
   return RANK_MULTIPLIERS[rank] || 1.0;
 }
+
+/**
+ * Calculate dodge chance based on speed difference and dodge buff
+ * Formula: (speedDifference / (speedDifference + 100)) + dodgeBuff
+ * Capped at 70% max dodge
+ */
+export function calculateDodgeChance(
+  attackerSpeed: number,
+  defenderSpeed: number,
+  dodgeBuff: number = 0
+): number {
+  const speedDiff = defenderSpeed - attackerSpeed;
+  const baseChance = Math.max(0, speedDiff / (Math.abs(speedDiff) + 100));
+  const totalChance = Math.min(baseChance + dodgeBuff, 0.70);
+  return totalChance;
+}
+
+/**
+ * Calculate damage based on attack and defense
+ * Formula: attack * (attack / (attack + defense))
+ */
+export function calculateDamage(attacker: BattleCreature, defender: BattleCreature): number {
+  const atk = attacker.stats.attack;
+  const def = defender.stats.defense;
+
+  let damage = atk * (atk / (atk + def));
+
+  // Apply defense buff
+  if (defender.buffs.defenseBuff > 0) {
+    damage = damage * (1 - defender.buffs.defenseBuff);
+  }
+
+  return Math.floor(Math.max(1, damage));
+}
+
+/**
+ * Check if a skill can be used (not on cooldown)
+ */
+export function canUseSkill(battleCreature: BattleCreature): boolean {
+  if (!battleCreature.creature.skill) {
+    return false;
+  }
+
+  const skillName = battleCreature.creature.skill.name;
+  const cooldownKey = `${skillName}_${battleCreature.name}`;
+  const currentCooldown = battleCreature.skillCooldowns[cooldownKey];
+
+  if (currentCooldown !== undefined && currentCooldown > 0) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Apply skill effect
+ */
+export function useSkill(
+  battleCreature: BattleCreature,
+  log: BattleLogEntry[]
+): boolean {
+  if (!battleCreature.creature.skill) {
+    return false;
+  }
+
+  const skill = battleCreature.creature.skill;
+  const skillName = skill.name;
+  const cooldownKey = `${skillName}_${battleCreature.name}`;
+
+  if (!canUseSkill(battleCreature)) {
     return false;
   }
 
@@ -164,6 +215,9 @@ export function getRankMultiplier(rank: Rank): number {
   return true;
 }
 
+/**
+ * Tick cooldowns and buff durations
+ */
 export function tickCooldownsAndBuffs(battleCreature: BattleCreature): void {
   for (const [skillName, cd] of Object.entries(battleCreature.skillCooldowns)) {
     if (cd > 0) {
@@ -206,6 +260,9 @@ export function calculateCritMultiplier(stats: BaseStats): number {
   return Math.min(baseMult + bonusMult, 1.75);
 }
 
+/**
+ * Execute attack and handle dodge, crit, damage
+ */
 export function executeAttack(
   attacker: BattleCreature,
   defender: BattleCreature,
@@ -245,4 +302,90 @@ export function executeAttack(
   });
 
   return damage;
+}
+
+/**
+ * Check if battle is over
+ */
+export function isBattleOver(player: BattleCreature, enemy: BattleCreature): boolean {
+  return player.currentHP <= 0 || enemy.currentHP <= 0;
+}
+
+/**
+ * Get battle winner
+ */
+export function getBattleWinner(player: BattleCreature, enemy: BattleCreature): "player" | "enemy" | "draw" {
+  if (player.currentHP <= 0 && enemy.currentHP <= 0) {
+    return "draw";
+  }
+  if (player.currentHP <= 0) {
+    return "enemy";
+  }
+  return "player";
+}
+
+/**
+ * Create battle creature from creature template
+ */
+export function createBattleCreature(
+  creature: Creature,
+  stats: BattleStats,
+  name?: string
+): BattleCreature {
+  return {
+    creature,
+    stats,
+    currentHP: stats.hp,
+    skillCooldowns: {},
+    buffs: {
+      defenseBuff: 0,
+      dodgeBuff: 0,
+      defenseBuffTurns: 0,
+      dodgeBuffTurns: 0,
+    },
+    name: name || creature.name,
+  };
+}
+
+/**
+ * Level scaling formulas
+ * hpLevel: 1.0 at level 1, scales to ~15.7 at level 50
+ * atkLevel/defLevel/spdLevel/critLevel: 1.0 at level 1, scales to ~8.4 at level 50
+ */
+function getLevelScale(level: number, stat: "hp" | "other"): number {
+  const baseRatio = level / 50;
+  const sqrtRatio = Math.sqrt(baseRatio);
+
+  if (stat === "hp") {
+    return 1 + baseRatio * 14.7;
+  } else {
+    return 1 + sqrtRatio * 7.4;
+  }
+}
+
+/**
+ * Calculate final stats for a creature with level and rank
+ * Final = (Base × Variance) × LevelScale
+ * Unused: Rank multiplier (as per user request)
+ */
+export function calculateFinalStats(
+  creature: Creature,
+  level: number,
+  rank: Rank
+): BattleStats {
+  // Get RNG stats with variance
+  const varianceStats = generateIndividualStats(creature.baseStats, rank);
+
+  // Apply level scaling
+  const hpScale = getLevelScale(level, "hp");
+  const statScale = getLevelScale(level, "other");
+
+  return {
+    hp: Math.floor(varianceStats.hp * hpScale),
+    attack: Math.floor(varianceStats.attack * statScale),
+    defense: Math.floor(varianceStats.defense * statScale),
+    speed: Math.floor(varianceStats.speed * statScale),
+    crit: Math.floor(varianceStats.crit * statScale),
+    rank,
+  };
 }

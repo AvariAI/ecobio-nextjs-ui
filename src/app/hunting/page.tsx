@@ -95,7 +95,8 @@ function getCreatureImage(creatureId: string, rank: Rank): string {
     return `/images/fly-rank-${rankSuffix}.png`;
   }
   if (creatureId === "ant") {
-    return "/images/caterpillar.png";
+    const rankSuffix = rank === "S+" ? "S+" : rank;
+    return `/creatures/ant_rank_${rankSuffix}.png`;
   }
   return "/images/giant_fly.png";
 }
