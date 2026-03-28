@@ -64,6 +64,34 @@ export default function CraftPage() {
     }
   };
 
+  // Sync ingredient2 rank with ingredient1 for plant essence craft
+  useEffect(() => {
+    if (selectedRecipe === "plantEssence" && ingredient1) {
+      const plant1 = mainInventory.items.find(p => p.id === ingredient1);
+      if (plant1 && ingredient2) {
+        const plant2 = mainInventory.items.find(p => p.id === ingredient2);
+        if (plant2 && plant2.rank !== plant1.rank) {
+          // Reset ingredient2 if ranks don't match
+          setIngredient2("");
+        }
+      }
+    }
+  }, [selectedRecipe, ingredient1, ingredient2, mainInventory]);
+
+  // Sync ingredient1 rank with ingredient2 for plant essence craft
+  useEffect(() => {
+    if (selectedRecipe === "plantEssence" && ingredient2) {
+      const plant2 = mainInventory.items.find(p => p.id === ingredient2);
+      if (plant2 && ingredient1) {
+        const plant1 = mainInventory.items.find(p => p.id === ingredient1);
+        if (plant1 && plant1.rank !== plant2.rank) {
+          // Reset ingredient1 if ranks don't match
+          setIngredient1("");
+        }
+      }
+    }
+  }, [selectedRecipe, ingredient1, ingredient2, mainInventory]);
+
   // Update preview
   useEffect(() => {
     if (!ingredient1 || !ingredient2) {
@@ -182,8 +210,19 @@ export default function CraftPage() {
 
   const filterIngredientsForSlot = (items: InventoryItem[], slot: number) => {
     if (selectedRecipe === "plantEssence") {
-      // For plant essence, filter out the other plant selection
-      return items.filter(item => item.id !== (slot === 1 ? ingredient2 : ingredient1));
+      // For plant essence, filter out the other plant selection AND enforce same rank
+      const otherSlotId = slot === 1 ? ingredient2 : ingredient1;
+      let filtered = items.filter(item => item.id !== otherSlotId);
+
+      // If the other slot has an ingredient, only show items with the same rank
+      if (otherSlotId) {
+        const otherItem = mainInventory.items.find(i => i.id === otherSlotId);
+        if (otherItem) {
+          filtered = filtered.filter(item => item.rank === otherItem.rank);
+        }
+      }
+
+      return filtered;
     } else if (selectedRecipe === "breedingBuffer") {
       // For breeding buffer:
       // Slot 1: only insectEssence
