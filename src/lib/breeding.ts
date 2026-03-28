@@ -3,7 +3,30 @@
  * Breeding logic for creature reproduction
  */
 
-import { Creature, Rank } from "./database";
+import { Creature, Rank, CREATURES } from "./database";
+import { TRAITS, getAllTraitsForRank } from "./traits";
+
+/**
+ * Reverse level scaling to get a stat at level 1 from a stat at a higher level
+ * Uses the same formula as getLevelScale from battle.ts
+ */
+function getStatAtLevel1(currentStat: number, level: number, statType: "hp" | "other"): number {
+  if (level <= 1) {
+    return currentStat; // Already at level 1
+  }
+
+  // Reverse the level scaling formula from battle.ts
+  const normalizedLevel = (level - 1) / 49;
+
+  let levelScale: number;
+  if (statType === "hp") {
+    levelScale = 1.0 + normalizedLevel * 14.7;
+  } else {
+    levelScale = 1.0 + Math.sqrt(normalizedLevel) * 7.4;
+  }
+
+  return currentStat / levelScale;
+}
 
 // Stats interface for creatures
 export interface Stats {
@@ -12,14 +35,13 @@ export interface Stats {
   defense: number;
   speed: number;
   crit: number;
-  rank?: Rank;
 }
 
 // Breeded creature structure (extended collection creature)
 export interface BreededCreature {
   id: string;
   nickname: string;
-  creatureType: string; // 'ant' | 'fly' | 'beefly' | 'bee' | 'wasp'
+  creatureType: string; // 'ant' | 'fly' | 'bee' | etc.
   level: number; // Always 1
   rank: Rank; // E-S+
   stats: Stats;
@@ -29,193 +51,225 @@ export interface BreededCreature {
   parentIds: string[]; // IDs of parents (for records)
   breedDate: number; // Timestamp
   creatureId: string; // Base creature type ID
-  finalStats: Stats; // Compatible with hunting page
+  finalStats: Stats & { rank: Rank }; // Compatible with hunting page
   skill: any; // Skill from base creature
   desc: string;
   createdAt: number;
+  currentXP: number;
+  xpToNextLevel: number;
+  feedCount: number;
+  feedStat: "hp" | "atk" | "def" | "spd" | "crit" | null;
 }
 
-// Breeding cost by rank (based on highest parent rank)
-export const BREEDING_COST: Record<Rank, number> = {
-  E: 50,
-  D: 75,
-  C: 100,
-  B: 150,
-  A: 200,
-  S: 300,
-  "S+": 500,
-};
+// Rank conversion helpers
+function rankToNumber(rank: Rank): number {
+  return { E: 1, D: 2, C: 3, B: 4, A: 5, S: 6, "S+": 7 }[rank];
+}
 
-// Rank order array for calculations
-const RANK_ORDER: Rank[] = ["E", "D", "C", "B", "A", "S", "S+"];
+function numberToRank(num: number): Rank {
+  const ranks: Rank[] = ['E', 'D', 'C', 'B', 'A', 'S', 'S+'];
+  return ranks[Math.max(0, Math.min(6, num - 1))] || 'E';
+}
 
-/**
- * Get rank index in order array
- */
-function getRankIndex(rank: Rank): number {
-  return RANK_ORDER.indexOf(rank);
+// Get base stat for creature type
+function getCreatureBaseStat(creatureType: string, stat: keyof Stats): number {
+  // Match creature type by ID or name
+  let baseCreature = CREATURES[creatureType];
+  if (!baseCreature) {
+    // Try to find by case-insensitive name match
+    const creatureKey = Object.keys(CREATURES).find(
+      key => CREATURES[key].name.toLowerCase() === creatureType.toLowerCase()
+    );
+    if (creatureKey) {
+      baseCreature = CREATURES[creatureKey];
+    } else {
+      // Default fallback
+      baseCreature = CREATURES.ant;
+    }
+  }
+  return baseCreature.baseStats[stat];
+}
+
+// Trait slot count helpers
+function getTraitSlots(rank: Rank): number {
+  const roll = Math.random();
+  switch (rank) {
+    case 'E': return roll < 0.5 ? 0 : 1;
+    case 'D': return 1;
+    case 'C': return roll < 0.5 ? 1 : 2;
+    case 'B': return 2;
+    case 'A': return roll < 0.5 ? 2 : 3;
+    case 'S': return 3;
+    case 'S+': return roll < 0.5 ? 3 : 4;
+    default: return 1;
+  }
+}
+
+function getMaxTraitSlots(rank: Rank): number {
+  return { E: 1, D: 1, C: 2, B: 2, A: 3, S: 3, "S+": 4 }[rank];
 }
 
 /**
- * Calculate baby stats based on parents
- * Average of parents + small RNG variance (±5%)
+ * Calculate baby stats based on parents' LEVEL 1 stats
+ * For each stat: 60% parent level 1 average + 40% template base + ±5% random variance
+ *
+ * IMPORTANT: Uses parents' LEVEL 1 stats (reverse-calculated from current stats)
+ * NOT their current leveled stats. This ensures high-level parents don't
+ * produce overpowered babies.
  */
-export function calculateBabyStats(parent1: any, parent2: any): Stats {
-  const varianceRange = 0.05; // ±5%
-
-  const hpVar = 1 + (Math.random() * 2 - 1) * varianceRange;
-  const attackVar = 1 + (Math.random() * 2 - 1) * varianceRange;
-  const defenseVar = 1 + (Math.random() * 2 - 1) * varianceRange;
-  const speedVar = 1 + (Math.random() * 2 - 1) * varianceRange;
-  const critVar = 1 + (Math.random() * 2 - 1) * varianceRange;
-
+export function calculateBabyStats(
+  parent1: any,
+  parent2: any,
+  babyCreatureType: string
+): Stats {
   const parent1Stats = parent1.finalStats || parent1.stats;
   const parent2Stats = parent2.finalStats || parent2.stats;
 
-  return {
-    hp: Math.max(1, Math.floor(((parent1Stats.hp + parent2Stats.hp) / 2) * hpVar)),
-    attack: Math.max(1, Math.floor(((parent1Stats.attack + parent2Stats.attack) / 2) * attackVar)),
-    defense: Math.max(1, Math.floor(((parent1Stats.defense + parent2Stats.defense) / 2) * defenseVar)),
-    speed: Math.max(1, Math.floor(((parent1Stats.speed + parent2Stats.speed) / 2) * speedVar)),
-    crit: Math.max(1, Math.floor(((parent1Stats.crit + parent2Stats.crit) / 2) * critVar)),
+  // Get parent levels to reverse-calculate level 1 stats
+  const parent1Level = parent1.level || 1;
+  const parent2Level = parent2.level || 1;
+
+  // Reverse-calculate both parents' stats to level 1
+  const parent1Lvl1Stats = {
+    hp: getStatAtLevel1(parent1Stats.hp, parent1Level, "hp"),
+    attack: getStatAtLevel1(parent1Stats.attack, parent1Level, "other"),
+    defense: getStatAtLevel1(parent1Stats.defense, parent1Level, "other"),
+    speed: getStatAtLevel1(parent1Stats.speed, parent1Level, "other"),
+    crit: getStatAtLevel1(parent1Stats.crit, parent1Level, "other"),
   };
+
+  const parent2Lvl1Stats = {
+    hp: getStatAtLevel1(parent2Stats.hp, parent2Level, "hp"),
+    attack: getStatAtLevel1(parent2Stats.attack, parent2Level, "other"),
+    defense: getStatAtLevel1(parent2Stats.defense, parent2Level, "other"),
+    speed: getStatAtLevel1(parent2Stats.speed, parent2Level, "other"),
+    crit: getStatAtLevel1(parent2Stats.crit, parent2Level, "other"),
+  };
+
+  const stats: Stats = {
+    hp: 0,
+    attack: 0,
+    defense: 0,
+    speed: 0,
+    crit: 0,
+  };
+
+  for (const stat of ['hp', 'attack', 'defense', 'speed', 'crit'] as const) {
+    // Use level 1 stats for averaging
+    const avgParents = (parent1Lvl1Stats[stat] + parent2Lvl1Stats[stat]) / 2;
+    const templateStat = getCreatureBaseStat(babyCreatureType, stat);
+    const baseBaby = 0.6 * avgParents + 0.4 * templateStat;
+
+    // ±5% random variance
+    const variance = 1 + (Math.random() * 2 - 1) * 0.05;
+    stats[stat] = Math.max(1, Math.floor(baseBaby * variance));
+  }
+
+  return stats;
 }
 
 /**
  * Predict baby rank based on parents
- * Weighted towards higher rank, but can drop
- * Never worse than worst parent by 2 ranks
+ * Average of parent ranks + weighted RNG
+ * -2: 5% chance
+ * -1: 25% chance
+ * 0: 60% chance
+ * +1: 10% chance
  */
 export function predictBabyRank(parent1: any, parent2: any): Rank {
   const p1Rank = parent1.finalStats?.rank || parent1.rank;
   const p2Rank = parent2.finalStats?.rank || parent2.rank;
 
-  const p1Idx = getRankIndex(p1Rank as Rank);
-  const p2Idx = getRankIndex(p2Rank as Rank);
-  const avgIdx = (p1Idx + p2Idx) / 2;
+  const rank1 = rankToNumber(p1Rank as Rank);
+  const rank2 = rankToNumber(p2Rank as Rank);
+  const avgRank = Math.round((rank1 + rank2) / 2);
 
-  // Weight towards higher rank slightly
-  // Random offset: -1, 0, or +1 (biased towards +1)
-  const randomOffset = Math.floor(Math.random() * 3) - 1;
-  let predictedIdx = Math.floor(avgIdx + randomOffset);
-
-  // Random boost chance for higher ranks
-  if (Math.random() < 0.2) {
-    predictedIdx = Math.min(predictedIdx + 1, 6);
+  // Weighted RNG roll
+  const roll = Math.random();
+  let rngResult: number;
+  if (roll < 0.05) {
+    rngResult = -2;
+  } else if (roll < 0.30) {
+    rngResult = -1;
+  } else if (roll < 0.90) {
+    rngResult = 0;
+  } else {
+    rngResult = 1;
   }
 
-  // Clamp within bounds
-  predictedIdx = Math.max(0, Math.min(6, predictedIdx));
+  const babyRankNumber = avgRank + rngResult;
+  const clampedRank = Math.max(1, Math.min(7, babyRankNumber));
 
-  // Minimum rank: never worse than worst parent by 2 ranks
-  const minRankIdx = Math.max(Math.min(p1Idx, p2Idx) - 2, 0);
-  predictedIdx = Math.max(minRankIdx, predictedIdx);
-
-  return RANK_ORDER[predictedIdx];
-}
-
-/**
- * Get trait slot count for a rank (from traits.ts logic)
- */
-function getTraitSlots(rank: Rank): number {
-  const slots: Record<Rank, { min: number; max: number }> = {
-    E: { min: 0, max: 1 },
-    D: { min: 1, max: 1 },
-    C: { min: 1, max: 2 },
-    B: { min: 2, max: 2 },
-    A: { min: 2, max: 3 },
-    S: { min: 3, max: 3 },
-    "S+": { min: 3, max: 4 },
-  };
-
-  const slotRange = slots[rank];
-  if (slotRange.min === slotRange.max) {
-    return slotRange.min;
-  }
-
-  // Random choice between min and max (50/50)
-  return Math.random() < 0.5 ? slotRange.min : slotRange.max;
+  return numberToRank(clampedRank);
 }
 
 /**
  * Inherit traits from parents
- * Select 2-4 random traits from both parents
- * Traits both parents have = higher inheritance chance
+ * Get trait slot count based on baby rank, then randomly select from parent trait pool
  */
-export function inheritParentTraits(parent1: any, parent2: any, babyRank: Rank): string[] {
+export function inheritParentTraits(
+  parent1: any,
+  parent2: any,
+  babyRank: Rank
+): string[] {
   const p1Traits = parent1.traits || [];
   const p2Traits = parent2.traits || [];
 
-  // Pool all parent traits (deduplicate)
-  const allTraits = [...new Set([...p1Traits, ...p2Traits])];
+  // Create trait pool = parent1.traits ∪ parent2.traits (deduplicate)
+  const traitPool = [...new Set([...p1Traits, ...p2Traits])];
 
-  // If no traits from parents, return empty
-  if (allTraits.length === 0) {
+  // Get trait slot count
+  const numSlots = getTraitSlots(babyRank);
+
+  // If no traits in pool, return empty
+  if (traitPool.length === 0) {
     return [];
   }
 
-  // Number of trait slots based on baby rank
-  const slots = getTraitSlots(babyRank);
+  // Randomly select nTraits from pool (without replacement, equal probability)
+  const selectedTraits: string[] = [];
+  const availableTraits = [...traitPool];
 
-  // Calculate inheritance weights
-  const traitWeights: Record<string, number> = {};
-  for (const trait of allTraits) {
-    const inP1 = p1Traits.includes(trait);
-    const inP2 = p2Traits.includes(trait);
-
-    if (inP1 && inP2) {
-      // Both parents have it = 3x weight
-      traitWeights[trait] = 3;
-    } else if (inP1 || inP2) {
-      // Only one parent has it = 1x weight
-      traitWeights[trait] = 1;
-    }
+  for (let i = 0; i < Math.min(numSlots, availableTraits.length); i++) {
+    const randomIndex = Math.floor(Math.random() * availableTraits.length);
+    selectedTraits.push(availableTraits[randomIndex]);
+    availableTraits.splice(randomIndex, 1);
   }
 
-  // Weighted random selection
-  const selected: string[] = [];
-  const usedTraits = new Set<string>();
-
-  for (let i = 0; i < Math.min(slots, allTraits.length); i++) {
-    // Calculate total weight
-    const totalWeight = Object.entries(traitWeights)
-      .filter(([traitId]) => !usedTraits.has(traitId))
-      .reduce((sum, [, weight]) => sum + weight, 0);
-
-    if (totalWeight === 0) {
-      break;
-    }
-
-    // Weighted random pick
-    let roll = Math.random() * totalWeight;
-    for (const [traitId, weight] of Object.entries(traitWeights)) {
-      if (usedTraits.has(traitId)) continue;
-
-      roll -= weight;
-      if (roll <= 0) {
-        selected.push(traitId);
-        usedTraits.add(traitId);
-        break;
-      }
-    }
-  }
-
-  return selected;
+  return selectedTraits;
 }
 
 /**
- * Calculate breeding cost
- * Based on highest rank parent
+ * Apply mutation surprise
+ * 20% chance of mutation if baby has free slot
  */
-export function calculateBreedingCost(parent1: any, parent2: any): number {
-  const p1Rank = parent1.finalStats?.rank || parent1.rank;
-  const p2Rank = parent2.finalStats?.rank || parent2.rank;
+export function applyMutationSurprise(babyTraits: string[], babyRank: Rank): string[] {
+  // 20% chance of mutation
+  if (Math.random() >= 0.2) {
+    return babyTraits;
+  }
 
-  const p1Value = BREEDING_COST[p1Rank as Rank];
-  const p2Value = BREEDING_COST[p2Rank as Rank];
+  // Check if baby has free slot
+  const maxSlots = getMaxTraitSlots(babyRank);
+  if (babyTraits.length >= maxSlots) {
+    return babyTraits;
+  }
 
-  // Cost based on highest rank parent
-  return Math.max(p1Value, p2Value);
+  // Get all possible traits for this rank
+  const possibleTraits = getAllTraitsForRank(babyRank);
+  if (possibleTraits.length === 0) {
+    return babyTraits;
+  }
+
+  // Filter out existing traits
+  const availableTraits = possibleTraits.filter(t => !babyTraits.includes(t.id));
+  if (availableTraits.length === 0) {
+    return babyTraits;
+  }
+
+  // Add one random trait as "mutation surprise"
+  const randomTrait = availableTraits[Math.floor(Math.random() * availableTraits.length)];
+  return [...babyTraits, randomTrait.id];
 }
 
 /**
@@ -225,85 +279,59 @@ export function calculateBreedingCost(parent1: any, parent2: any): number {
 export function generateBabyCreature(
   parent1: any,
   parent2: any,
-  creatureType: string,
-  playerBalance: number
-): {
-  baby: BreededCreature | null;
-  newBalance: number;
-  error?: string;
-} {
-  // Validation: Cannot use same creature as both parents
-  if (parent1.id === parent2.id) {
-    return {
-      baby: null,
-      newBalance: playerBalance,
-      error: "Cannot use same creature as both parents",
-    };
+  babyCreatureType: string
+): BreededCreature {
+  // 1. Calculate baby stats
+  const stats = calculateBabyStats(parent1, parent2, babyCreatureType);
+
+  // 2. Predict baby rank
+  const rank = predictBabyRank(parent1, parent2);
+
+  // 3. Inherit traits
+  let traits = inheritParentTraits(parent1, parent2, rank);
+
+  // 4. Apply mutation surprise (20% chance)
+  traits = applyMutationSurprise(traits, rank);
+
+  // 5. Get base creature data
+  let baseCreature = CREATURES[babyCreatureType];
+  if (!baseCreature) {
+    // Try to find by case-insensitive name match or fallback
+    const creatureKey = Object.keys(CREATURES).find(
+      key => key.toLowerCase().includes(babyCreatureType.toLowerCase()) ||
+             CREATURES[key].name.toLowerCase().includes(babyCreatureType.toLowerCase())
+    );
+    baseCreature = creatureKey ? CREATURES[creatureKey] : CREATURES.ant;
   }
 
-  // Calculate breeding cost
-  const cost = calculateBreedingCost(parent1, parent2);
-
-  // Check if player has enough balance
-  if (playerBalance < cost) {
-    return {
-      baby: null,
-      newBalance: playerBalance,
-      error: `Insufficient balance. Need ${cost} coins`,
-    };
-  }
-
-  // Import creature definitions
-  // We'll need the CREATURES data from database.ts
-  // For now, we'll create a basic creature
-  const baseStats = calculateBabyStats(parent1, parent2);
-  const predictedRank = predictBabyRank(parent1, parent2);
-  baseStats.rank = predictedRank;
-
-  // Calculate inherited traits
-  const inheritedTraits = inheritParentTraits(parent1, parent2, predictedRank);
-
-  // Generate unique ID
-  const babyId = `breed_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-  // Map creature type to base creature ID
-  const typeMap: Record<string, string> = {
-    Ant: "ant",
-    Fly: "housefly",
-    Beefly: "housefly", // Fallback
-    Bee: "honeybee",
-    Wasp: "housefly", // Fallback
-  };
-
-  const baseCreatureId = typeMap[creatureType] || creatureType.toLowerCase();
-
-  // Create baby creature
+  // 6. Create baby creature object
   const baby: BreededCreature = {
-    id: babyId,
-    nickname: `${creatureType} ${predictedRank}`,
-    creatureType: creatureType.toLowerCase(),
+    id: `baby-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    nickname: `${baseCreature.name} ${rank}`,
+    creatureType: babyCreatureType.toLowerCase(),
     level: 1,
-    rank: predictedRank,
-    stats: baseStats,
-    finalStats: baseStats, // For compatibility with hunting page
-    traits: inheritedTraits,
+    currentXP: 0,
+    xpToNextLevel: 100,
+    feedCount: 0,
+    feedStat: null,
+    rank,
+    stats,
+    finalStats: {
+      ...stats,
+      rank,
+    },
+    traits,
     isFavorite: false,
     breeded: true,
     parentIds: [parent1.id, parent2.id],
     breedDate: Date.now(),
-    creatureId: baseCreatureId,
-    skill: parent1.skill, // Inherit skill from parent1
-    desc: "Bébé créature issue de reproduction",
+    creatureId: baseCreature.id,
+    skill: baseCreature.skill,
+    desc: `Bébé ${baseCreature.name} issu de reproduction`,
     createdAt: Date.now(),
   };
 
-  // Deduct cost from balance
-  const newBalance = playerBalance - cost;
-
-  return {
-    baby,
-    newBalance,
-  };
+  return baby;
 }
 
 /**
@@ -312,8 +340,7 @@ export function generateBabyCreature(
 export function validateBreeding(
   parent1: any | null,
   parent2: any | null,
-  creatureType: string,
-  minLevel: number
+  babyCreatureType: string
 ): {
   valid: boolean;
   error?: string;
@@ -326,16 +353,158 @@ export function validateBreeding(
     return { valid: false, error: "Cannot use same creature as both parents" };
   }
 
-  const p1Level = parent1.level || 1;
-  const p2Level = parent2.level || 1;
+  // Check same creature type
+  const p1Type = parent1.creatureId || parent1.creatureType;
+  const p2Type = parent2.creatureId || parent2.creatureType;
 
-  if (p1Level < minLevel || p2Level < minLevel) {
-    return { valid: false, error: `Parents must be at least level ${minLevel}` };
+  if (p1Type !== p2Type) {
+    return {
+      valid: false,
+      error: `Parents must be same type (${parent1.name} ≠ ${parent2.name})`
+    };
   }
 
-  if (!creatureType) {
-    return { valid: false, error: "Creature type must be selected" };
+  // Baby type must match parent type
+  if (babyCreatureType !== p1Type) {
+    return {
+      valid: false,
+      error: `Baby type must match parent type (${babyCreatureType} ≠ ${p1Type})`
+    };
   }
 
   return { valid: true };
+}
+
+/**
+ * Preview baby stats (without RNG for consistent display)
+ * Uses parents' LEVEL 1 stats and average values without variance for preview
+ */
+export function previewBabyStats(
+  parent1: any,
+  parent2: any,
+  babyCreatureType: string
+): Stats {
+  const parent1Stats = parent1.finalStats || parent1.stats;
+  const parent2Stats = parent2.finalStats || parent2.stats;
+
+  // Get parent levels to reverse-calculate level 1 stats
+  const parent1Level = parent1.level || 1;
+  const parent2Level = parent2.level || 1;
+
+  // Reverse-calculate both parents' stats to level 1
+  const parent1Lvl1Stats = {
+    hp: getStatAtLevel1(parent1Stats.hp, parent1Level, "hp"),
+    attack: getStatAtLevel1(parent1Stats.attack, parent1Level, "other"),
+    defense: getStatAtLevel1(parent1Stats.defense, parent1Level, "other"),
+    speed: getStatAtLevel1(parent1Stats.speed, parent1Level, "other"),
+    crit: getStatAtLevel1(parent1Stats.crit, parent1Level, "other"),
+  };
+
+  const parent2Lvl1Stats = {
+    hp: getStatAtLevel1(parent2Stats.hp, parent2Level, "hp"),
+    attack: getStatAtLevel1(parent2Stats.attack, parent2Level, "other"),
+    defense: getStatAtLevel1(parent2Stats.defense, parent2Level, "other"),
+    speed: getStatAtLevel1(parent2Stats.speed, parent2Level, "other"),
+    crit: getStatAtLevel1(parent2Stats.crit, parent2Level, "other"),
+  };
+
+  const stats: Stats = {
+    hp: 0,
+    attack: 0,
+    defense: 0,
+    speed: 0,
+    crit: 0,
+  };
+
+  // Use level 1 stats average without variance for preview
+  for (const stat of ['hp', 'attack', 'defense', 'speed', 'crit'] as const) {
+    const avgParents = (parent1Lvl1Stats[stat] + parent2Lvl1Stats[stat]) / 2;
+    const templateStat = getCreatureBaseStat(babyCreatureType, stat);
+    stats[stat] = Math.max(1, Math.floor(0.6 * avgParents + 0.4 * templateStat));
+  }
+
+  return stats;
+}
+
+/**
+ * Preview baby rank (uses average without RNG for consistent display)
+ */
+export function previewBabyRank(parent1: any, parent2: any): Rank {
+  const p1Rank = parent1.finalStats?.rank || parent1.rank;
+  const p2Rank = parent2.finalStats?.rank || parent2.rank;
+
+  const rank1 = rankToNumber(p1Rank as Rank);
+  const rank2 = rankToNumber(p2Rank as Rank);
+  const avgRank = Math.round((rank1 + rank2) / 2);
+
+  const clampedRank = Math.max(1, Math.min(7, avgRank));
+  return numberToRank(clampedRank);
+}
+
+/**
+ * Preview baby traits (uses minimum slots for conservative preview)
+ */
+export function previewBabyTraits(
+  parent1: any,
+  parent2: any,
+  babyRank: Rank
+): string[] {
+  const p1Traits = parent1.traits || [];
+  const p2Traits = parent2.traits || [];
+  const traitPool = [...new Set([...p1Traits, ...p2Traits])];
+
+  // Use minimum trait slots for preview
+  const minSlots: Record<Rank, number> = {
+    E: 0,
+    D: 1,
+    C: 1,
+    B: 2,
+    A: 2,
+    S: 3,
+    "S+": 3,
+  };
+
+  const numSlots = minSlots[babyRank];
+
+  if (traitPool.length === 0 || numSlots === 0) {
+    return [];
+  }
+
+  // Select first numSlots traits for consistency
+  return traitPool.slice(0, Math.min(numSlots, traitPool.length));
+}
+
+/**
+ * Get creature display name from creature ID
+ */
+export function getCreatureName(creatureId: string): string {
+  const creature = CREATURES[creatureId];
+  if (creature) {
+    return creature.name;
+  }
+
+  // Try to find by partial match
+  const key = Object.keys(CREATURES).find(k =>
+    k.toLowerCase().includes(creatureId.toLowerCase())
+  );
+  return key ? CREATURES[key].name : creatureId;
+}
+
+/**
+ * Get unique creature types from parents
+ * Returns the creature type if both parents are same type, undefined otherwise
+ */
+export function getValidCreatureType(parent1: any | null, parent2: any | null): string | null {
+  if (!parent1 || !parent2) {
+    return null;
+  }
+
+  const p1Type = parent1.creatureId || parent1.creatureType;
+  const p2Type = parent2.creatureId || parent2.creatureType;
+
+  if (p1Type !== p2Type) {
+    return null;
+  }
+
+  return p1Type;
 }

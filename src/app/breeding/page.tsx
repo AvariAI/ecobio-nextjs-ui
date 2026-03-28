@@ -3,6 +3,16 @@
 import { useState, useEffect } from "react";
 import { Rank, Creature } from "@/lib/database";
 import { getTraitsByIds } from "@/lib/traits";
+import {
+  generateBabyCreature,
+  validateBreeding,
+  previewBabyStats,
+  previewBabyRank,
+  previewBabyTraits,
+  getCreatureName,
+  getValidCreatureType,
+  BreededCreature
+} from "@/lib/breeding";
 import Link from "next/link";
 
 type BreedingMode = "basic" | "enhanced" | "advanced";
@@ -80,6 +90,9 @@ export default function BreedingPage() {
   const [search2, setSearch2] = useState("");
   const [mode, setMode] = useState<BreedingMode>("basic");
   const [error, setError] = useState<string | null>(null);
+  const [babyCreatureType, setBabyCreatureType] = useState<string>("");
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [breedingSuccess, setBreedingSuccess] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("ecobio-collection");
@@ -93,24 +106,43 @@ export default function BreedingPage() {
     }
   }, []);
 
-  // Filter and sort creatures (all creatures available, no level restriction)
+  // Auto-set baby creature type when both parents selected and they match
+  useEffect(() => {
+    if (parent1 && parent2 && parent1.creatureId === parent2.creatureId) {
+      setBabyCreatureType(parent1.creatureId);
+    } else {
+      setBabyCreatureType("");
+    }
+  }, [parent1, parent2]);
+
+  // Save collection when it changes
+  useEffect(() => {
+    if (collection.length > 0) {
+      localStorage.setItem("ecobio-collection", JSON.stringify(collection));
+    } else {
+      localStorage.removeItem("ecobio-collection");
+    }
+  }, [collection]);
+
+  // Filter and sort creatures
   const filteredCollection = [...collection].sort((a, b) => {
-    // Sort by rank descending first, then level descending
     const rankDiff = RANK_ORDER[b.finalStats.rank] - RANK_ORDER[a.finalStats.rank];
     if (rankDiff !== 0) return rankDiff;
     return b.level - a.level;
   });
+
+  // Get valid creature type for dropdown
+  const validCreatureType = getValidCreatureType(parent1, parent2);
 
   // Filter creatures for dropdown based on search and creature type
   const getDropdownCreatures = (search: string, otherParent: HuntedCreature | null) => {
     return filteredCollection.filter(creature => {
       const matchesSearch = creature.name.toLowerCase().includes(search.toLowerCase());
       const notSelectedAsOther = otherParent ? creature.id !== otherParent.id : true;
-      const notSelectedAsSelf = parent1 ? creature.id !== parent1.id : true;
+      const notSelectedAsSelf1 = parent1 ? creature.id !== parent1.id : true;
       const notSelectedAsSelf2 = parent2 ? creature.id !== parent2.id : true;
-      // Only show creatures of the same type as the selected parent
       const matchesType = otherParent ? creature.creatureId === otherParent.creatureId : true;
-      return matchesSearch && notSelectedAsOther && notSelectedAsSelf && notSelectedAsSelf2 && matchesType;
+      return matchesSearch && notSelectedAsOther && notSelectedAsSelf1 && notSelectedAsSelf2 && matchesType;
     });
   };
 
@@ -154,6 +186,41 @@ export default function BreedingPage() {
     setError(null);
   };
 
+  const handleReproduce = () => {
+    if (!parent1 || !parent2 || !babyCreatureType) return;
+
+    const validation = validateBreeding(parent1, parent2, babyCreatureType);
+    if (!validation.valid) {
+      setError(validation.error || "Invalid breeding parameters");
+      return;
+    }
+
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmReproduce = () => {
+    if (!parent1 || !parent2 || !babyCreatureType) return;
+
+    try {
+      const baby = generateBabyCreature(parent1, parent2, babyCreatureType);
+      setCollection([...collection, baby]);
+      setBreedingSuccess(true);
+      setShowConfirmDialog(false);
+
+      // Reset form after success
+      setTimeout(() => {
+        setParent1(null);
+        setParent2(null);
+        setBabyCreatureType("");
+        setError(null);
+        setBreedingSuccess(false);
+      }, 2000);
+    } catch (err) {
+      setError("Failed to generate baby creature");
+      setShowConfirmDialog(false);
+    }
+  };
+
   const getBreedingStatus = () => {
     if (collection.length === 0) {
       return "Aucune créature dans votre collection. Allez chasser!";
@@ -169,6 +236,13 @@ export default function BreedingPage() {
     }
     return "Prêt à reproduire!";
   };
+
+  // Calculate baby preview
+  const babyPreview = parent1 && parent2 && babyCreatureType ? {
+    stats: previewBabyStats(parent1, parent2, babyCreatureType),
+    rank: previewBabyRank(parent1, parent2),
+    traits: previewBabyTraits(parent1, parent2, previewBabyRank(parent1, parent2)),
+  } : null;
 
   const renderCreatureCard = (creature: HuntedCreature, index: number) => {
     const traits = getTraitsByIds(creature.traits);
@@ -369,20 +443,166 @@ export default function BreedingPage() {
           </div>
         </div>
 
-        {/* Baby Preview (placeholder for future) */}
-        <div className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-6 border border-green-700">
-          <h2 className="text-2xl font-bold text-green-100 mb-4">🐣 Prévision du bébé</h2>
-          {parent1 && parent2 && parent1.id !== parent2.id ? (
-            <div className="text-center p-8 bg-green-950 rounded-lg border-2 border-dashed border-green-600">
-              <p className="text-green-300 text-lg">🔮 Prévisions à venir...</p>
-              <p className="text-green-400 text-sm mt-2">Les calculs de reproduction arrivent bientôt!</p>
-            </div>
-          ) : (
+        {/* Baby Preview */}
+        {parent1 && parent2 && parent1.id !== parent2.id && validCreatureType && (
+          <div className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-6 border border-green-700 mb-6">
+            <h2 className="text-2xl font-bold text-green-100 mb-4">🐣 Prévision du bébé</h2>
+
+            {babyPreview ? (
+              <div className="space-y-4">
+                {/* Creature Type Display */}
+                <div className="bg-green-950 rounded-lg p-4">
+                  <p className="text-green-200 font-semibold mb-2">Type:</p>
+                  <p className="text-2xl font-bold text-green-100">
+                    {getCreatureName(validCreatureType)}
+                  </p>
+                </div>
+
+                {/* Stats Preview */}
+                <div className="bg-green-950 rounded-lg p-4">
+                  <p className="text-green-200 font-semibold mb-3">Stats (approximatives):</p>
+                  <div className="grid grid-cols-5 gap-3">
+                    <div className="text-center">
+                      <p className="text-green-300 text-sm">HP</p>
+                      <p className="text-xl font-bold text-green-100">{babyPreview.stats.hp}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-green-300 text-sm">ATK</p>
+                      <p className="text-xl font-bold text-green-100">{babyPreview.stats.attack}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-green-300 text-sm">DEF</p>
+                      <p className="text-xl font-bold text-green-100">{babyPreview.stats.defense}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-green-300 text-sm">SPD</p>
+                      <p className="text-xl font-bold text-green-100">{babyPreview.stats.speed}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-green-300 text-sm">CRIT</p>
+                      <p className="text-xl font-bold text-green-100">{babyPreview.stats.crit}%</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Rank Prediction */}
+                <div className="bg-green-950 rounded-lg p-4">
+                  <p className="text-green-200 font-semibold mb-2">Rang prédit:</p>
+                  <span className={`text-3xl font-bold ${getRankBadgeColor(babyPreview.rank)} text-white px-4 py-2 rounded-full`}>
+                    {babyPreview.rank}
+                  </span>
+                  <p className="text-green-400 text-sm mt-2">Peut varier de ±2 rangs</p>
+                </div>
+
+                {/* Traits Preview */}
+                <div className="bg-green-950 rounded-lg p-4">
+                  <p className="text-green-200 font-semibold mb-2">Traits hérités:</p>
+                  {babyPreview.traits.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {getTraitsByIds(babyPreview.traits).map(trait => (
+                        <span key={trait.id} className="px-3 py-1 text-sm rounded bg-purple-700 text-white">
+                          {trait.name}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-green-400 italic">Aucun trait hérité</p>
+                  )}
+                  <p className="text-yellow-300 text-sm mt-2">⚡ 20% de chance de mutation surprise!</p>
+                </div>
+
+                {/* Reproduce Button */}
+                <button
+                  onClick={handleReproduce}
+                  disabled={!parent1 || !parent2 || !validCreatureType}
+                  className="w-full bg-gradient-to-r from-pink-700 to-pink-600 hover:from-pink-600 hover:to-pink-500 disabled:from-gray-700 disabled:to-gray-600 text-white rounded-lg p-4 text-xl font-bold shadow-lg transition-all duration-200"
+                >
+                  🧬 REPRODUIRE
+                </button>
+              </div>
+            ) : (
+              <div className="text-center p-8 bg-green-950 rounded-lg border-2 border-dashed border-green-600">
+                <p className="text-green-400">Calcul en cours...</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Empty state for baby preview */}
+        {(!parent1 || !parent2 || parent1.id === parent2.id) && (
+          <div className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-6 border border-green-700">
+            <h2 className="text-2xl font-bold text-green-100 mb-4">🐣 Prévision du bébé</h2>
             <div className="text-center p-8 bg-green-950 rounded-lg">
-              <p className="text-green-400">Sélectionnez deux parents différents pour voir les prévisions</p>
+              <p className="text-green-400">
+                {!parent1 || !parent2
+                  ? "Sélectionnez deux parents différents pour voir les prévisions"
+                  : "Les parents doivent être du même type"}
+              </p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Success Message */}
+        {breedingSuccess && (
+          <div className="fixed top-4 right-4 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-lg p-6 shadow-xl border-2 border-green-400 z-50">
+            <h3 className="text-2xl font-bold mb-2">🎉 Succès!</h3>
+            <p className="text-lg">Nouveau bébé ajouté à votre collection!</p>
+          </div>
+        )}
+
+        {/* Confirm Dialog */}
+        {showConfirmDialog && babyPreview && (
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+            <div className="bg-gradient-to-br from-green-800 to-green-900 rounded-xl p-6 max-w-lg w-full mx-4 border-2 border-green-600">
+              <h2 className="text-2xl font-bold text-green-100 mb-4">🔮 Confirmer la reproduction</h2>
+
+              <div className="bg-green-950 rounded-lg p-4 mb-4">
+                <p className="text-green-200 font-semibold mb-2">Bébé prévu:</p>
+                <div className="space-y-2">
+                  <p className="text-green-100">Type: <strong>{getCreatureName(validCreatureType!)}</strong></p>
+                  <div className="flex gap-2 text-sm">
+                    <span>HP: <strong>{babyPreview.stats.hp}</strong></span>
+                    <span>ATK: <strong>{babyPreview.stats.attack}</strong></span>
+                    <span>DEF: <strong>{babyPreview.stats.defense}</strong></span>
+                    <span>SPD: <strong>{babyPreview.stats.speed}</strong></span>
+                    <span>CRIT: <strong>{babyPreview.stats.crit}%</strong></span>
+                  </div>
+                  <p className="text-green-100">
+                    Rang: <span className={`font-bold ${getRankBadgeColor(babyPreview.rank)} text-white px-2 py-1 rounded-full`}>
+                      {babyPreview.rank}
+                    </span>
+                  </p>
+                  {babyPreview.traits.length > 0 && (
+                    <p className="text-green-100">
+                      Traits: {getTraitsByIds(babyPreview.traits).map(t => t.name).join(", ")}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-yellow-900 bg-opacity-30 rounded-lg p-3 mb-4 border border-yellow-600">
+                <p className="text-yellow-200 text-sm">
+                  ⚠️ Ces valeurs sont des prévisions et peuvent varier légèrement!
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleConfirmReproduce}
+                  className="flex-1 bg-gradient-to-r from-pink-700 to-pink-600 hover:from-pink-600 hover:to-pink-500 text-white rounded-lg p-3 font-bold"
+                >
+                  ✅ Confirmer
+                </button>
+                <button
+                  onClick={() => setShowConfirmDialog(false)}
+                  className="flex-1 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-lg p-3 font-bold"
+                >
+                  ❌ Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
