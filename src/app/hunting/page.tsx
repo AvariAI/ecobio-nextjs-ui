@@ -793,7 +793,11 @@ export default function HuntingPage() {
                             Level {creature.level} | Rang {creature.finalStats.rank}
                           </p>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right flex items-center gap-2">
+                          <div>
+                            <p className="text-yellow-300 font-bold">+{calculateRankXP(creature.finalStats.rank, creature.level, creature.finalStats)}</p>
+                            <p className="text-green-400 text-xs">XP</p>
+                          </div>
                           <button
                             onClick={(e) => { e.stopPropagation(); setPeekingCreature(creature); }}
                             className="text-lg hover:scale-125 transition-transform"
