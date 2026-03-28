@@ -237,7 +237,6 @@ export default function HuntingPage() {
   const [feedChoice, setFeedChoice] = useState<"hp" | "atk" | "def" | "spd" | "crit" | null>(null);
   const [feedMode, setFeedMode] = useState(false);
   const [selectedFoodIds, setSelectedFoodIds] = useState<Set<string>>(new Set());
-  const [previewMode, setPreviewMode] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("rank");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [confirmReleaseAll, setConfirmReleaseAll] = useState(false);
@@ -450,7 +449,6 @@ export default function HuntingPage() {
     // Reset
     setSelectedFoodIds(new Set());
     setFeedMode(false);
-    setPreviewMode(false);
   };
 
   const formatVariance = (variance: number) => { const sign = variance >= 0 ? "+" : ""; return `${sign}${variance.toFixed(1)}%`; };
@@ -717,32 +715,18 @@ export default function HuntingPage() {
                         {selectedFoodIds.size} créature{selectedFoodIds.size > 1 ? 's' : ''} sélectionnée{selectedFoodIds.size > 1 ? 's' : ''}
                       </p>
                     </div>
-                    {!previewMode && (
-                      <>
-                        <button 
-                          onClick={() => setPreviewMode(true)}
-                          disabled={selectedFoodIds.size === 0}
-                          className="bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white rounded-lg px-4 py-2 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          👁️ Afficher
-                        </button>
-                        <button 
-                          onClick={handleFeedNewSystem}
-                          disabled={selectedFoodIds.size === 0}
-                          className="bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white rounded-lg px-4 py-2 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          ✅ Nourrir
-                        </button>
-                      </>
-                    )}
-                    {previewMode && (
-                      <button onClick={() => setPreviewMode(false)} className="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-lg px-4 py-2 font-bold">✏️ Modifier</button>
-                    )}
+                    <button
+                      onClick={handleFeedNewSystem}
+                      disabled={selectedFoodIds.size === 0}
+                      className="bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white rounded-lg px-4 py-2 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      ✅ Nourrir
+                    </button>
                   </div>
-                  
-                  {previewMode && selectedCreature && (
+
+                  {selectedFoodIds.size > 0 && (
                     <div className="bg-blue-900 bg-opacity-50 rounded-lg p-4 mb-4 border-2 border-blue-600">
-                      <h4 className="text-blue-200 font-bold mb-2">🔮 Prévision</h4>
+                      <h4 className="text-blue-200 font-bold mb-2">🔮 Prévision de nutrition</h4>
                       <p className="text-blue-100">Total XP: <strong>{calculateTotalXP()}</strong></p>
                       {(() => {
                         const sim = simulateFeeding();
@@ -758,21 +742,22 @@ export default function HuntingPage() {
                       })()}
                     </div>
                   )}
-                  
+
                   <div className="max-h-64 overflow-y-auto border-2 border-green-700 rounded-lg p-2">
                     {filteredFoodCollection.map(creature => (
                       <div
                         key={creature.id}
-                        onClick={() => !previewMode && toggleFoodCreature(creature.id)}
+                        onClick={() => toggleFoodCreature(creature.id)}
                         className={`flex items-center gap-2 p-2 rounded-lg mb-2 cursor-pointer transition-colors ${
                           selectedFoodIds.has(creature.id) ? 'bg-yellow-700 bg-opacity-50' : 'hover:bg-green-700 bg-opacity-30'
-                        } ${previewMode ? 'cursor-not-allowed' : ''}`}
+                        }`}
                       >
                         <input
                           type="checkbox"
                           checked={selectedFoodIds.has(creature.id)}
-                          onChange={() => !previewMode && toggleFoodCreature(creature.id)}
-                          disabled={previewMode || creature.isFavorite}
+                          onChange={() => toggleFoodCreature(creature.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          disabled={creature.isFavorite}
                           className="w-5 h-5"
                         />
                         <button
