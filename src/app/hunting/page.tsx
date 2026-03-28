@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { CREATURES, Rank, Creature } from "@/lib/database";
 import { getVarianceRange, BattleStats } from "@/lib/battle";
 import { rollRandomTraits, getTraitsByIds } from "@/lib/traits";
-import { applyStarBonusToSkill } from "@/lib/star-unlocks";
 import Link from "next/link";
 
 type HuntingPhase = "ready" | "spawned" | "viewing";
