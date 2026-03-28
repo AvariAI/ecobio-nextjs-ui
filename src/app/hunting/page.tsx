@@ -309,11 +309,8 @@ export default function HuntingPage() {
     setSelectedFoodIds(allIds);
   };
 
-  const autoSelectByRank = (rank: Rank) => {
-    const rankIds = new Set(collection
-      .filter(c => c.id !== selectedCreature?.id && !c.isFavorite && c.finalStats.rank === rank)
-      .map(c => c.id));
-    setSelectedFoodIds(rankIds);
+  const autoSelectNone = () => {
+    setSelectedFoodIds(new Set());
   };
 
   const handleSpawn = () => {
@@ -647,6 +644,12 @@ export default function HuntingPage() {
                 <div className="mb-4 p-3 bg-green-900 bg-opacity-50 rounded-lg border border-green-600">
                   <div className="flex flex-wrap gap-2 mb-3">
                     <span className="text-green-200 font-semibold">Filtre rang:</span>
+                    <button
+                      onClick={() => setFeedRankFilter(null)}
+                      className={`px-3 py-1 rounded-full font-bold text-sm ${feedRankFilter === null ? "ring-2 ring-white bg-gray-600" : "bg-gray-600 opacity-60 hover:opacity-100"}`}
+                    >
+                      Tout
+                    </button>
                     {(["E", "D", "C", "B", "A", "S", "S+"] as Rank[]).map(rank => (
                       <button
                         key={rank}
@@ -663,22 +666,19 @@ export default function HuntingPage() {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    <span className="text-green-200 font-semibold">Auto-sélection:</span>
+                    <span className="text-green-200 font-semibold">Sélection:</span>
                     <button
                       onClick={autoSelectAll}
                       className="bg-gradient-to-r from-purple-700 to-purple-600 hover:from-purple-600 hover:to-purple-500 text-white rounded px-3 py-1 text-sm font-bold"
                     >
-                      ✅ Tous
+                      ✅ Tout sélectionner
                     </button>
-                    {(["E", "D", "C", "B", "A", "S", "S+"] as Rank[]).map(rank => (
-                      <button
-                        key={rank}
-                        onClick={() => autoSelectByRank(rank)}
-                        className={`px-3 py-1 rounded text-white text-sm font-bold ${getRankBadgeColor(rank)} hover:opacity-80`}
-                      >
-                        {rank}
-                      </button>
-                    ))}
+                    <button
+                      onClick={autoSelectNone}
+                      className="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded px-3 py-1 text-sm font-bold"
+                    >
+                      ❌ Tout désélectionner
+                    </button>
                   </div>
                 </div>
               )}
