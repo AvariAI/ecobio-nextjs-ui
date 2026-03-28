@@ -245,21 +245,24 @@ export default function BreedingPage() {
       return;
     }
 
-    // Validate breeding buffers
-    if (selectedBuffer1 && selectedBuffer2) {
-      const buffer1 = inventory.items.find(i => i.id === selectedBuffer1 && i.type === "breedingBuffer");
-      const buffer2 = inventory.items.find(i => i.id === selectedBuffer2 && i.type === "breedingBuffer");
+    // Require breeding buffers
+    if (!selectedBuffer1 || !selectedBuffer2) {
+      setError("Les buffers de reproduction sont obligatoires (un pour chaque parent)");
+      return;
+    }
 
-      if (!buffer1 || !buffer2 || buffer1.count === 0 || buffer2.count === 0) {
-        setError("Les buffers sélectionnés ne sont pas disponibles");
-        return;
-      }
+    const buffer1 = inventory.items.find(i => i.id === selectedBuffer1 && i.type === "breedingBuffer");
+    const buffer2 = inventory.items.find(i => i.id === selectedBuffer2 && i.type === "breedingBuffer");
 
-      // Buffers should match parent ranks
-      if (buffer1.rank !== parent1.finalStats.rank || buffer2.rank !== parent2.finalStats.rank) {
-        setError(`Les buffers doivent correspondre aux rangs des parents (${parent1.finalStats.rank} et ${parent2.finalStats.rank})`);
-        return;
-      }
+    if (!buffer1 || !buffer2 || buffer1.count === 0 || buffer2.count === 0) {
+      setError("Les buffers sélectionnés ne sont pas disponibles");
+      return;
+    }
+
+    // Buffers should match parent ranks
+    if (buffer1.rank !== parent1.finalStats.rank || buffer2.rank !== parent2.finalStats.rank) {
+      setError(`Les buffers doivent correspondre aux rangs des parents (${parent1.finalStats.rank} et ${parent2.finalStats.rank})`);
+      return;
     }
 
     setShowConfirmDialog(true);
@@ -524,8 +527,8 @@ export default function BreedingPage() {
           {/* Breeding Buffer Selection */}
           {(parent1 || parent2) && (
             <div className="mt-6 pt-6 border-t border-green-700">
-              <h3 className="text-xl font-bold text-green-100 mb-4">🧬 Buffer Breeding (Optionnel)</h3>
-              <p className="text-green-300 text-sm mb-4">Sélectionnez des buffers correspondant aux rangs des parents pour améliorer les résultats</p>
+              <h3 className="text-xl font-bold text-green-100 mb-4">🧬 Buffer Breeding</h3>
+              <p className="text-green-300 text-sm mb-4">Sélectionnez un buffer correspondant au rang de chaque parent</p>
 
               <div className="grid md:grid-cols-2 gap-4">
                 {parent1 && (
@@ -536,9 +539,10 @@ export default function BreedingPage() {
                     <select
                       value={selectedBuffer1}
                       onChange={(e) => setSelectedBuffer1(e.target.value)}
+                      required
                       className="w-full p-3 rounded-lg border-2 border-green-600 bg-green-950 text-green-100 focus:outline-none focus:border-green-500"
                     >
-                      <option value="">Aucun buffer</option>
+                      <option value="">Sélectionner un buffer...</option>
                       {inventory.items
                         .filter(i => i.type === "breedingBuffer" && i.rank === parent1.finalStats.rank && i.count > 0)
                         .map(item => (
@@ -558,9 +562,10 @@ export default function BreedingPage() {
                     <select
                       value={selectedBuffer2}
                       onChange={(e) => setSelectedBuffer2(e.target.value)}
+                      required
                       className="w-full p-3 rounded-lg border-2 border-green-600 bg-green-950 text-green-100 focus:outline-none focus:border-green-500"
                     >
-                      <option value="">Aucun buffer</option>
+                      <option value="">Sélectionner un buffer...</option>
                       {inventory.items
                         .filter(i => i.type === "breedingBuffer" && i.rank === parent2.finalStats.rank && i.count > 0)
                         .map(item => (
@@ -654,7 +659,7 @@ export default function BreedingPage() {
                 {/* Reproduce Button */}
                 <button
                   onClick={handleReproduce}
-                  disabled={!parent1 || !parent2 || !validCreatureType}
+                  disabled={!parent1 || !parent2 || !validCreatureType || !selectedBuffer1 || !selectedBuffer2}
                   className="w-full bg-gradient-to-r from-pink-700 to-pink-600 hover:from-pink-600 hover:to-pink-500 disabled:from-gray-700 disabled:to-gray-600 text-white rounded-lg p-4 text-xl font-bold shadow-lg transition-all duration-200"
                 >
                   🧬 REPRODUIRE
