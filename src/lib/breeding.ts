@@ -37,17 +37,26 @@ export interface Stats {
   crit: number;
 }
 
-// Breeded creature structure (extended collection creature)
+// Breeded creature structure (compatible with HuntedCreature)
 export interface BreededCreature {
   id: string;
-  nickname: string;
+  name: string; // Required for HuntedCreature compatibility
+  creatureId: string; // Creature database ID
   creatureType: string; // 'ant' | 'fly' | 'bee' | etc.
+  nickname?: string;
   level: number; // Always 1
   rank: Rank; // E-S+
   stats: Stats;
+  currentXP: number;
+  xpToNextLevel: number;
+  feedCount: number;
+  feedStat: "hp" | "atk" | "def" | "spd" | "crit" | null;
+  createdAt: number;
   traits: string[]; // Trait IDs
   isFavorite: boolean;
-  breeded: true; // Flag to indicate breeded creature
+  breeded?: true; // Optional flag to indicate breeded creature
+  parentIds?: string[] // IDs of parents (for records)
+}
   parentIds: string[]; // IDs of parents (for records)
   breedDate: number; // Timestamp
   creatureId: string; // Base creature type ID
@@ -304,31 +313,30 @@ export function generateBabyCreature(
     baseCreature = creatureKey ? CREATURES[creatureKey] : CREATURES.ant;
   }
 
-  // 6. Create baby creature object
+  // 6. Create baby creature object (compatible with HuntedCreature)
   const baby: BreededCreature = {
     id: `baby-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    nickname: `${baseCreature.name} ${rank}`,
+    name: `${baseCreature.name} ${rank}`,
+    creatureId: baseCreature.id,
     creatureType: babyCreatureType.toLowerCase(),
     level: 1,
+    rank,
     currentXP: 0,
     xpToNextLevel: 100,
     feedCount: 0,
     feedStat: null,
-    rank,
-    stats,
-    finalStats: {
-      ...stats,
-      rank,
-    },
+    createdAt: Date.now(),
     traits,
     isFavorite: false,
     breeded: true,
     parentIds: [parent1.id, parent2.id],
-    breedDate: Date.now(),
-    creatureId: baseCreature.id,
-    skill: baseCreature.skill,
-    desc: `Bébé ${baseCreature.name} issu de reproduction`,
-    createdAt: Date.now(),
+  };
+
+  // Add properties compatible with finalStats structure
+  (baby as any).stats = stats;
+  (baby as any).finalStats = {
+    ...stats,
+    rank,
   };
 
   return baby;
