@@ -90,8 +90,8 @@ function isHuntedCreature(item: CollectionItem): item is HuntedCreature {
 }
 
 export default function BreedingPage() {
-  const [parent1, setParent1] = useState<HuntedCreature | null>(null);
-  const [parent2, setParent2] = useState<HuntedCreature | null>(null);
+  const [parent1, setParent1] = useState<CollectionItem | null>(null);
+  const [parent2, setParent2] = useState<CollectionItem | null>(null);
   const [collection, setCollection] = useState<CollectionItem[]>([]);
   const [showDropdown1, setShowDropdown1] = useState(false);
   const [showDropdown2, setShowDropdown2] = useState(false);
