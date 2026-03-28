@@ -21,16 +21,12 @@ export default function CraftPage() {
     resultRank: string | null;
     canCraft: boolean;
   }>({ resultRank: null, canCraft: false });
-  const [filteredCraftItems, setFilteredCraftItems] = useState<InventoryItem[]>([]);
   const [mainInventory, setMainInventory] = useState<Inventory>({ items: [], totalLootObtained: 0 });
 
   // Load data
   useEffect(() => {
     const loadedInventory = loadInventory();
     setMainInventory(loadedInventory);
-
-    // Filter craft items based on selected recipe type
-    updateFilteredCraftItems();
   }, [selectedRecipe]);
 
   // Listen for updates
@@ -38,9 +34,6 @@ export default function CraftPage() {
     const handleUpdate = () => {
       const inventory = loadInventory();
       setMainInventory(inventory);
-
-      // Update filtered items
-      updateFilteredCraftItems();
     };
 
     window.addEventListener("inventory-updated", handleUpdate);
@@ -48,21 +41,6 @@ export default function CraftPage() {
       window.removeEventListener("inventory-updated", handleUpdate);
     };
   }, [selectedRecipe]);
-
-  // Update filtered craft items helper
-  const updateFilteredCraftItems = () => {
-    const inventory = loadInventory();
-
-    if (selectedRecipe === "plantEssence") {
-      // For plant essence craft, we need plants
-      setFilteredCraftItems(inventory.items.filter(item => item.type === "plant"));
-    } else if (selectedRecipe === "breedingBuffer") {
-      // For breeding buffer craft, we need essences (both insect and plant)
-      setFilteredCraftItems(inventory.items.filter(item =>
-        item.type === "insectEssence" || item.type === "plantEssence"
-      ));
-    }
-  };
 
   // Sync ingredient2 rank with ingredient1 for plant essence craft
   useEffect(() => {
@@ -157,6 +135,9 @@ export default function CraftPage() {
         setIngredient1("");
         setIngredient2("");
         setPreview({ resultRank: null, canCraft: false });
+
+        // Trigger inventory update event
+        window.dispatchEvent(new CustomEvent("inventory-updated"));
       }
     } else if (selectedRecipe === "breedingBuffer") {
       const essence1 = mainInventory.items.find(i => i.id === ingredient1 && i.type === "insectEssence");
@@ -176,6 +157,9 @@ export default function CraftPage() {
         setIngredient1("");
         setIngredient2("");
         setPreview({ resultRank: null, canCraft: false });
+
+        // Trigger inventory update event
+        window.dispatchEvent(new CustomEvent("inventory-updated"));
       }
     }
   };
@@ -372,52 +356,6 @@ export default function CraftPage() {
           >
             🧪 CRAFT
           </button>
-        </div>
-
-        {/* Craft Inventory (filtered from main inventory) */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
-          <h2 className="text-2xl font-bold text-amber-800 dark:text-amber-200 mb-4">
-            Inventaire Craft
-          </h2>
-
-          {filteredCraftItems.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">
-              {selectedRecipe === "plantEssence"
-                ? "Ton inventaire plante est vide. Explore pour obtenir des plantes!"
-                : "Ton inventaire essence est vide. Craft des essences d'abord!"}
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {filteredCraftItems.map(item => (
-                <div
-                  key={item.id}
-                  className={`flex justify-between items-center p-3 rounded-xl ${RANK_COLORS[item.rank]}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">
-                      {item.type === "insectEssence" ? "🐛" : item.type === "plantEssence" ? "🌿" : item.type === "plant" ? "🌱" : "🧬"}
-                    </span>
-                    <div>
-                      <h4 className="font-bold">{item.name}</h4>
-                      <p className="text-sm opacity-80">{item.rank}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold">{item.count}×</span>
-                    <button
-                      className="text-red-600 hover:text-red-800 text-sm"
-                      onClick={() => {
-                        removeFromInventory(item.id, item.count);
-                        window.dispatchEvent(new CustomEvent("inventory-updated"));
-                      }}
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Back button */}
