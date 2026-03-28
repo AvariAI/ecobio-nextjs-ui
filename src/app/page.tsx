@@ -51,31 +51,7 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 mb-8 max-w-4xl mx-auto">
-          <Link href="/formulas">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-blue-400">
-              <div className="text-6xl mb-4">🧮</div>
-              <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
-                Formules
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300">
-                Découvrez toutes les formules du jeu: variance de stats, scaling de niveau, dégâts, critiques.
-              </p>
-            </div>
-          </Link>
-
-          <Link href="/traits">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-purple-400">
-              <div className="text-6xl mb-4">✨</div>
-              <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
-                Traits
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300">
-                Liste complète des traits passifs et conditionnels avec leurs effets et rarités.
-              </p>
-            </div>
-          </Link>
-
+        <div className="grid md:grid-cols-2 gap-8 mb-8">
           <Link href="/breeding">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-pink-400">
               <div className="text-6xl mb-4">🧬</div>
@@ -83,13 +59,11 @@ export default function Home() {
                 Reproduction
               </h2>
               <p className="text-gray-600 dark:text-gray-300">
-                Combinez tes créatures pour créer de nouveaux spécimens avec de meilleurs stats.
+                Combinez tes créatures pour créer de nouveaux spécimens.
               </p>
             </div>
           </Link>
-        </div>
 
-        <div className="grid md:grid-cols-1 gap-8 mb-8 max-w-xl mx-auto">
           <Link href="/exploration">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-amber-500">
               <div className="text-6xl mb-4">🗺️</div>
@@ -97,9 +71,19 @@ export default function Home() {
                 Exploration
               </h2>
               <p className="text-gray-600 dark:text-gray-300">
-                Envois tes créatures en mission pour récolter des ressources rares.
+                Envois tes créatures en mission pour récolter des ressources.
               </p>
             </div>
+          </Link>
+        </div>
+
+        <div className="flex gap-4 mb-8 max-w-lg mx-auto justify-center">
+          <Link href="/formulas" className="text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600">
+            Formules
+          </Link>
+          <span className="text-gray-400">|</span>
+          <Link href="/traits" className="text-sm text-gray-600 dark:text-gray-400 hover:text-purple-600">
+            Traits
           </Link>
         </div>
 
