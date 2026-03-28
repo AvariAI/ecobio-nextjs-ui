@@ -14,6 +14,7 @@ import {
   BreededCreature
 } from "@/lib/breeding";
 import Link from "next/link";
+import { loadInventory, removeFromInventory, Inventory, type InventoryItem } from "@/lib/inventory";
 
 type BreedingMode = "basic" | "enhanced" | "advanced";
 
@@ -103,6 +104,9 @@ export default function BreedingPage() {
   const [babyCreatureType, setBabyCreatureType] = useState<string>("");
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [breedingSuccess, setBreedingSuccess] = useState(false);
+  const [inventory, setInventory] = useState<Inventory>({ items: [], totalLootObtained: 0 });
+  const [selectedBuffer1, setSelectedBuffer1] = useState<string>("");
+  const [selectedBuffer2, setSelectedBuffer2] = useState<string>("");
 
   useEffect(() => {
     const saved = localStorage.getItem("ecobio-collection");
@@ -114,6 +118,21 @@ export default function BreedingPage() {
         console.error("Failed load collection", e);
       }
     }
+
+    // Load inventory for breeding buffers
+    const loadedInventory = loadInventory();
+    setInventory(loadedInventory);
+  }, []);
+
+  // Listen for inventory updates
+  useEffect(() => {
+    const handleInventoryUpdate = () => {
+      const loadedInventory = loadInventory();
+      setInventory(loadedInventory);
+    };
+
+    window.addEventListener("inventory-updated", handleInventoryUpdate);
+    return () => window.removeEventListener("inventory-updated", handleInventoryUpdate);
   }, []);
 
   // Auto-set baby creature type when both parents selected and they match
@@ -208,11 +227,13 @@ export default function BreedingPage() {
   const handleClearParent1 = () => {
     setParent1(null);
     setError(null);
+    setSelectedBuffer1("");
   };
 
   const handleClearParent2 = () => {
     setParent2(null);
     setError(null);
+    setSelectedBuffer2("");
   };
 
   const handleReproduce = () => {
@@ -222,6 +243,23 @@ export default function BreedingPage() {
     if (!validation.valid) {
       setError(validation.error || "Invalid breeding parameters");
       return;
+    }
+
+    // Validate breeding buffers
+    if (selectedBuffer1 && selectedBuffer2) {
+      const buffer1 = inventory.items.find(i => i.id === selectedBuffer1 && i.type === "breedingBuffer");
+      const buffer2 = inventory.items.find(i => i.id === selectedBuffer2 && i.type === "breedingBuffer");
+
+      if (!buffer1 || !buffer2 || buffer1.count === 0 || buffer2.count === 0) {
+        setError("Les buffers sélectionnés ne sont pas disponibles");
+        return;
+      }
+
+      // Buffers should match parent ranks
+      if (buffer1.rank !== parent1.finalStats.rank || buffer2.rank !== parent2.finalStats.rank) {
+        setError(`Les buffers doivent correspondre aux rangs des parents (${parent1.finalStats.rank} et ${parent2.finalStats.rank})`);
+        return;
+      }
     }
 
     setShowConfirmDialog(true);
@@ -236,6 +274,15 @@ export default function BreedingPage() {
       setBreedingSuccess(true);
       setShowConfirmDialog(false);
 
+      // Consume breeding buffers if selected
+      if (selectedBuffer1 && selectedBuffer2) {
+        removeFromInventory(selectedBuffer1, 1);
+        removeFromInventory(selectedBuffer2, 1);
+        setSelectedBuffer1("");
+        setSelectedBuffer2("");
+        window.dispatchEvent(new CustomEvent("inventory-updated"));
+      }
+
       // Reset form after success
       setTimeout(() => {
         setParent1(null);
@@ -243,6 +290,8 @@ export default function BreedingPage() {
         setBabyCreatureType("");
         setError(null);
         setBreedingSuccess(false);
+        setSelectedBuffer1("");
+        setSelectedBuffer2("");
       }, 2000);
     } catch (err) {
       setError("Failed to generate baby creature");
@@ -467,6 +516,60 @@ export default function BreedingPage() {
                   getDropdownCreatures(search2, parent1).map(creature => renderCreatureCard(creature, 2))
                 ) : (
                   <p className="text-center text-green-400 p-4">Aucune créature trouvée</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Breeding Buffer Selection */}
+          {(parent1 || parent2) && (
+            <div className="mt-6 pt-6 border-t border-green-700">
+              <h3 className="text-xl font-bold text-green-100 mb-4">🧬 Buffer Breeding (Optionnel)</h3>
+              <p className="text-green-300 text-sm mb-4">Sélectionnez des buffers correspondant aux rangs des parents pour améliorer les résultats</p>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                {parent1 && (
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-green-200">
+                      Buffer pour {parent1.name} ({parent1.finalStats.rank})
+                    </label>
+                    <select
+                      value={selectedBuffer1}
+                      onChange={(e) => setSelectedBuffer1(e.target.value)}
+                      className="w-full p-3 rounded-lg border-2 border-green-600 bg-green-950 text-green-100 focus:outline-none focus:border-green-500"
+                    >
+                      <option value="">Aucun buffer</option>
+                      {inventory.items
+                        .filter(i => i.type === "breedingBuffer" && i.rank === parent1.finalStats.rank && i.count > 0)
+                        .map(item => (
+                          <option key={item.id} value={item.id}>
+                            Buffer Breeding ({item.rank}) ×{item.count}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
+
+                {parent2 && (
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-green-200">
+                      Buffer pour {parent2.name} ({parent2.finalStats.rank})
+                    </label>
+                    <select
+                      value={selectedBuffer2}
+                      onChange={(e) => setSelectedBuffer2(e.target.value)}
+                      className="w-full p-3 rounded-lg border-2 border-green-600 bg-green-950 text-green-100 focus:outline-none focus:border-green-500"
+                    >
+                      <option value="">Aucun buffer</option>
+                      {inventory.items
+                        .filter(i => i.type === "breedingBuffer" && i.rank === parent2.finalStats.rank && i.count > 0)
+                        .map(item => (
+                          <option key={item.id} value={item.id}>
+                            Buffer Breeding ({item.rank}) ×{item.count}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
                 )}
               </div>
             </div>
