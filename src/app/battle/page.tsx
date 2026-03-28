@@ -184,7 +184,105 @@ export default function BattlePage() {
 
       if (isEnemyCreature) {
         const timer = setTimeout(() => {
-          executeMultiCreatureTurn(true);
+          // Inline enemy turn execution to avoid closure issues
+          // Capture current state now, inside the setTimeout
+          setIsActionProcessing(true);
+
+          if (!playerTeam || !enemyTeam || !currentActingCreature || phase !== "battle") {
+            setIsActionProcessing(false);
+            return;
+          }
+
+          // Check if battle is over
+          if (isTeamBattleOver(playerTeam, enemyTeam)) {
+            const winner = getTeamBattleWinner(playerTeam, enemyTeam);
+            const newLog = [...log];
+            newLog.push({
+              text: winner === "player" ? "🏆 VICTORY!" : "💀 DEFEAT!",
+              type: winner === "player" ? "victory" : "defeat",
+            });
+            setLog(newLog);
+            setPhase("complete");
+            setIsActionProcessing(false);
+            return;
+          }
+
+          const newLog = [...log];
+          const turnResult = executeCreatureTurn(
+            currentActingCreature,
+            playerTeam,
+            enemyTeam,
+            true, // isAuto = true (AI)
+            teamSize
+          );
+
+          newLog.push(...turnResult);
+
+          // Create new team references
+          const newPlayerTeam = { ...playerTeam, creatures: playerTeam.creatures.map(c => ({ ...c })) };
+          const newEnemyTeam = { ...enemyTeam, creatures: enemyTeam.creatures.map(c => ({ ...c })) };
+
+          // Rebuild turn order with new creature references
+          const newTurnOrder = getAllBattleElements(newPlayerTeam, newEnemyTeam).sort(
+            (a, b) => getEffectiveSpeed(b.creature) - getEffectiveSpeed(a.creature)
+          );
+
+          // Find the new creature reference corresponding to current
+          const newCurrentCreature = newTurnOrder.find(el =>
+            el.creature.name === currentActingCreature.name &&
+            el.team === (playerTeam.creatures.includes(currentActingCreature) ? "player" : "enemy")
+          )?.creature || currentActingCreature;
+
+          setLog(newLog);
+          setPlayerTeam(newPlayerTeam);
+          setEnemyTeam(newEnemyTeam);
+          setTurnOrder(newTurnOrder);
+
+          // Check if battle ended after this turn
+          if (isTeamBattleOver(newPlayerTeam, newEnemyTeam)) {
+            const winner = getTeamBattleWinner(newPlayerTeam, newEnemyTeam);
+            newLog.push({
+              text: winner === "player" ? "🏆 VICTORY!" : "💀 DEFEAT!",
+              type: winner === "player" ? "victory" : "defeat",
+            });
+            setLog(newLog);
+            setPhase("complete");
+            setIsActionProcessing(false);
+            return;
+          }
+
+          // Move to next creature
+          const currentIndex = newTurnOrder.findIndex(el => el.creature === newCurrentCreature);
+          let nextIndex = (currentIndex + 1) % newTurnOrder.length;
+          let nextCreature = newTurnOrder[nextIndex];
+
+          // Find next alive creature
+          let attempts = 0;
+          while (nextCreature.creature.currentHP <= 0 && attempts < newTurnOrder.length) {
+            nextIndex = (nextIndex + 1) % newTurnOrder.length;
+            nextCreature = newTurnOrder[nextIndex];
+            attempts++;
+          }
+
+          if (attempts >= newTurnOrder.length) {
+            const winner = getTeamBattleWinner(newPlayerTeam, newEnemyTeam);
+            newLog.push({
+              text: winner === "player" ? "🏆 VICTORY!" : "💀 DEFEAT!",
+              type: winner === "player" ? "victory" : "defeat",
+            });
+            setLog(newLog);
+            setPhase("complete");
+            setIsActionProcessing(false);
+            return;
+          }
+
+          setCurrentActingCreature(nextCreature.creature);
+          setTurn(nextCreature.team as "player" | "enemy");
+          if (nextIndex < currentIndex) {
+            setRound((prev) => prev + 1);
+          }
+
+          setTimeout(() => setIsActionProcessing(false), 1000);
         }, 1500);
 
         return () => clearTimeout(timer);
@@ -497,12 +595,26 @@ export default function BattlePage() {
     setLog(logCopy);
 
     // Update team states - create new references for React to detect changes
-    setPlayerTeam({ ...playerTeam, creatures: playerTeam.creatures.map(c => ({ ...c })) });
-    setEnemyTeam({ ...enemyTeam, creatures: enemyTeam.creatures.map(c => ({ ...c })) });
+    const newPlayerTeam = { ...playerTeam, creatures: playerTeam.creatures.map(c => ({ ...c })) };
+    const newEnemyTeam = { ...enemyTeam, creatures: enemyTeam.creatures.map(c => ({ ...c })) };
+
+    // Rebuild turn order with new creature references before advancing
+    const newTurnOrder = getAllBattleElements(newPlayerTeam, newEnemyTeam).sort(
+      (a, b) => getEffectiveSpeed(b.creature) - getEffectiveSpeed(a.creature)
+    );
+
+    // Find the new creature reference corresponding to the current acting creature
+    const newCurrentCreature = newTurnOrder.find(el =>
+      el.creature.name === currentActingCreature.name &&
+      el.team === (playerTeam.creatures.includes(currentActingCreature) ? "player" : "enemy")
+    )?.creature || currentActingCreature;
+
+    setPlayerTeam(newPlayerTeam);
+    setEnemyTeam(newEnemyTeam);
 
     // Check if battle ended after this turn
-    if (isTeamBattleOver(playerTeam, enemyTeam)) {
-      const winner = getTeamBattleWinner(playerTeam, enemyTeam);
+    if (isTeamBattleOver(newPlayerTeam, newEnemyTeam)) {
+      const winner = getTeamBattleWinner(newPlayerTeam, newEnemyTeam);
       logCopy.push({
         text: winner === "player" ? "🏆 VICTORY!" : "💀 DEFEAT!",
         type: winner === "player" ? "victory" : "defeat",
@@ -514,21 +626,21 @@ export default function BattlePage() {
     }
 
     // Move to next creature in turn order that's still alive
-    const currentIndex = turnOrder.findIndex(el => el.creature === currentActingCreature);
-    let nextIndex = (currentIndex + 1) % turnOrder.length;
-    let nextCreature = turnOrder[nextIndex];
+    const currentIndex = newTurnOrder.findIndex(el => el.creature === newCurrentCreature);
+    let nextIndex = (currentIndex + 1) % newTurnOrder.length;
+    let nextCreature = newTurnOrder[nextIndex];
 
     // Find next alive creature, handling wrap-around
     let attempts = 0;
-    while (nextCreature.creature.currentHP <= 0 && attempts < turnOrder.length) {
-      nextIndex = (nextIndex + 1) % turnOrder.length;
-      nextCreature = turnOrder[nextIndex];
+    while (nextCreature.creature.currentHP <= 0 && attempts < newTurnOrder.length) {
+      nextIndex = (nextIndex + 1) % newTurnOrder.length;
+      nextCreature = newTurnOrder[nextIndex];
       attempts++;
     }
 
     // If all creatures are dead, battle should have ended already
-    if (attempts >= turnOrder.length) {
-      const winner = getTeamBattleWinner(playerTeam, enemyTeam);
+    if (attempts >= newTurnOrder.length) {
+      const winner = getTeamBattleWinner(newPlayerTeam, newEnemyTeam);
       logCopy.push({
         text: winner === "player" ? "🏆 VICTORY!" : "💀 DEFEAT!",
         type: winner === "player" ? "victory" : "defeat",
@@ -541,6 +653,7 @@ export default function BattlePage() {
 
     setCurrentActingCreature(nextCreature.creature);
     setTurn(nextCreature.team as "player" | "enemy");
+    setTurnOrder(newTurnOrder);
 
     // Increment round if we've cycled back to the first creature
     if (nextIndex < currentIndex) {
@@ -582,10 +695,109 @@ export default function BattlePage() {
   const handleAttack = () => {
     if (isActionProcessing) return; // Prevent multiple actions in same turn
 
-    // Multi-creature mode: auto-execute current creature's turn
+    // Multi-creature mode: inline turn execution to avoid closure issues
     if (teamSize > 1) {
       setIsActionProcessing(true);
-      executeMultiCreatureTurn(false);
+
+      // Execute turn inline - same logic as executeMultiCreatureTurn but with local state
+      if (!playerTeam || !enemyTeam || !currentActingCreature || phase !== "battle") {
+        setIsActionProcessing(false);
+        return;
+      }
+
+      // Check if battle is over
+      if (isTeamBattleOver(playerTeam, enemyTeam)) {
+        const winner = getTeamBattleWinner(playerTeam, enemyTeam);
+        const logCopy = [...log];
+        logCopy.push({
+          text: winner === "player" ? "🏆 VICTORY!" : "💀 DEFEAT!",
+          type: winner === "player" ? "victory" : "defeat",
+        });
+        setLog(logCopy);
+        setPhase("complete");
+        setIsActionProcessing(false);
+        return;
+      }
+
+      const logCopy = [...log];
+      const turnResult = executeCreatureTurn(
+        currentActingCreature,
+        playerTeam,
+        enemyTeam,
+        false, // isAuto = false (player initiated)
+        teamSize
+      );
+
+      logCopy.push(...turnResult);
+
+      // Create new team references
+      const newPlayerTeam = { ...playerTeam, creatures: playerTeam.creatures.map(c => ({ ...c })) };
+      const newEnemyTeam = { ...enemyTeam, creatures: enemyTeam.creatures.map(c => ({ ...c })) };
+
+      // Rebuild turn order with new creature references
+      const newTurnOrder = getAllBattleElements(newPlayerTeam, newEnemyTeam).sort(
+        (a, b) => getEffectiveSpeed(b.creature) - getEffectiveSpeed(a.creature)
+      );
+
+      // Find the new creature reference corresponding to current
+      const newCurrentCreature = newTurnOrder.find(el =>
+        el.creature.name === currentActingCreature.name &&
+        el.team === (playerTeam.creatures.includes(currentActingCreature) ? "player" : "enemy")
+      )?.creature || currentActingCreature;
+
+      // Update all state
+      setLog(logCopy);
+      setPlayerTeam(newPlayerTeam);
+      setEnemyTeam(newEnemyTeam);
+
+      // Check if battle ended after this turn
+      if (isTeamBattleOver(newPlayerTeam, newEnemyTeam)) {
+        const winner = getTeamBattleWinner(newPlayerTeam, newEnemyTeam);
+        logCopy.push({
+          text: winner === "player" ? "🏆 VICTORY!" : "💀 DEFEAT!",
+          type: winner === "player" ? "victory" : "defeat",
+        });
+        setLog(logCopy);
+        setPhase("complete");
+        setIsActionProcessing(false);
+        return;
+      }
+
+      // Move to next creature
+      const currentIndex = newTurnOrder.findIndex(el => el.creature === newCurrentCreature);
+      let nextIndex = (currentIndex + 1) % newTurnOrder.length;
+      let nextCreature = newTurnOrder[nextIndex];
+
+      // Find next alive creature
+      let attempts = 0;
+      while (nextCreature.creature.currentHP <= 0 && attempts < newTurnOrder.length) {
+        nextIndex = (nextIndex + 1) % newTurnOrder.length;
+        nextCreature = newTurnOrder[nextIndex];
+        attempts++;
+      }
+
+      // If all dead, end battle
+      if (attempts >= newTurnOrder.length) {
+        const winner = getTeamBattleWinner(newPlayerTeam, newEnemyTeam);
+        logCopy.push({
+          text: winner === "player" ? "🏆 VICTORY!" : "💀 DEFEAT!",
+          type: winner === "player" ? "victory" : "defeat",
+        });
+        setLog(logCopy);
+        setPhase("complete");
+        setTurnOrder(newTurnOrder);
+        setIsActionProcessing(false);
+        return;
+      }
+
+      // Update next creature state
+      setTurnOrder(newTurnOrder);
+      setCurrentActingCreature(nextCreature.creature);
+      setTurn(nextCreature.team as "player" | "enemy");
+      if (nextIndex < currentIndex) {
+        setRound((prev) => prev + 1);
+      }
+
       setTimeout(() => setIsActionProcessing(false), 1000);
       return;
     }
@@ -670,17 +882,78 @@ export default function BattlePage() {
   };
 
   const handleSwitchPosition = (creatureA: BattleCreature, creatureB: BattleCreature) => {
-    if (!playerTeam || phase !== "battle" || turn !== "player") return;
+    if (!playerTeam || !enemyTeam || phase !== "battle" || !currentActingCreature || turn !== "player") return;
+
+    // Create new team references (we need fresh copies since switchPositions mutates in place)
+    const newPlayerTeam = { ...playerTeam, creatures: playerTeam.creatures.map(c => ({ ...c })) };
+    const newEnemyTeam = { ...enemyTeam, creatures: enemyTeam.creatures.map(c => ({ ...c })) };
 
     const logCopy = [...log];
-    const success = switchPositions(playerTeam, creatureA, creatureB, logCopy);
+    const success = switchPositions(newPlayerTeam, creatureA, creatureB, logCopy);
 
     if (success) {
-      setLog(logCopy);
-      setPlayerTeam({ ...playerTeam });
+      // Rebuild turn order with updated team after position swap
+      const newTurnOrder = getAllBattleElements(newPlayerTeam, newEnemyTeam).sort(
+        (a, b) => getEffectiveSpeed(b.creature) - getEffectiveSpeed(a.creature)
+      );
 
-      // Switching position consumes the entire turn - move to next creature
-      setTimeout(() => executeMultiCreatureTurn(false), 1000);
+      // Find the current creature in the new team
+      const newCurrentCreature = newPlayerTeam.creatures.find(
+        c => c.name === currentActingCreature.name
+      ) || newTurnOrder.find(el => el.name === currentActingCreature.name)?.creature;
+
+      if (!newCurrentCreature) {
+        setIsActionProcessing(false);
+        return;
+      }
+
+      setLog(logCopy);
+      setPlayerTeam(newPlayerTeam);
+      setEnemyTeam(newEnemyTeam);
+      setTurnOrder(newTurnOrder);
+
+      // Check if battle is over
+      if (isTeamBattleOver(newPlayerTeam, newEnemyTeam)) {
+        const winner = getTeamBattleWinner(newPlayerTeam, newEnemyTeam);
+        logCopy.push({
+          text: winner === "player" ? "🏆 VICTORY!" : "💀 DEFEAT!",
+          type: winner === "player" ? "victory" : "defeat",
+        });
+        setLog(logCopy);
+        setPhase("complete");
+        return;
+      }
+
+      // Move to next creature
+      const currentIndex = newTurnOrder.findIndex(el => el.creature === newCurrentCreature);
+      let nextIndex = (currentIndex + 1) % newTurnOrder.length;
+      let nextCreature = newTurnOrder[nextIndex];
+
+      // Find next alive creature
+      let attempts = 0;
+      while (nextCreature.creature.currentHP <= 0 && attempts < newTurnOrder.length) {
+        nextIndex = (nextIndex + 1) % newTurnOrder.length;
+        nextCreature = newTurnOrder[nextIndex];
+        attempts++;
+      }
+
+      if (attempts >= newTurnOrder.length) {
+        // All creatures dead - should have been caught by battle over check
+        const winner = getTeamBattleWinner(newPlayerTeam, newEnemyTeam);
+        logCopy.push({
+          text: winner === "player" ? "🏆 VICTORY!" : "💀 DEFEAT!",
+          type: winner === "player" ? "victory" : "defeat",
+        });
+        setLog(logCopy);
+        setPhase("complete");
+        return;
+      }
+
+      setCurrentActingCreature(nextCreature.creature);
+      setTurn(nextCreature.team as "player" | "enemy");
+      if (nextIndex < currentIndex) {
+        setRound((prev) => prev + 1);
+      }
     }
   };
 
@@ -741,29 +1014,84 @@ export default function BattlePage() {
       const success = useSkill(currentActingCreature, logCopy, target);
 
       if (success) {
+        // Create new team references for React
+        const newPlayerTeam = { ...playerTeam };
+        const newEnemyTeam = { ...enemyTeam };
+
         // Update the team with new state - must create new references for React to detect changes
         if (playerTeam.creatures.includes(currentActingCreature)) {
-          setPlayerTeam({
-            ...playerTeam,
-            creatures: playerTeam.creatures.map(c =>
-              c === currentActingCreature || c === target ? { ...c } : c
-            )
-          });
+          newPlayerTeam.creatures = playerTeam.creatures.map(c =>
+            c === currentActingCreature || c === target ? { ...c } : c
+          );
         } else {
-          setEnemyTeam({
-            ...enemyTeam,
-            creatures: enemyTeam.creatures.map(c =>
-              c === currentActingCreature || c === target ? { ...c } : c
-            )
-          });
+          newEnemyTeam.creatures = enemyTeam.creatures.map(c =>
+            c === currentActingCreature || c === target ? { ...c } : c
+          );
         }
 
-        setLog(logCopy);
+        // Rebuild turn order with new creature references
+        const newTurnOrder = getAllBattleElements(newPlayerTeam, newEnemyTeam).sort(
+          (a, b) => getEffectiveSpeed(b.creature) - getEffectiveSpeed(a.creature)
+        );
 
-        // Skill use consumes the entire turn - move to next creature
-        setTimeout(() => {
+        setLog(logCopy);
+        setPlayerTeam(newPlayerTeam);
+        setEnemyTeam(newEnemyTeam);
+        setTurnOrder(newTurnOrder);
+
+        // Check if battle ended
+        if (isTeamBattleOver(newPlayerTeam, newEnemyTeam)) {
+          const winner = getTeamBattleWinner(newPlayerTeam, newEnemyTeam);
+          logCopy.push({
+            text: winner === "player" ? "🏆 VICTORY!" : "💀 DEFEAT!",
+            type: winner === "player" ? "victory" : "defeat",
+          });
+          setLog(logCopy);
+          setPhase("complete");
           setIsActionProcessing(false);
-          executeMultiCreatureTurn(false);
+          return;
+        }
+
+        // Find the current creature in the new teams
+        const isPlayerCreature = playerTeam.creatures.includes(currentActingCreature);
+        const teamWithCurrent = isPlayerCreature ? newPlayerTeam : newEnemyTeam;
+        const newCurrentCreature = teamWithCurrent.creatures.find(
+          c => c.name === currentActingCreature.name
+        ) || currentActingCreature;
+
+        // Move to next creature
+        const currentIndex = newTurnOrder.findIndex(el => el.creature === newCurrentCreature);
+        let nextIndex = (currentIndex + 1) % newTurnOrder.length;
+        let nextCreature = newTurnOrder[nextIndex];
+
+        // Find next alive creature
+        let attempts = 0;
+        while (nextCreature.creature.currentHP <= 0 && attempts < newTurnOrder.length) {
+          nextIndex = (nextIndex + 1) % newTurnOrder.length;
+          nextCreature = newTurnOrder[nextIndex];
+          attempts++;
+        }
+
+        // If all dead, end battle
+        if (attempts >= newTurnOrder.length) {
+          const winner = getTeamBattleWinner(newPlayerTeam, newEnemyTeam);
+          logCopy.push({
+            text: winner === "player" ? "🏆 VICTORY!" : "💀 DEFEAT!",
+            type: winner === "player" ? "victory" : "defeat",
+          });
+          setLog(logCopy);
+          setPhase("complete");
+          setIsActionProcessing(false);
+          return;
+        }
+
+        setTimeout(() => {
+          setCurrentActingCreature(nextCreature.creature);
+          setTurn(nextCreature.team as "player" | "enemy");
+          if (nextIndex < currentIndex) {
+            setRound((prev) => prev + 1);
+          }
+          setIsActionProcessing(false);
         }, 1000);
       } else {
         setIsActionProcessing(false);
