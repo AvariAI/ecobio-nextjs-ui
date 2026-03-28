@@ -6,7 +6,7 @@ export interface BaseStats {
   crit: number;
 }
 
-export type SkillTargetType = "front" | "back" | "all" | "random" | "self";
+export type SkillTargetType = "front" | "back" | "all" | "random" | "self" | "ally";
 
 export interface Creature {
   id: string;
@@ -107,6 +107,7 @@ export const CREATURES: Record<string, Creature> = {
       value: 0.40,
       duration: 2,
       cooldown: 3,
+      target: "ally",
     },
   },
 };

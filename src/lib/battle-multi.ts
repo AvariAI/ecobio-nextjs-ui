@@ -101,13 +101,18 @@ export function selectTargetByPosition(
   attacker: BattleCreature,
   targetTeam: BattleTeam,
   teamSize: TeamSize,
-  targetType: "front" | "back" | "all" | "random" | "self" = "front"
+  targetType: "front" | "back" | "all" | "random" | "self" | "ally" = "front"
 ): BattleCreature | null {
   const allAlive = targetTeam.creatures.filter(c => c.currentHP > 0);
   if (allAlive.length === 0) return null;
 
   // Self targeting returns null (handled by useSkill directly)
   if (targetType === "self") return null;
+
+  // Ally targeting selects a random alive ally
+  if (targetType === "ally") {
+    return allAlive[Math.floor(Math.random() * allAlive.length)];
+  }
 
   // If targeting specifically back row, skip front row check
   if (targetType === "back") {
@@ -287,7 +292,7 @@ export function executeCreatureTurn(
           // Self-buff skill
           useSkill(activeCreature, log, activeCreature);
           usedSkill = true;
-        } else if (targetType === "front" || targetType === "back" || targetType === "random") {
+        } else if (targetType === "ally" || targetType === "front" || targetType === "back" || targetType === "random") {
           // Support buff skill - target allies
           const targetAlly = selectTargetByPosition(activeCreature, allyTeam, teamSize, targetType);
           if (targetAlly) {

@@ -487,9 +487,9 @@ export function useSkill(
   }
 
   // Determine target for logging
-  const isSelfBuff = skill.target === "self" || !target || target === battleCreature;
-  const targetCreature = isSelfBuff ? battleCreature : (target || battleCreature);
-  const targetName = isSelfBuff ? "soi-même" : target.name;
+  const isSelfBuff = skill.target === "self" || (!target && skill.target !== "ally");
+  const targetCreature = isSelfBuff ? battleCreature : target!;
+  const targetName = isSelfBuff ? "soi-même" : target!.name;
 
   // Apply skill effect based on skill type with detailed logging
   if (skill.effect === "defense") {
