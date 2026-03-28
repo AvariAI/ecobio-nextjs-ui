@@ -166,43 +166,38 @@ function getLevelScale(level: number, stat: "hp" | "other"): number {
 function feedCreature(creature: HuntedCreature, foodXP: number): { creature: HuntedCreature; levelUps: number; totalGained: number } {
   let currentCreature = { ...creature };
   let levelUps = 0;
-  let totalGained = 0;
-  let remainingXP = foodXP;
-  
-  while (remainingXP > 0 && currentCreature.xpToNextLevel > 0) {
-    if (remainingXP >= currentCreature.xpToNextLevel) {
-      // Level up!
-      remainingXP -= currentCreature.xpToNextLevel;
-      totalGained += currentCreature.xpToNextLevel;
-      
-      const oldLevel = currentCreature.level;
-      const oldStats = { ...currentCreature.finalStats };
-      
-      currentCreature = {
-        ...currentCreature,
-        level: oldLevel + 1,
-        currentXP: 0,
-        xpToNextLevel: calculateXPToNextLevel(oldLevel + 1),
-        finalStats: {
-          ...currentCreature.finalStats,
-          hp: Math.floor(currentCreature.customStats.hp * getLevelScale(oldLevel + 1, "hp")),
-          attack: Math.floor(currentCreature.customStats.attack * getLevelScale(oldLevel + 1, "other")),
-          defense: Math.floor(currentCreature.customStats.defense * getLevelScale(oldLevel + 1, "other")),
-          speed: Math.floor(currentCreature.customStats.speed * getLevelScale(oldLevel + 1, "other")),
-          crit: Math.floor(currentCreature.customStats.crit * getLevelScale(oldLevel + 1, "other")),
-        },
-      };
-      
-      levelUps++;
-    } else {
-      // Juste XP, pas de level up
-      totalGained += remainingXP;
-      remainingXP = 0;
-    }
+  let totalGained = foodXP;
+
+  // XP restant = XP actuel + XP de la nourriture
+  let remainingXP = currentCreature.currentXP + foodXP;
+
+  while (remainingXP >= currentCreature.xpToNextLevel && currentCreature.xpToNextLevel > 0) {
+    // Level up!
+    remainingXP -= currentCreature.xpToNextLevel;
+
+    const oldLevel = currentCreature.level;
+
+    currentCreature = {
+      ...currentCreature,
+      level: oldLevel + 1,
+      currentXP: 0,
+      xpToNextLevel: calculateXPToNextLevel(oldLevel + 1),
+      finalStats: {
+        ...currentCreature.finalStats,
+        hp: Math.floor(currentCreature.customStats.hp * getLevelScale(oldLevel + 1, "hp")),
+        attack: Math.floor(currentCreature.customStats.attack * getLevelScale(oldLevel + 1, "other")),
+        defense: Math.floor(currentCreature.customStats.defense * getLevelScale(oldLevel + 1, "other")),
+        speed: Math.floor(currentCreature.customStats.speed * getLevelScale(oldLevel + 1, "other")),
+        crit: Math.floor(currentCreature.customStats.crit * getLevelScale(oldLevel + 1, "other")),
+      },
+    };
+
+    levelUps++;
   }
-  
-  currentCreature.currentXP += totalGained;
-  
+
+  // L'XP restant devient le currentXP
+  currentCreature.currentXP = remainingXP;
+
   return { creature: currentCreature, levelUps, totalGained };
 }
 
