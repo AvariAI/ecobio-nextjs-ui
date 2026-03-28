@@ -101,10 +101,10 @@ export const CREATURES: Record<string, Creature> = {
     desc: "Abeille ouvrière avec rôle de support, boostée l'attaque ou la défense des alliés",
     image: "/images/bee.png",
     skill: {
-      name: "Essaim Stimulant",
-      description: "Buff random ATK ou DEF (+40%) sur un allié pendant 2 tours",
-      effect: "defense",
-      value: 0.40,
+      name: "Nectar Energisant",
+      description: "Buff ATK ou DEF (+20%) sur un allié pendant 2 tours",
+      effect: "defense", // Placeholder - actual implementation would toggle based on position
+      value: 0.20,
       duration: 2,
       cooldown: 3,
       target: "ally",
