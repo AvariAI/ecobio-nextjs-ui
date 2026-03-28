@@ -1,10 +1,6 @@
 import { Rank } from "./database";
 import { createItemInInventory } from "./inventory";
 
-// Craft item types
-export type CraftItemType = "insectEssence" | "plantEssence" | "breedingBuffer";
-export type CraftRecipeType = "insectEssence" | "plantEssence" | "breedingBuffer";
-
 // Recipe types
 export type RecipeType = "insectEssence" | "plantEssence" | "breedingBuffer";
 
@@ -236,13 +232,9 @@ export function transformCreatureToEssence(creatureRank: Rank): {
  * Add crafted essence/buffer to main inventory (replaces old craft inventory)
  */
 export function addCraftedItemToInventory(
-  type: ItemType,
+  type: RecipeType,
   rank: Rank,
   count: number = 1
 ): void {
-  createItemInInventory(type, rank, count);
+  createItemInInventory(type as "insectEssence" | "plantEssence" | "breedingBuffer", rank, count);
 }
-
-// Craft types for TypeScript
-export type CraftItemType = "insectEssence" | "plantEssence" | "breedingBuffer";
-export type CraftRecipeType = "insectEssence" | "plantEssence" | "breedingBuffer";
