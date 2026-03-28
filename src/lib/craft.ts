@@ -144,39 +144,8 @@ export function craftBreedingBuffer(
 }
 
 /**
- * Load craft inventory from localStorage
- */
-export function loadCraftInventory(): CraftInventory {
-  if (typeof window === "undefined") {
-    return { items: [] };
-  }
-
-  const saved = localStorage.getItem("ecobio-craft-inventory");
-  if (saved) {
-    try {
-      return JSON.parse(saved);
-    } catch (e) {
-      console.error("Failed to load craft inventory", e);
-    }
-  }
-  return { items: [] };
-}
-
-/**
- * Save craft inventory to localStorage
- */
-export function saveCraftInventory(inventory: CraftInventory): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  localStorage.setItem("ecobio-craft-inventory", JSON.stringify(inventory));
-  // Trigger update event
-  window.dispatchEvent(new CustomEvent("craft-inventory-updated"));
-}
-
-/**
  * Add item to craft inventory
+ * @deprecated Use addCraftedItemToInventory() instead
  */
 export function addToCraftInventory(item: CraftItem): CraftInventory {
   const inventory = loadCraftInventory();
@@ -198,6 +167,7 @@ export function addToCraftInventory(item: CraftItem): CraftInventory {
 
 /**
  * Remove items from craft inventory
+ * @deprecated Craft inventory is no longer used - items go directly to main inventory
  */
 export function removeFromCraftInventory(item: CraftItem): CraftInventory {
   const inventory = loadCraftInventory();
@@ -207,12 +177,45 @@ export function removeFromCraftInventory(item: CraftItem): CraftInventory {
 }
 
 /**
+ * Load craft inventory from localStorage
+ * @deprecated Craft inventory is no longer used - use loadInventory() instead
+ */
+export function loadCraftInventory(): CraftInventory {
+  if (typeof window === "undefined") {
+    return { items: [] };
+  }
+
+  const saved = localStorage.getItem("ecobio-craft-inventory");
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch (e) {
+      console.error("Failed to load craft inventory", e);
+    }
+  }
+  return { items: [] };
+}
+
+/**
+ * Save craft inventory to localStorage
+ * @deprecated Craft inventory is no longer used - items go directly to main inventory
+ */
+export function saveCraftInventory(inventory: CraftInventory): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  localStorage.setItem("ecobio-craft-inventory", JSON.stringify(inventory));
+  // Trigger update event
+  window.dispatchEvent(new CustomEvent("craft-inventory-updated"));
+}
+
+/**
  * Transform a creature into essence (creature → essence)
  * Returns essence with the same rank as the creature
  */
 export function transformCreatureToEssence(creatureRank: Rank): {
   essenceItem: CraftItem;
-  craftInventory: CraftInventory;
 } {
   const essenceItem: CraftItem = {
     id: `essence-insect-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -220,12 +223,11 @@ export function transformCreatureToEssence(creatureRank: Rank): {
     rank: creatureRank,
     count: 1
   };
-  
-  const inventory = loadCraftInventory();
-  inventory.items.push(essenceItem);
-  saveCraftInventory(inventory);
-  
-  return { essenceItem, craftInventory: inventory };
+
+  // Add to main inventory
+  addCraftedItemToInventory("insectEssence", creatureRank, 1);
+
+  return { essenceItem };
 }
 
 /**
