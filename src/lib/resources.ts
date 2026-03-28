@@ -27,13 +27,6 @@ export const PLANTS: PlantResource[] = [
   
   // D
   {
-    id: "herbe_houleuse",
-    name: "Herbe Houleuse",
-    rarity: "D",
-    description: "Herbe résistante aux tempêtes et au vent",
-    icon: "🌿"
-  },
-  {
     id: "pissenlit",
     name: "Pissenlit",
     rarity: "D",
@@ -106,22 +99,13 @@ export const MISSION_XP_VALUES: Record<string, number> = {
   "8h": 200
 };
 
-// Helper to get rank from rarity (for inventory compatibility)
-export function getPlantRank(rarity: string): Rank {
-  const rankMap: Record<string, Rank> = {
-    "E": "E",
-    "D": "D",
-    "C": "C",
-    "B": "B",
-    "A": "A",
-    "S": "S",
-    "S+": "S+"
-  };
-  return rankMap[rarity] || "E";
-}
-
-// Helper function to convert rarity string to Rank
-// No longer needed - using native Rank system now
+// Helper to map legacy rarity string to Rank
 export function getPlantRankFromLegacy(rarity: string): Rank {
-  return "E"; // Default to E
+  const map: Record<string, Rank> = {
+    "common": "E" as Rank,
+    "uncommon": "D" as Rank,
+    "rare": "S" as Rank,
+    "epic": "S+" as Rank
+  };
+  return map[rarity] || "E";
 }
