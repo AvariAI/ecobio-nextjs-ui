@@ -51,7 +51,7 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 mb-8 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-8 mb-8 max-w-4xl mx-auto">
           <Link href="/formulas">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-blue-400">
               <div className="text-6xl mb-4">🧮</div>
@@ -72,6 +72,18 @@ export default function Home() {
               </h2>
               <p className="text-gray-600 dark:text-gray-300">
                 Liste complète des traits passifs et conditionnels avec leurs effets et rarités.
+              </p>
+            </div>
+          </Link>
+
+          <Link href="/breeding">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-pink-400">
+              <div className="text-6xl mb-4">🧬</div>
+              <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
+                Reproduction
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                Combinez tes créatures pour créer de nouveaux spécimens avec de meilleurs stats.
               </p>
             </div>
           </Link>
