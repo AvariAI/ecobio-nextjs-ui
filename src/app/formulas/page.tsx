@@ -26,8 +26,8 @@ export default function FormulasPage() {
               <li><strong>HP (1-10):</strong> ×(1 + level × 0.1)</li>
               <li><strong>HP (10-25):</strong> 1.9 + (level-10) × 0.05</li>
               <li><strong>HP (25+):</strong> 2.65 × 1.01^(level-25)</li>
-              <li><strong>ATK/DEF/SPD/CRIT (≤25):</strong> 1 + level × 0.15</li>
-              <li><strong>ATK/DEF/SPD/CRIT (>25):</strong> 4.6 × 1.005^(level-25)</li>
+              <li><strong>ATK/DEF/SPD/CRIT (<=25):</strong> 1 + level × 0.15</li>
+              <li><strong>ATK/DEF/SPD/CRIT (>=25):</strong> 4.6 × 1.005^(level-25)</li>
             </ul>
           </section>
 
