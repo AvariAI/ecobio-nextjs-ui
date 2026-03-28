@@ -43,6 +43,7 @@ interface HuntedCreature extends Creature {
   createdAt: number;
   creatureId: string;
   traits: string[];
+  isFavorite: boolean;
 }
 
 function getCreatureImage(creatureId: string, rank: Rank): string {
@@ -1072,6 +1073,13 @@ function CollectionSelector({
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); }}
+                    className="text-lg hover:scale-125 transition-transform"
+                    title={creature.isFavorite ? "Favori (protégé)" : "Pas favori"}
+                  >
+                    {creature.isFavorite ? "❤️" : "🤍"}
+                  </button>
                   <img
                     src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
                     alt={creature.name}
