@@ -184,10 +184,14 @@ export default function ExplorationPage() {
         return {
           ...m,
           endTime: Date.now(), // Set to now
-          status: results.survivors.length > 0 ? "completed" : "failed",
+          status: (results.survivors.length > 0 ? "completed" : "failed") as "completed" | "failed",
           results: {
-            ...results,
+            loot: results.loot,
+            totalLoot: results.loot.length,
+            casualties: results.casualties,
+            survivors: results.survivors,
             missionSuccess: results.survivors.length > 0,
+            lootReduction: results.lootReduction,
             instant: true // Flag to indicate instant completion
           }
         };
