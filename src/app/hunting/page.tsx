@@ -379,12 +379,7 @@ export default function HuntingPage() {
       setCollection(favoritesOnly);
       setConfirmReleaseAll(false);
     } else {
-      const favoritesCount = collection.filter(c => c.isFavorite).length;
-      const totalCount = collection.length;
-      const nonFavoritesCount = totalCount - favoritesCount;
-      if (confirm(`⚠️ ATTENTION !\n\nTu vas relâcher ${nonFavoritesCount} créatures.\nLes ${favoritesCount} favorites ❤️ seront PRESERVÉES.\n\nCette action est IRREVERSIBLE !\n\nContinuer ?`)) {
-        setConfirmReleaseAll(true);
-      }
+      setConfirmReleaseAll(true);
     }
   };
 
@@ -854,12 +849,8 @@ export default function HuntingPage() {
                 <button onClick={handleAutoSort} className="bg-gradient-to-r from-purple-700 to-purple-600 hover:from-purple-600 hover:to-purple-500 text-white rounded px-4 py-2 font-bold">⚡ Auto (Top-Rank + Alpha)</button>
                 <button onClick={handleReleaseAll} className="bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white rounded px-4 py-2 font-bold">🗑️ Tout relâcher</button>
                 {confirmReleaseAll && (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-yellow-200 text-sm">
-                      ⚠️ Confirmer tout relâcher? C'est irréversible!
-                      <br/>
-                      <span className="text-red-300">Toutes les créatures seront supprimées SAUF les favorites ❤️</span>
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-yellow-200 text-sm">Confirmer tout relâcher? C'est l'irréversible!</p>
                     <button onClick={() => { setCollection(collection.filter(c => c.isFavorite)); setConfirmReleaseAll(false); }} className="bg-gradient-to-r from-red-800 to-red-700 hover:from-red-700 hover:to-red-600 text-white rounded px-3 py-1 text-sm font-bold">OUI</button>
                     <button onClick={() => setConfirmReleaseAll(false)} className="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded px-3 py-1 text-sm font-bold">Annuler</button>
                   </div>
