@@ -2,8 +2,73 @@
 // Multi-Creature Battle Display Components for 3v3 and 5v5
 // =============================================================================
 
+import { useMemo } from "react";
 import { BattleCreature, BattleElement } from "@/lib/battle";
 import { BattleTeam, TeamSize, countAliveCreatures, isFrontRow, getFrontRowPositions, getBackRowPositions } from "@/lib/battle-multi";
+
+/**
+ * Interface for buffed stats with breakdown
+ */
+interface BuffedStats {
+  hp: number;
+  attack: number;
+  defense: number;
+  speed: number;
+  crit: number;
+  bonuses: {
+    hp: number;
+    attack: number;
+    defense: number;
+    speed: number;
+    crit: number;
+  };
+  activeBuffs: {
+    defenseBuff: { value: number; turns: number } | null;
+    attackBuff: { value: number; turns: number } | null;
+    dodgeBuff: { value: number; turns: number } | null;
+  };
+}
+
+/**
+ * Calculate stats with active buffs applied
+ * This is a pure calculation function - NO state updates
+ * Used with useMemo to prevent re-renders
+ */
+function getBuffedStats(creature: BattleCreature): BuffedStats {
+  const attackBonus = creature.buffs.attackBuff;
+  const defenseBonus = creature.buffs.defenseBuff;
+  const dodgeBonus = creature.buffs.dodgeBuff;
+
+  // Calculate effective stats with buff bonuses
+  // buffs are percentages (e.g., 0.5 = +50%)
+  const effectiveAttack = Math.floor(creature.stats.attack * (1 + attackBonus));
+  const effectiveDefense = Math.floor(creature.stats.defense * (1 + defenseBonus));
+  // Speed is affected by status effects, not buffs, so we use base
+  const effectiveSpeed = creature.stats.speed;
+  const effectiveCrit = creature.stats.crit;
+  // HP is not affected by buffs directly
+  const effectiveHP = creature.stats.hp;
+
+  return {
+    hp: effectiveHP,
+    attack: effectiveAttack,
+    defense: effectiveDefense,
+    speed: effectiveSpeed,
+    crit: effectiveCrit,
+    bonuses: {
+      hp: 0, // HP not buffed by skills
+      attack: effectiveAttack - creature.stats.attack,
+      defense: effectiveDefense - creature.stats.defense,
+      speed: 0, // Speed not buffed by skills
+      crit: 0, // Crit not buffed by skills
+    },
+    activeBuffs: {
+      defenseBuff: defenseBonus > 0 ? { value: defenseBonus, turns: creature.buffs.defenseBuffTurns } : null,
+      attackBuff: attackBonus > 0 ? { value: attackBonus, turns: creature.buffs.attackBuffTurns } : null,
+      dodgeBuff: dodgeBonus > 0 ? { value: dodgeBonus, turns: creature.buffs.dodgeBuffTurns } : null,
+    },
+  };
+}
 
 // Define locally to avoid import issues
 export interface BattleLogEntry {
@@ -453,23 +518,52 @@ function CompactCreatureDisplay({ creature }: CompactCreatureDisplayProps) {
   const hpPercent = (creature.currentHP / creature.stats.hp) * 100;
   const isDead = creature.currentHP <= 0;
 
+  // Use useMemo to calculate buffed stats without triggering re-renders
+  // This is the key fix to prevent infinite re-render loops
+  const buffedStats = useMemo(() => getBuffedStats(creature), [creature]);
+
   // Status effect indicators
   const hasStun = creature.statusEffects.some(e => e.type === "stun");
   const hasPoison = creature.statusEffects.some(e => e.type === "poison");
   const hasSlow = creature.statusEffects.some(e => e.type === "slow");
 
+  // Buff indicators from memoized stats
+  const defenseBuffActive = buffedStats.activeBuffs.defenseBuff !== null;
+  const dodgeBuffActive = buffedStats.activeBuffs.dodgeBuff !== null;
+  const attackBuffActive = buffedStats.activeBuffs.attackBuff !== null;
+
   const skillOnCooldown = creature.creature.skill
     ? Object.entries(creature.skillCooldowns).some(([k, v]) => k.startsWith(creature.creature.skill!.name) && v > 0)
     : false;
+
+  // Get slow effect value for display
+  const slowEffect = creature.statusEffects.find(e => e.type === "slow");
 
   return (
     <div className={isDead ? "grayscale" : ""}>
       <div className="flex items-center justify-between mb-2 pr-8">
         <h4 className="font-bold text-lg">{creature.name}</h4>
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
+          {/* Status Effects */}
           {hasStun && <span className="px-2 py-0.5 bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 text-xs rounded-full">💫</span>}
           {hasPoison && <span className="px-2 py-0.5 bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200 text-xs rounded-full">☠️</span>}
           {hasSlow && <span className="px-2 py-0.5 bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 text-xs rounded-full">🐌</span>}
+          {/* Active Buffs with duration in badge */}
+          {attackBuffActive && buffedStats.activeBuffs.attackBuff && (
+            <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 text-xs rounded-full font-semibold">
+              ⚔️ ATK+{Math.floor(buffedStats.activeBuffs.attackBuff.value * 100)}% ({buffedStats.activeBuffs.attackBuff.turns}t)
+            </span>
+          )}
+          {defenseBuffActive && buffedStats.activeBuffs.defenseBuff && (
+            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 text-xs rounded-full font-semibold">
+              🛡️ DEF+{Math.floor(buffedStats.activeBuffs.defenseBuff.value * 100)}% ({buffedStats.activeBuffs.defenseBuff.turns}t)
+            </span>
+          )}
+          {dodgeBuffActive && buffedStats.activeBuffs.dodgeBuff && (
+            <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 text-xs rounded-full font-semibold">
+              💨 DOD+{Math.floor(buffedStats.activeBuffs.dodgeBuff.value * 100)}% ({buffedStats.activeBuffs.dodgeBuff.turns}t)
+            </span>
+          )}
         </div>
       </div>
 
@@ -502,19 +596,40 @@ function CompactCreatureDisplay({ creature }: CompactCreatureDisplayProps) {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats with Buff Bonuses */}
       <div className="grid grid-cols-4 gap-1 text-xs text-center">
         <div className="bg-gray-100 dark:bg-gray-700 rounded p-1">
           <p className="text-gray-500">ATK</p>
-          <p className="font-bold">{creature.stats.attack}</p>
+          {attackBuffActive ? (
+            <div>
+              <p className="font-bold text-red-600">{buffedStats.attack}</p>
+              <p className="text-xs text-red-500">+{buffedStats.bonuses.attack}</p>
+            </div>
+          ) : (
+            <p className="font-bold">{creature.stats.attack}</p>
+          )}
         </div>
         <div className="bg-gray-100 dark:bg-gray-700 rounded p-1">
           <p className="text-gray-500">DEF</p>
-          <p className="font-bold">{creature.stats.defense}</p>
+          {defenseBuffActive ? (
+            <div>
+              <p className="font-bold text-blue-600">{buffedStats.defense}</p>
+              <p className="text-xs text-blue-500">+{buffedStats.bonuses.defense}</p>
+            </div>
+          ) : (
+            <p className="font-bold">{creature.stats.defense}</p>
+          )}
         </div>
         <div className="bg-gray-100 dark:bg-gray-700 rounded p-1">
           <p className="text-gray-500">SPD</p>
-          <p className="font-bold">{creature.stats.speed}</p>
+          {hasSlow && slowEffect ? (
+            <div>
+              <p className="font-bold text-blue-600">{Math.floor(creature.stats.speed * (1 - (slowEffect.value || 0)))}</p>
+              <p className="text-xs text-blue-500">-{Math.floor((slowEffect.value || 0) * 100)}%</p>
+            </div>
+          ) : (
+            <p className="font-bold">{creature.stats.speed}</p>
+          )}
         </div>
         <div className="bg-gray-100 dark:bg-gray-700 rounded p-1">
           <p className="text-gray-500">CRIT</p>
@@ -536,6 +651,29 @@ function CompactCreatureDisplay({ creature }: CompactCreatureDisplayProps) {
               </span>
             ) : (
               <span className="text-green-500">✓ Ready</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Active Buffs with Duration */}
+      {(defenseBuffActive || dodgeBuffActive || attackBuffActive) && (
+        <div className="mt-2 pt-2 border-t text-xs">
+          <div className="space-y-0.5">
+            {defenseBuffActive && buffedStats.activeBuffs.defenseBuff && (
+              <div className="text-blue-600 dark:text-blue-400">
+                🛡️ DEF +{Math.floor(buffedStats.activeBuffs.defenseBuff.value * 100)}% ({buffedStats.activeBuffs.defenseBuff.turns}t)
+              </div>
+            )}
+            {dodgeBuffActive && buffedStats.activeBuffs.dodgeBuff && (
+              <div className="text-green-600 dark:text-green-400">
+                💨 Dodge +{Math.floor(buffedStats.activeBuffs.dodgeBuff.value * 100)}% ({buffedStats.activeBuffs.dodgeBuff.turns}t)
+              </div>
+            )}
+            {attackBuffActive && buffedStats.activeBuffs.attackBuff && (
+              <div className="text-red-600 dark:text-red-400">
+                ⚔️ ATK +{Math.floor(buffedStats.activeBuffs.attackBuff.value * 100)}% ({buffedStats.activeBuffs.attackBuff.turns}t)
+              </div>
             )}
           </div>
         </div>
