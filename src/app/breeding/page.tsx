@@ -156,40 +156,50 @@ export default function BreedingPage() {
   };
 
   const handleSelectParent1 = (creature: CollectionItem) => {
-    if (isHuntedCreature(creature)) {
+    // Allow both hunted AND breeded creatures as parents
+    if (isHuntedCreature(creature) || (creature as any).breeded) {
       if (parent2?.id === creature.id) {
         setError("Vous ne pouvez pas sélectionner la même créature deux fois");
         return;
       }
-      if (parent2 && parent2.creatureId !== creature.creatureId) {
-        setError(`La reproduction n'est possible qu'entre créatures du même type (${parent2.name} ≠ ${creature.name})`);
-        return;
+      const creatureType = (creature as any).creatureId || (creature as any).creatureType;
+      if (parent2) {
+        const parent2Type = (parent2 as any).creatureId || (parent2 as any).creatureType;
+        if (parent2Type !== creatureType) {
+          setError(`La reproduction n'est possible qu'entre créatures du même type (${parent2.name} ≠ ${creature.name})`);
+          return;
+        }
       }
       setParent1(creature);
       setShowDropdown1(false);
       setSearch1("");
       setError(null);
     } else {
-      setError("Les bébés ne peuvent pas être utilisés comme parents");
+      setError("Créature invalide pour reproduction");
     }
   };
 
   const handleSelectParent2 = (creature: CollectionItem) => {
-    if (isHuntedCreature(creature)) {
+    // Allow both hunted AND breeded creatures as parents
+    if (isHuntedCreature(creature) || (creature as any).breeded) {
       if (parent1?.id === creature.id) {
         setError("Vous ne pouvez pas sélectionner la même créature deux fois");
         return;
       }
-      if (parent1 && parent1.creatureId !== creature.creatureId) {
-        setError(`La reproduction n'est possible qu'entre créatures du même type (${parent1.name} ≠ ${creature.name})`);
-        return;
+      const creatureType = (creature as any).creatureId || (creature as any).creatureType;
+      if (parent1) {
+        const parent1Type = (parent1 as any).creatureId || (parent1 as any).creatureType;
+        if (parent1Type !== creatureType) {
+          setError(`La reproduction n'est possible qu'entre créatures du même type (${parent1.name} ≠ ${creature.name})`);
+          return;
+        }
       }
       setParent2(creature);
       setShowDropdown2(false);
       setSearch2("");
       setError(null);
     } else {
-      setError("Les bébés ne peuvent pas être utilisés comme parents");
+      setError("Créature invalide pour reproduction");
     }
   };
 
