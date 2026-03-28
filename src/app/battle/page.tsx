@@ -9,8 +9,12 @@ import {
   executeAttack,
   useSkill,
   tickCooldownsAndBuffs,
+  tickStatusEffects,
   applyTraitRegeneration,
+  applyStatusEffects,
+  getEffectiveSpeed,
   BattleLogEntry,
+  createBattleCreature,
 } from "@/lib/battle";
 import { getTraitsByIds, applyTraitStatModifiers } from "@/lib/traits";
 import Link from "next/link";
@@ -137,39 +141,19 @@ export default function BattlePage() {
 
     // Test mode: Calculate stats with level scaling (deterministic)
     if (battleMode === "test") {
-      p = {
-        creature: playerCreature,
-        stats: playerBattleStats,
-        currentHP: playerBattleStats.hp,
-        skillCooldowns: {},
-        buffs: {
-          defenseBuff: 0,
-          dodgeBuff: 0,
-          attackBuff: 0,
-          defenseBuffTurns: 0,
-          dodgeBuffTurns: 0,
-          attackBuffTurns: 0,
-        },
-        name: `${playerCreature.name} (R${playerRank} L${playerLevel})`,
-        traits: [],  // Test mode: no traits
-      };
+      p = createBattleCreature(
+        playerCreature,
+        playerBattleStats,
+        `${playerCreature.name} (R${playerRank} L${playerLevel})`,
+        []  // Test mode: no traits
+      );
 
-      e = {
-        creature: enemyCreature,
-        stats: enemyBattleStats,
-        currentHP: enemyBattleStats.hp,
-        skillCooldowns: {},
-        buffs: {
-          defenseBuff: 0,
-          dodgeBuff: 0,
-          attackBuff: 0,
-          defenseBuffTurns: 0,
-          dodgeBuffTurns: 0,
-          attackBuffTurns: 0,
-        },
-        name: `${enemyCreature.name} (R${enemyRank} L${enemyLevel})`,
-        traits: [],  // Test mode: no traits
-      };
+      e = createBattleCreature(
+        enemyCreature,
+        enemyBattleStats,
+        `${enemyCreature.name} (R${enemyRank} L${enemyLevel})`,
+        []  // Test mode: no traits
+      );
     } else {
       // Collection mode: Use hunting creatures with RNG stats and traits
       if (!selectedPlayer || !selectedEnemy) {
@@ -200,9 +184,9 @@ export default function BattlePage() {
         selectedEnemy.traits || []
       );
 
-      p = {
-        creature: CREATURES[selectedPlayer.creatureId],
-        stats: {
+      p = createBattleCreature(
+        CREATURES[selectedPlayer.creatureId],
+        {
           hp: playerStatMods.modifiedStats.hp,
           attack: playerStatMods.modifiedStats.attack,
           defense: playerStatMods.modifiedStats.defense,
@@ -210,32 +194,22 @@ export default function BattlePage() {
           crit: playerStatMods.modifiedStats.crit,
           rank: selectedPlayer.finalStats.rank,
         },
-        currentHP: playerStatMods.modifiedStats.hp,
-        skillCooldowns: {},
-        buffs: {
-          defenseBuff: 0,
-          dodgeBuff: 0,
-          attackBuff: 0,
-          defenseBuffTurns: 0,
-          dodgeBuffTurns: 0,
-          attackBuffTurns: 0,
-        },
-        name: `${selectedPlayer.name} (R${selectedPlayer.finalStats.rank} L${selectedPlayer.level})`,
-        traits: selectedPlayer.traits || [],
-        baseStats: {
-          hp: selectedPlayer.finalStats.hp,
-          attack: selectedPlayer.finalStats.attack,
-          defense: selectedPlayer.finalStats.defense,
-          speed: selectedPlayer.finalStats.speed,
-          crit: selectedPlayer.finalStats.crit,
-          rank: selectedPlayer.finalStats.rank,
-        },
-        statModifiers: playerStatMods.breakdown,
+        `${selectedPlayer.name} (R${selectedPlayer.finalStats.rank} L${selectedPlayer.level})`,
+        selectedPlayer.traits || []
+      );
+      p.baseStats = {
+        hp: selectedPlayer.finalStats.hp,
+        attack: selectedPlayer.finalStats.attack,
+        defense: selectedPlayer.finalStats.defense,
+        speed: selectedPlayer.finalStats.speed,
+        crit: selectedPlayer.finalStats.crit,
+        rank: selectedPlayer.finalStats.rank,
       };
+      p.statModifiers = playerStatMods.breakdown;
 
-      e = {
-        creature: CREATURES[selectedEnemy.creatureId],
-        stats: {
+      e = createBattleCreature(
+        CREATURES[selectedEnemy.creatureId],
+        {
           hp: enemyStatMods.modifiedStats.hp,
           attack: enemyStatMods.modifiedStats.attack,
           defense: enemyStatMods.modifiedStats.defense,
@@ -243,35 +217,27 @@ export default function BattlePage() {
           crit: enemyStatMods.modifiedStats.crit,
           rank: selectedEnemy.finalStats.rank,
         },
-        currentHP: enemyStatMods.modifiedStats.hp,
-        skillCooldowns: {},
-        buffs: {
-          defenseBuff: 0,
-          dodgeBuff: 0,
-          attackBuff: 0,
-          defenseBuffTurns: 0,
-          dodgeBuffTurns: 0,
-          attackBuffTurns: 0,
-        },
-        name: `${selectedEnemy.name} (R${selectedEnemy.finalStats.rank} L${selectedEnemy.level})`,
-        traits: selectedEnemy.traits || [],
-        baseStats: {
-          hp: selectedEnemy.finalStats.hp,
-          attack: selectedEnemy.finalStats.attack,
-          defense: selectedEnemy.finalStats.defense,
-          speed: selectedEnemy.finalStats.speed,
-          crit: selectedEnemy.finalStats.crit,
-          rank: selectedEnemy.finalStats.rank,
-        },
-        statModifiers: enemyStatMods.breakdown,
+        `${selectedEnemy.name} (R${selectedEnemy.finalStats.rank} L${selectedEnemy.level})`,
+        selectedEnemy.traits || []
+      );
+      e.baseStats = {
+        hp: selectedEnemy.finalStats.hp,
+        attack: selectedEnemy.finalStats.attack,
+        defense: selectedEnemy.finalStats.defense,
+        speed: selectedEnemy.finalStats.speed,
+        crit: selectedEnemy.finalStats.crit,
+        rank: selectedEnemy.finalStats.rank,
       };
+      e.statModifiers = enemyStatMods.breakdown;
     }
 
         setPlayer(p);
     setEnemy(e);
 
-    // Determine who starts based on speed - higher speed goes first
-    const firstAttacker = p.stats.speed >= e.stats.speed ? "player" : "enemy";
+    // Determine who starts based on effective speed - higher speed goes first
+    const playerEffectiveSpeed = getEffectiveSpeed(p);
+    const enemyEffectiveSpeed = getEffectiveSpeed(e);
+    const firstAttacker = playerEffectiveSpeed >= enemyEffectiveSpeed ? "player" : "enemy";
 
     setLog([
       { text: `⚔️ BATTLE START!`, type: "info" },
@@ -290,6 +256,16 @@ export default function BattlePage() {
 
     const logCopy = [...log];
     logCopy.push({ text: `--- Round ${round}: Player Turn ---`, type: "info" });
+
+    // Apply status effects at start of turn (check for stun)
+    const turnSkipped = applyStatusEffects(player, logCopy);
+
+    if (turnSkipped) {
+      // Player is stunned - skip turn and pass to enemy
+      setPlayer({ ...player });
+      setTimeout(() => enemyTurn(logCopy), 1500);
+      return;
+    }
 
     // Apply trait regeneration at start of player's turn
     const oldPlayerHP = player.currentHP;
@@ -310,6 +286,7 @@ export default function BattlePage() {
     const oldDefenseBuff = player.buffs.defenseBuff;
     const oldDodgeBuff = player.buffs.dodgeBuff;
     tickCooldownsAndBuffs(player);
+    tickStatusEffects(player, logCopy);
 
     if (oldDefenseBuff !== player.buffs.defenseBuff) {
       logCopy.push({ text: `✨ ${player.name}: ${formatBuffChange("DEF buff", oldDefenseBuff, player.buffs.defenseBuff)}`, type: "info" });
@@ -399,6 +376,19 @@ export default function BattlePage() {
 
     const logCopy = [...currentLog];
 
+    // Apply status effects at start of turn (check for stun)
+    const turnSkipped = applyStatusEffects(enemy, logCopy);
+
+    if (turnSkipped) {
+      // Enemy is stunned - skip turn and pass to player
+      setEnemy({ ...enemy });
+      logCopy.push({ text: `--- Fin round ${round} ---`, type: "info" });
+      setLog(logCopy);
+      setRound((prev) => prev + 1);
+      setTurn("player");
+      return;
+    }
+
     // Apply trait regeneration at start of enemy's turn
     const oldEnemyHP = enemy.currentHP;
     const oldPlayerHP = player.currentHP;
@@ -418,6 +408,7 @@ export default function BattlePage() {
     const oldDefenseBuff = enemy.buffs.defenseBuff;
     const oldDodgeBuff = enemy.buffs.dodgeBuff;
     tickCooldownsAndBuffs(enemy);
+    tickStatusEffects(enemy, logCopy);
 
     if (oldDefenseBuff !== enemy.buffs.defenseBuff) {
       logCopy.push({ text: `${enemy.name}: ${formatBuffChange("DEF buff", oldDefenseBuff, enemy.buffs.defenseBuff)}`, type: "info" });
@@ -641,8 +632,36 @@ function BattleCreatureDisplay({
     ? Object.entries(creature.skillCooldowns).some(([k, v]) => k === creature.creature.skill?.name && v > 0)
     : false;
 
+  // Status effect helpers
+  const hasStun = creature.statusEffects.some(e => e.type === "stun");
+  const hasPoison = creature.statusEffects.some(e => e.type === "poison");
+  const hasSlow = creature.statusEffects.some(e => e.type === "slow");
+  const slowEffect = creature.statusEffects.find(e => e.type === "slow");
+  const poisonEffect = creature.statusEffects.find(e => e.type === "poison");
+
   return (
     <div className="space-y-4">
+      {/* Status Effects Indicator */}
+      {creature.statusEffects.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {hasStun && (
+            <span className="px-2 py-0.5 bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 text-xs rounded-full font-semibold">
+              💫 Étourdi (1t)
+            </span>
+          )}
+          {hasPoison && poisonEffect && (
+            <span className="px-2 py-0.5 bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200 text-xs rounded-full font-semibold">
+              ☠️ Poison ({poisonEffect?.duration}t)
+            </span>
+          )}
+          {hasSlow && slowEffect && (
+            <span className="px-2 py-0.5 bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 text-xs rounded-full font-semibold">
+              🐌 Lent ({slowEffect?.duration}t)
+            </span>
+          )}
+        </div>
+      )}
+
       <div>
         <div className="flex justify-between text-sm mb-1">
           <span className="font-bold">HP</span>
@@ -700,7 +719,12 @@ function BattleCreatureDisplay({
         )}
         <div className="flex justify-between">
           <span>SPD</span>
-          {creature.statModifiers && creature.statModifiers.speedBonus !== 0 && creature.baseStats ? (
+          {hasSlow && slowEffect ? (
+            <div>
+              <span className="text-blue-600 font-bold">{Math.floor(creature.stats.speed * (1 - (slowEffect.value || 0)))}</span>
+              <span className="text-xs text-blue-600 ml-1">({creature.stats.speed} -{Math.floor((slowEffect.value || 0) * 100)}%)</span>
+            </div>
+          ) : creature.statModifiers && creature.statModifiers.speedBonus !== 0 && creature.baseStats ? (
             <div>
               <span className="font-bold">{creature.stats.speed}</span>
               <span className="text-xs text-purple-600 ml-1">({creature.baseStats.speed} +{creature.statModifiers.speedBonus > 0 ? "+" : ""}{creature.statModifiers.speedBonus.toFixed(0)}%)</span>
@@ -745,6 +769,15 @@ function BattleCreatureDisplay({
           <div className="text-xs">
             {defenseBuffActive && <div>✨ DEF +{Math.floor(creature.buffs.defenseBuff * 100)}% ({creature.buffs.defenseBuffTurns}t)</div>}
             {dodgeBuffActive && <div>💨 Dodge +{Math.floor(creature.buffs.dodgeBuff * 100)}% ({creature.buffs.dodgeBuffTurns}t)</div>}
+          </div>
+        </div>
+      )}
+
+      {/* Attack Counter for "every X attacks" traits */}
+      {creature.traits.includes("slowTrait") && (
+        <div className="pt-2 border-t">
+          <div className="text-xs text-gray-600 dark:text-gray-400">
+            🔄 Attaques: {creature.attackCounter % 3}/3
           </div>
         </div>
       )}

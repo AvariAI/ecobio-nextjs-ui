@@ -379,6 +379,51 @@ export const TRAITS: Record<string, Trait> = {
       { stat: "speed", value: -0.20, isNegative: true },
     ],
   },
+
+  // STATUS EFFECT TRAITS =====================
+  // PHASE 2: Traits that apply status effects
+
+  epines: {
+    id: "epines",
+    name: "Épines",
+    description: "Renvoie 20% des dégâts reçus à l'attaquant",
+    type: TraitType.PASSIVE,
+    category: TraitCategory.DEFENSE,
+    rarity: ["B", "A", "S", "S+"],
+    effects: [],
+  },
+
+  slowTrait: {
+    id: "slowTrait",
+    name: "Lenteur",
+    description: "Tous les 3 attaques, ralentit la cible de 15% pendant 2 tours",
+    type: TraitType.PASSIVE,
+    category: TraitCategory.UTILITY,
+    rarity: ["C", "B", "A", "S", "S+"],
+    effects: [],
+  },
+
+  coupBas: {
+    id: "coupBas",
+    name: "Coup Bas",
+    description: "Quand HP < 20%, 25% de chance d'étourdir la cible (saut de tour)",
+    type: TraitType.CONDITIONAL,
+    category: TraitCategory.OFFENSE,
+    rarity: ["A", "S", "S+"],
+    effects: [],
+    condition: "HP < 20%",
+    conditionFn: (hpPercent: number) => hpPercent < 0.2,
+  },
+
+  venom: {
+    id: "venom",
+    name: "Venin",
+    description: "30% de chance d'empoisonner la cible (6% dégâts par tour, 3 tours)",
+    type: TraitType.PASSIVE,
+    category: TraitCategory.OFFENSE,
+    rarity: ["B", "A", "S", "S+"],
+    effects: [],
+  },
 };
 
 /**

@@ -4,7 +4,7 @@
  */
 
 import { Creature, BaseStats, Rank, RANK_MULTIPLIERS } from "./database";
-import { applyTraits as applyTraitEffects } from "./traits";
+import { applyTraits as applyTraitEffects, getTraitsByIds } from "./traits";
 
 export interface BattleElement {
   creature: BattleCreature;
@@ -15,10 +15,13 @@ export interface BattleElement {
 /**
  * Get round order for multiple creatures based on speed
  * Higher speed = attacks FIRST (turn-based order)
+ * Uses effective speed (accounts for Slow status effect)
  * @returns BattleElement[] sorted by speed DESCENDING (fastest to slowest)
  */
 export function getRoundOrder(creatures: BattleElement[]): BattleElement[] {
-  return [...creatures].sort((a, b) => b.creature.stats.speed - a.creature.stats.speed);
+  return [...creatures].sort(
+    (a, b) => getEffectiveSpeed(b.creature) - getEffectiveSpeed(a.creature)
+  );
 }
 
 export interface BattleStats extends BaseStats {
@@ -46,6 +49,18 @@ export interface StatModifiers {
   critBonus: number;
 }
 
+export enum StatusEffectType {
+  STUN = "stun",
+  POISON = "poison",
+  SLOW = "slow",
+}
+
+export interface StatusEffect {
+  type: StatusEffectType;
+  duration: number;  // Turns remaining
+  value?: number;  // Effect strength (e.g., poison damage %, slow % reduction)
+}
+
 export interface BattleCreature {
   creature: Creature;
   stats: BattleStats;
@@ -56,6 +71,145 @@ export interface BattleCreature {
   traits: string[];  // Trait IDs
   baseStats?: BattleStats;  // Original stats before trait modifications
   statModifiers?: StatModifiers;  // Bonus breakdown from traits
+  statusEffects: StatusEffect[];  // Active status effects
+  attackCounter: number;  // Track attack count for "every X attacks" traits
+}
+
+/**
+ * Add a status effect to a creature
+ */
+export function addStatusEffect(
+  creature: BattleCreature,
+  type: StatusEffectType,
+  duration: number,
+  value?: number
+): void {
+  // For stacking effects like Slow, combine durations
+  const existingIndex = creature.statusEffects.findIndex(e => e.type === type);
+  if (existingIndex !== -1 && type === StatusEffectType.SLOW) {
+    // Slow stacks by adding to value and maxing duration
+    const existing = creature.statusEffects[existingIndex];
+    const maxValue = (existing.value || 0) + (value || 0);
+    creature.statusEffects[existingIndex] = {
+      type,
+      duration: Math.max(duration, existing.duration),
+      value: Math.min(maxValue, 0.5), // Cap slow at 50% reduction
+    };
+  } else if (existingIndex === -1) {
+    // New effect
+    creature.statusEffects.push({ type, duration, value });
+  }
+  // For Stun and Poison, don't refresh (existing effect continues)
+}
+
+/**
+ * Remove a status effect from a creature
+ */
+export function removeStatusEffect(
+  creature: BattleCreature,
+  type: StatusEffectType
+): void {
+  creature.statusEffects = creature.statusEffects.filter(e => e.type !== type);
+}
+
+/**
+ * Check if a creature has a specific status effect
+ */
+export function hasStatusEffect(
+  creature: BattleCreature,
+  type: StatusEffectType
+): boolean {
+  return creature.statusEffects.some(e => e.type === type);
+}
+
+/**
+ * Get all status effects of a specific type
+ */
+export function getStatusEffects(
+  creature: BattleCreature,
+  type: StatusEffectType
+): StatusEffect[] {
+  return creature.statusEffects.filter(e => e.type === type);
+}
+
+/**
+ * Calculate effective speed with Slow effect applied
+ */
+export function getEffectiveSpeed(creature: BattleCreature): number {
+  const slowEffects = getStatusEffects(creature, StatusEffectType.SLOW);
+  let totalSlowReduction = 0;
+  for (const effect of slowEffects) {
+    totalSlowReduction += effect.value || 0;
+  }
+  // Cap at 50% reduction
+  totalSlowReduction = Math.min(totalSlowReduction, 0.5);
+  return Math.floor(creature.stats.speed * (1 - totalSlowReduction));
+}
+
+/**
+ * Apply status effects at the start of a creature's turn
+ * Returns true if the turn should be skipped (stunned)
+ */
+export function applyStatusEffects(
+  creature: BattleCreature,
+  log: BattleLogEntry[]
+): boolean {
+  let turnSkipped = false;
+
+  // Check for Stun - skip turn
+  if (hasStatusEffect(creature, StatusEffectType.STUN)) {
+    log.push({
+      text: `${creature.name} est étourdi et ne peut pas agir!`,
+      type: "info",
+    });
+    turnSkipped = true;
+  }
+
+  // Apply Poison damage
+  const poisonEffects = getStatusEffects(creature, StatusEffectType.POISON);
+  for (const poison of poisonEffects) {
+    const damagePercent = poison.value || 0.05; // Default 5% of max HP
+    const poisonDamage = Math.floor(creature.stats.hp * damagePercent);
+    if (poisonDamage > 0 && creature.currentHP > 0) {
+      creature.currentHP = Math.max(0, creature.currentHP - poisonDamage);
+      log.push({
+        text: `☠️ ${creature.name} subit les dégâts du poison: -${poisonDamage} HP`,
+        type: "damage",
+      });
+    }
+  }
+
+  return turnSkipped;
+}
+
+/**
+ * Tick down status effect durations and remove expired ones
+ */
+export function tickStatusEffects(creature: BattleCreature, log: BattleLogEntry[]): void {
+  const expiredEffects: StatusEffectType[] = [];
+
+  for (let i = 0; i < creature.statusEffects.length; i++) {
+    const effect = creature.statusEffects[i];
+    effect.duration--;
+
+    if (effect.duration <= 0) {
+      expiredEffects.push(effect.type);
+    }
+  }
+
+  // Remove expired effects
+  for (const expiredType of expiredEffects) {
+    removeStatusEffect(creature, expiredType);
+    const effectNames: Record<StatusEffectType, string> = {
+      [StatusEffectType.STUN]: "Étourdissement",
+      [StatusEffectType.POISON]: "Poison",
+      [StatusEffectType.SLOW]: "Lenteur",
+    };
+    log.push({
+      text: `✨ ${effectNames[expiredType]} sur ${creature.name} s'est dissipé`,
+      type: "info",
+    });
+  }
 }
 
 export interface BattleLogEntry {
@@ -160,6 +314,112 @@ export function calculateDodgeChance(
   const baseChance = Math.log10(speedRatio) * 0.5; // Changed to 0.5 for lower scaling
   const totalChance = Math.min(baseChance + dodgeBuff, 0.60);
   return totalChance;
+}
+
+/**
+ * Hook point for traits that trigger when damage is taken
+ * Returns any additional damage to apply (e.g., reflection from Épines)
+ */
+export function onDamageTakenHooks(
+  defender: BattleCreature,
+  damage: number,
+  attacker: BattleCreature,
+  log: BattleLogEntry[]
+): number {
+  const reflectedDamage = applyTraitOnDamageTaken(defender, damage, attacker, log);
+  if (reflectedDamage > 0) {
+    log.push({
+      text: `🔥 Épines renvoie ${reflectedDamage} dégâts à ${attacker.name}!`,
+      type: "damage",
+    });
+  }
+  return reflectedDamage;
+}
+
+/**
+ * Hook point for traits that trigger when attacking
+ * Returns any status effects to apply to the defender
+ */
+export function onAttackHooks(
+  attacker: BattleCreature,
+  defender: BattleCreature,
+  damage: number,
+  log: BattleLogEntry[]
+): void {
+  // Increment attack counter for "every X attacks" traits
+  attacker.attackCounter++;
+
+  // Apply Slow trait (every X attacks, reduce target speed)
+  applyTraitOnAttack(attacker, defender, log);
+}
+
+/**
+ * Apply trait effects when damage is taken
+ */
+function applyTraitOnDamageTaken(
+  defender: BattleCreature,
+  damage: number,
+  attacker: BattleCreature,
+  log: BattleLogEntry[]
+): number {
+  const traits = getTraitsByIds(defender.traits);
+  let reflectedDamage = 0;
+
+  for (const trait of traits) {
+    if (trait.id === "epines") {
+      // Épines: Reflect X% of damage back to attacker
+      const reflectPercent = 0.2; // 20% reflection (will vary by rarity)
+      reflectedDamage += Math.floor(damage * reflectPercent);
+    }
+  }
+
+  return reflectedDamage;
+}
+
+/**
+ * Apply trait effects when attacking
+ */
+function applyTraitOnAttack(
+  attacker: BattleCreature,
+  defender: BattleCreature,
+  log: BattleLogEntry[]
+): void {
+  const traits = getTraitsByIds(attacker.traits);
+
+  for (const trait of traits) {
+    if (trait.id === "slowTrait") {
+      const attacksNeeded = 3; // Every 3 attacks
+      if (attacker.attackCounter % attacksNeeded === 0) {
+        const slowAmount = 0.15; // 15% speed reduction
+        addStatusEffect(defender, StatusEffectType.SLOW, 2, slowAmount);
+        log.push({
+          text: `🐌 ${defender.name} est ralentit (${Math.floor(slowAmount * 100)}% SPD) pour 2 tours!`,
+          type: "info",
+        });
+      }
+    } else if (trait.id === "venom") {
+      const poisonChance = 0.3; // 30% chance to apply poison
+      if (Math.random() < poisonChance) {
+        const poisonDamage = 0.06; // 6% HP per turn
+        addStatusEffect(defender, StatusEffectType.POISON, 3, poisonDamage);
+        log.push({
+          text: `☠️ ${defender.name} est empoisonné!`,
+          type: "info",
+        });
+      }
+    } else if (trait.id === "coupBas") {
+      const defenderHpPercent = defender.currentHP / defender.stats.hp;
+      const myHpPercent = attacker.currentHP / attacker.stats.hp;
+      // When my HP < 20%, chance to stun target
+      if (myHpPercent < 0.2 && Math.random() < 0.25) {
+        addStatusEffect(defender, StatusEffectType.STUN, 1);
+        log.push({
+          text: `💫 ${defender.name} est étourdi par Coup Bas!`,
+          type: "info",
+        });
+      }
+    }
+  }
 }
 
 /**
@@ -368,9 +628,12 @@ export function executeAttack(
   const attackerMods = applyTraitModifiers(attacker, defenderHpPercent);
   const defenderMods = applyTraitModifiers(defender, attackerHpPercent);
 
+  // Use effective speed in dodge calculation (accounts for Slow)
+  const defenderEffectiveSpeed = getEffectiveSpeed(defender);
+
   const dodgeChance = calculateDodgeChance(
     attacker.stats.speed,
-    defender.stats.speed,
+    defenderEffectiveSpeed,
     defender.buffs.dodgeBuff + defenderMods.dodgeBonus
   );
 
@@ -403,6 +666,17 @@ export function executeAttack(
     text: `${attacker.name} attaque! Dégâts: ${damage} (${defender.name} HP: ${defender.currentHP})`,
     type: "damage",
   });
+
+  // Apply damage taken hooks (e.g., Épines reflection)
+  if (damage > 0) {
+    const reflectedDamage = onDamageTakenHooks(defender, damage, attacker, log);
+    if (reflectedDamage > 0) {
+      attacker.currentHP = Math.max(0, attacker.currentHP - reflectedDamage);
+    }
+  }
+
+  // Apply attack hooks (e.g., Slow, Venom, Coup Bas)
+  onAttackHooks(attacker, defender, damage, log);
 
   return damage;
 }
@@ -451,6 +725,8 @@ export function createBattleCreature(
     },
     name: name || creature.name,
     traits: traits || [],
+    statusEffects: [],
+    attackCounter: 0,
   };
 }
 
