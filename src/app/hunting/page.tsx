@@ -264,6 +264,33 @@ const renderStars = (stars: number) => {
   ));
 };
 
+// Render exploration progress
+const renderExplorationProgress = (creature: HuntedCreature) => {
+  const currentXP = creature.explorationXP || 0;
+  const xpToNext = creature.explorationXPToNext || 100;
+  const progressPercent = Math.min(100, (currentXP / xpToNext) * 100);
+
+  return (
+    <div>
+      <div className="flex items-center gap-1 mb-1">
+        <span className="text-amber-500">🗺️</span>
+        <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+          Expl. Lvl {creature.explorationLevel || 0}
+        </span>
+        <span className="text-xs text-gray-600 dark:text-gray-400">
+          ({currentXP}/{xpToNext} XP)
+        </span>
+      </div>
+      <div className="w-full bg-gray-700 rounded-full h-2">
+        <div
+          className="bg-amber-500 h-2 rounded-full transition-all"
+          style={{ width: `${progressPercent}%` }}
+        />
+      </div>
+    </div>
+  );
+};
+
 export default function HuntingPage() {
   const [phase, setPhase] = useState<HuntingPhase>("ready");
   const [huntedCreature, setHuntedCreature] = useState<HuntedCreature | null>(null);
@@ -670,6 +697,18 @@ export default function HuntingPage() {
                     Victoires: {selectedCreature.battlesWon || 0} | Batailles: {selectedCreature.battlesTotal || 0}
                   </div>
                 </div>
+
+                {/* NEW: Add exploration progress bar */}
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <h3 className="text-lg font-bold text-amber-700 dark:text-amber-400 mb-3">
+                    Progression d'Exploration
+                  </h3>
+                  {renderExplorationProgress(selectedCreature)}
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                    Envoyez cette créature en mission pour gagner de l'XP et débloquer des durées de mission plus longues.
+                  </p>
+                </div>
+
                 {selectedCreature.traits && selectedCreature.traits.length > 0 && (
                   <div className="bg-purple-700 bg-opacity-50 rounded-lg p-3 mb-4">
                     <h3 className="font-bold text-purple-100">✨ Traits ({selectedCreature.traits.length})</h3>
@@ -893,6 +932,10 @@ export default function HuntingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {sortedCollection.map(c => (
                 <div key={c.id} onClick={() => handleViewCreature(c)} className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-4 border border-green-700 hover:border-green-600 cursor-pointer hover:scale-105 transition-all duration-200 relative">
+                  {/* Exploration level badge */}
+                  <div className="absolute top-2 right-2 bg-amber-500 text-white text-xs px-2 py-1 rounded-lg font-semibold">
+                    🗺️ Lvl {c.explorationLevel || 0}
+                  </div>
                   <div className="flex items-start gap-3 mb-2">
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleFavorite(c.id); }}
