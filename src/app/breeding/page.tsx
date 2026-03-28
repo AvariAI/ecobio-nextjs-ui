@@ -621,7 +621,12 @@ export default function BreedingPage() {
                     >
                       <option value="">Sélectionner un buffer...</option>
                       {inventory.items
-                        .filter(i => i.type === "breedingBuffer" && i.rank === parent1.finalStats.rank && i.count > 0)
+                        .filter(i => 
+                          i.type === "breedingBuffer" && 
+                          i.rank === parent1.finalStats.rank && 
+                          i.count > 0 &&
+                          (i.id !== selectedBuffer2 || (inventory.items.find(x => x.id === selectedBuffer2)?.count || 0) >= 2)
+                        )
                         .map(item => (
                           <option key={item.id} value={item.id}>
                             Buffer Breeding ({item.rank}) ×{item.count}
@@ -644,7 +649,12 @@ export default function BreedingPage() {
                     >
                       <option value="">Sélectionner un buffer...</option>
                       {inventory.items
-                        .filter(i => i.type === "breedingBuffer" && i.rank === parent2.finalStats.rank && i.count > 0)
+                        .filter(i => 
+                          i.type === "breedingBuffer" && 
+                          i.rank === parent2.finalStats.rank && 
+                          i.count > 0 &&
+                          (i.id !== selectedBuffer1 || (inventory.items.find(x => x.id === selectedBuffer1)?.count || 0) >= 2)
+                        )
                         .map(item => (
                           <option key={item.id} value={item.id}>
                             Buffer Breeding ({item.rank}) ×{item.count}
