@@ -247,6 +247,7 @@ export default function HuntingPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [confirmReleaseAll, setConfirmReleaseAll] = useState(false);
   const [selectedRank, setSelectedRank] = useState<Rank | null>(null);
+  const [peekingCreature, setPeekingCreature] = useState<HuntedCreature | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("ecobio-collection");
@@ -724,8 +725,13 @@ export default function HuntingPage() {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-yellow-300 font-bold">+{calculateRankXP(creature.finalStats.rank, creature.level, creature.finalStats)}</p>
-                          <p className="text-green-400 text-xs">XP</p>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setPeekingCreature(creature); }}
+                            className="text-lg hover:scale-125 transition-transform"
+                            title="Voir les détails"
+                          >
+                            👁️
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -827,6 +833,83 @@ export default function HuntingPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {peekingCreature && (
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" onClick={() => setPeekingCreature(null)}>
+            <div className="bg-gradient-to-br from-green-800 to-green-900 rounded-xl p-6 max-w-2xl w-full mx-4 border-2 border-green-600 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-3xl font-bold text-green-100">{peekingCreature.name}</h2>
+                <button onClick={() => setPeekingCreature(null)} className="text-2xl hover:scale-110 transition-transform">❌</button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <img
+                    src={getCreatureImage(peekingCreature.creatureId, peekingCreature.finalStats.rank)}
+                    alt={peekingCreature.name}
+                    className="w-full rounded-lg border-2 border-green-600"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className={`text-3xl font-bold ${getRankBadgeColor(peekingCreature.finalStats.rank)} text-white px-4 py-2 rounded-full`}>{peekingCreature.finalStats.rank}</span>
+                    <span className="text-2xl text-yellow-300 font-bold">L{peekingCreature.level}</span>
+                    <button
+                      onClick={(e) => { toggleFavorite(peekingCreature.id); setPeekingCreature({ ...peekingCreature, isFavorite: !peekingCreature.isFavorite }); }}
+                      className="text-2xl hover:scale-125 transition-transform"
+                    >
+                      {peekingCreature.isFavorite ? "❤️" : "🤍"}
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 mb-4">
+                    <div><strong>HP:</strong> {peekingCreature.finalStats.hp}</div>
+                    <div><strong>ATK:</strong> {peekingCreature.finalStats.attack}</div>
+                    <div><strong>DEF:</strong> {peekingCreature.finalStats.defense}</div>
+                    <div><strong>SPD:</strong> {peekingCreature.finalStats.speed}</div>
+                    <div><strong>CRIT:</strong> {peekingCreature.finalStats.crit}%</div>
+                  </div>
+
+                  {peekingCreature.isFavorite && (
+                    <div className="bg-pink-600 bg-opacity-30 rounded-lg p-3 mb-4 border border-pink-500">
+                      <p className="text-pink-200 font-semibold">🔒 Protégé (favori)</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {peekingCreature.traits && peekingCreature.traits.length > 0 && (
+                <div className="mt-6 bg-purple-700 bg-opacity-30 rounded-lg p-4 border border-purple-500">
+                  <h3 className="text-xl font-bold text-purple-100 mb-3">✨ Traits ({peekingCreature.traits.length})</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {getTraitsByIds(peekingCreature.traits).map(trait => (
+                      <div key={trait.id} className="bg-purple-900 bg-opacity-50 rounded p-3">
+                        <p className="font-bold text-purple-100">{trait.name}</p>
+                        <p className="text-sm text-purple-200">{trait.description}</p>
+                        {trait.condition && (
+                          <p className="text-xs text-yellow-300 mt-1">Condition: {trait.condition}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-6">
+                <h3 className="text-xl font-bold text-green-100 mb-3">📊 Valeur XP (nourriture)</h3>
+                <p className="text-2xl text-yellow-300 font-bold">+{calculateRankXP(peekingCreature.finalStats.rank, peekingCreature.level, peekingCreature.finalStats)} XP</p>
+              </div>
+
+              <button
+                onClick={() => setPeekingCreature(null)}
+                className="w-full mt-6 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-lg p-3 font-bold"
+              >
+                Fermer
+              </button>
             </div>
           </div>
         )}
