@@ -272,7 +272,16 @@ export default function HuntingPage() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setCollection(parsed);
+        // Migrate existing creatures to have star progression fields
+        const migrated = parsed.map((c: any) => ({
+          ...c,
+          stars: c.stars ?? 0,
+          combatXP: c.combatXP ?? 0,
+          combatXPToNextStar: c.combatXPToNextStar ?? 100,
+          battlesWon: c.battlesWon ?? 0,
+          battlesTotal: c.battlesTotal ?? 0,
+        }));
+        setCollection(migrated);
       } catch (e) {
         console.error("Failed load collection", e);
       }
@@ -637,11 +646,11 @@ export default function HuntingPage() {
                     {renderStars(selectedCreature.stars || 0)}
                   </div>
                   <p className="text-yellow-100 font-bold">⭐ Star {selectedCreature.stars || 0} | Combat XP: {selectedCreature.combatXP || 0}/{selectedCreature.combatXPToNextStar || "MAX"}</p>
-                  {selectedCreature.stars && selectedCreature.stars < 5 && (
+                  {selectedCreature.stars !== undefined && selectedCreature.stars < 5 && selectedCreature.combatXPToNextStar > 0 && (
                     <div className="w-full bg-yellow-950 rounded-full h-2 mt-2">
                       <div
                         className="bg-yellow-400 h-2 rounded-full"
-                        style={{ width: `${Math.min(100, ((selectedCreature.combatXP || 0) / (selectedCreature.combatXPToNextStar + (selectedCreature.combatXP || 0))) * 100)}%` }}
+                        style={{ width: `${Math.min(100, ((selectedCreature.combatXP || 0) / Math.max(1, selectedCreature.combatXPToNextStar)) * 100)}%` }}
                       />
                     </div>
                   )}
@@ -896,11 +905,11 @@ export default function HuntingPage() {
                       <div className="text-xs text-gray-300 mt-1">
                         Combat XP: {c.combatXP || 0}/{c.combatXPToNextStar || "MAX"}
                       </div>
-                      {c.stars && c.stars < 5 && (
+                      {c.stars !== undefined && c.stars < 5 && c.combatXPToNextStar > 0 && (
                         <div className="w-full bg-gray-700 rounded-full h-1.5 mt-2">
                           <div
                             className="bg-yellow-500 h-1.5 rounded-full transition-all"
-                            style={{ width: `${Math.min(100, ((c.combatXP || 0) / (c.combatXPToNextStar + (c.combatXP || 0))) * 100)}%` }}
+                            style={{ width: `${Math.min(100, ((c.combatXP || 0) / Math.max(1, c.combatXPToNextStar)) * 100)}%` }}
                           />
                         </div>
                       )}
