@@ -374,9 +374,9 @@ export default function HuntingPage() {
 
   const handleReleaseAll = () => {
     if (confirmReleaseAll) {
-      // Ne relâche que les créatures qui ne sont pas favorites
-      const nonFavorites = collection.filter(c => !c.isFavorite);
-      setCollection(nonFavorites);
+      // Ne relâche que les créatures qui ne sont pas favorites (garde les favorites)
+      const favoritesOnly = collection.filter(c => c.isFavorite);
+      setCollection(favoritesOnly);
       setConfirmReleaseAll(false);
     } else {
       setConfirmReleaseAll(true);
@@ -851,7 +851,7 @@ export default function HuntingPage() {
                 {confirmReleaseAll && (
                   <div className="flex items-center gap-2">
                     <p className="text-yellow-200 text-sm">Confirmer tout relâcher? C'est l'irréversible!</p>
-                    <button onClick={() => { setCollection(collection.filter(c => !c.isFavorite)); setConfirmReleaseAll(false); }} className="bg-gradient-to-r from-red-800 to-red-700 hover:from-red-700 hover:to-red-600 text-white rounded px-3 py-1 text-sm font-bold">OUI</button>
+                    <button onClick={() => { setCollection(collection.filter(c => c.isFavorite)); setConfirmReleaseAll(false); }} className="bg-gradient-to-r from-red-800 to-red-700 hover:from-red-700 hover:to-red-600 text-white rounded px-3 py-1 text-sm font-bold">OUI</button>
                     <button onClick={() => setConfirmReleaseAll(false)} className="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded px-3 py-1 text-sm font-bold">Annuler</button>
                   </div>
                 )}
