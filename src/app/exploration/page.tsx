@@ -174,6 +174,30 @@ export default function ExplorationPage() {
     };
   }, [missions, collection]);
 
+  // End mission immediately (instant completion, no cost for now)
+  const handleEndMissionNow = (mission: ExplorationMission) => {
+    const teamCreatures = collection.filter(c => mission.team.includes(c.id));
+    const results = simulateExplorationMission(mission, teamCreatures);
+
+    const updatedMissions = missions.map(m => {
+      if (m.id === mission.id) {
+        return {
+          ...m,
+          endTime: Date.now(), // Set to now
+          status: results.survivors.length > 0 ? "completed" : "failed",
+          results: {
+            ...results,
+            missionSuccess: results.survivors.length > 0,
+            instant: true // Flag to indicate instant completion
+          }
+        };
+      }
+      return m;
+    });
+
+    setMissions(updatedMissions);
+  };
+
   // Start new mission
   const handleStartMission = () => {
     if (selectedTeam.length === 0) return;
@@ -462,6 +486,15 @@ export default function ExplorationPage() {
                       <p className="text-gray-600 dark:text-gray-400 mb-2">
                         Reste: {Math.max(0, Math.ceil((mission.endTime - Date.now()) / (60 * 1000)))} min
                       </p>
+
+                      <div className="flex justify-end mb-2">
+                        <button
+                          className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg transition-all"
+                          onClick={() => handleEndMissionNow(mission)}
+                        >
+                          Terminer Maintenant (No Cost)
+                        </button>
+                      </div>
 
                       <div className="w-full bg-amber-200 rounded-full h-3 dark:bg-amber-900">
                         <div
