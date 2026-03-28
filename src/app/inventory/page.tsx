@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { loadInventory, removeFromInventory, PLANT_DEFINITIONS, RARITY_COLORS, Inventory } from "@/lib/inventory";
+import { loadInventory, removeFromInventory, PLANT_DEFINITIONS, ESSENCE_DEFINITIONS, BUFFER_DEFINITIONS, RARITY_COLORS, Inventory } from "@/lib/inventory";
 
 export default function InventoryPage() {
   const [inventory, setInventory] = useState<Inventory>({ items: [], totalLootObtained: 0 });
@@ -43,24 +43,15 @@ export default function InventoryPage() {
     }
   };
 
-  // Filter items with missing definitions (legacy data migration fixes)
-  const filteredItems = inventory.items.filter(item => {
-    // Find plant name from PLANT_DEFINITIONS by case-insensitive match
-    const plantDef = Object.values(PLANT_DEFINITIONS).find(def => 
-      def.name.toLowerCase() === item.plantName.toLowerCase()
-    );
-    return plantDef !== undefined;
-  });
-  
-  // Sort items
-  const sortedItems = [...filteredItems].sort((a, b) => {
+  // Sort items (no filtering anymore - accept all item types)
+  const sortedItems = [...inventory.items].sort((a, b) => {
     if (sortBy === "rarity") {
       const rarityOrder = ["E", "D", "C", "B", "A", "S", "S+"];
       return rarityOrder.indexOf(a.rank) - rarityOrder.indexOf(b.rank);
     } else if (sortBy === "count") {
       return b.count - a.count;
     } else {
-      return a.plantName.localeCompare(b.plantName);
+      return (a.plantName || a.name).localeCompare(b.plantName || b.name);
     }
   });
 
@@ -164,22 +155,32 @@ export default function InventoryPage() {
                 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {itemsInRarity.map(item => {
-                    // Find plant definition by case-insensitive name match (for legacy data migration)
-                    const plantDef = Object.values(PLANT_DEFINITIONS).find(def => 
-                      def.name.toLowerCase() === item.plantName.toLowerCase()
-                    );
+                    // Get definition based on item type
+                    let itemDef = null;
                     
-                    if (!plantDef) {
+                    if (item.type === "plant") {
+                      itemDef = PLANT_DEFINITIONS[item.plantId || ""];
+                    } else if (item.type === "insectEssence" || item.type === "plantEssence") {
+                      itemDef = ESSENCE_DEFINITIONS[`essence_${item.type === "insectEssence" ? "insect" : "plant"}_${item.rank}`];
+                    } else if (item.type === "breedingBuffer") {
+                      itemDef = BUFFER_DEFINITIONS[`buffer_${item.rank}`];
+                    }
+                    
+                    if (!itemDef) {
                       return (
                         <div 
                           key={item.id}
                           className="bg-gray-100 border-4 border-red-300 rounded-xl p-4"
                         >
-                          <p className="text-red-600 font-bold">⚠️ Plant ID manquant: {item.plantId}</p>
+                          <p className="text-red-600 font-bold">⚠️ Item non trouvé: {item.type} {item.rank}</p>
                           <p className="text-xs text-gray-600">Qty: {item.count}</p>
                         </div>
                       );
                     }
+                    
+                    const displayName = itemDef.name;
+                    const displayDesc = itemDef.description;
+                    const displayIcon = itemDef.icon;
                     
                     return (
                       <div
@@ -188,10 +189,10 @@ export default function InventoryPage() {
                       >
                         <div className="flex justify-between items-start mb-2">
                           <div className="flex items-center gap-2">
-                            <span className="text-3xl">{plantDef.icon}</span>
+                            <span className="text-3xl">{displayIcon}</span>
                             <div>
-                              <h4 className="font-bold text-lg">{plantDef.name}</h4>
-                              <p className="text-xs text-gray-600 dark:text-gray-400">{plantDef.description}</p>
+                              <h4 className="font-bold text-lg">{displayName}</h4>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">{displayDesc}</p>
                             </div>
                           </div>
                         </div>

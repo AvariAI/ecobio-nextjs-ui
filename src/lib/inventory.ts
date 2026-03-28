@@ -1,13 +1,19 @@
 import { Rank } from "./database";
 
+export type ItemType = "plant" | "insectEssence" | "plantEssence" | "breedingBuffer";
+
 export interface InventoryItem {
   id: string;
-  type: "plant";
-  plantId: string;
-  plantName: string;
+  type: ItemType;
+  name: string;
   rank: Rank;
-  count: number; // Number of this plant owned
+  description: string;
+  icon: string;
+  count: number;
   lastUpdated: number;
+  // Legacy fields pour compatibilité avec plant items existants
+  plantId?: string;
+  plantName?: string;
 }
 
 export interface Inventory {
@@ -94,6 +100,49 @@ export const PLANT_DEFINITIONS: Record<string, {
   }
 };
 
+// Essence definitions (for insect & plant essences)
+export const ESSENCE_DEFINITIONS: Record<string, {
+  id: string;
+  name: string;
+  type: "insectEssence" | "plantEssence";
+  rank: Rank;
+  description: string;
+  icon: string;
+}> = {
+  "essence_insect_E": { id: "essence_insect_E", name: "Essence Insecte", type: "insectEssence", rank: "E", description: "Essence d'insecte de rang E", icon: "🐛" },
+  "essence_insect_D": { id: "essence_insect_D", name: "Essence Insecte", type: "insectEssence", rank: "D", description: "Essence d'insecte de rang D", icon: "🐛" },
+  "essence_insect_C": { id: "essence_insect_C", name: "Essence Insecte", type: "insectEssence", rank: "C", description: "Essence d'insecte de rang C", icon: "🐛" },
+  "essence_insect_B": { id: "essence_insect_B", name: "Essence Insecte", type: "insectEssence", rank: "B", description: "Essence d'insecte de rang B", icon: "🐛" },
+  "essence_insect_A": { id: "essence_insect_A", name: "Essence Insecte", type: "insectEssence", rank: "A", description: "Essence d'insecte de rang A", icon: "🐛" },
+  "essence_insect_S": { id: "essence_insect_S", name: "Essence Insecte", type: "insectEssence", rank: "S", description: "Essence d'insecte de rang S", icon: "🐛" },
+  "essence_insect_S+": { id: "essence_insect_S+", name: "Essence Insecte", type: "insectEssence", rank: "S+", description: "Essence d'insecte de rang S+", icon: "🐛" },
+  "essence_plant_E": { id: "essence_plant_E", name: "Essence Plante", type: "plantEssence", rank: "E", description: "Essence de plante de rang E", icon: "🌿" },
+  "essence_plant_D": { id: "essence_plant_D", name: "Essence Plante", type: "plantEssence", rank: "D", description: "Essence de plante de rang D", icon: "🌿" },
+  "essence_plant_C": { id: "essence_plant_C", name: "Essence Plante", type: "plantEssence", rank: "C", description: "Essence de plante de rang C", icon: "🌿" },
+  "essence_plant_B": { id: "essence_plant_B", name: "Essence Plante", type: "plantEssence", rank: "B", description: "Essence de plante de rang B", icon: "🌿" },
+  "essence_plant_A": { id: "essence_plant_A", name: "Essence Plante", type: "plantEssence", rank: "A", description: "Essence de plante de rang A", icon: "🌿" },
+  "essence_plant_S": { id: "essence_plant_S", name: "Essence Plante", type: "plantEssence", rank: "S", description: "Essence de plante de rang S", icon: "🌿" },
+  "essence_plant_S+": { id: "essence_plant_S+", name: "Essence Plante", type: "plantEssence", rank: "S+", description: "Essence de plante de rang S+", icon: "🌿" }
+};
+
+// Buffer breeding definitions
+export const BUFFER_DEFINITIONS: Record<string, {
+  id: string;
+  name: string;
+  type: "breedingBuffer";
+  rank: Rank;
+  description: string;
+  icon: string;
+}> = {
+  "buffer_E": { id: "buffer_E", name: "Buffer Breeding", type: "breedingBuffer", rank: "E", description: "Buffer de rang E", icon: "⚗️" },
+  "buffer_D": { id: "buffer_D", name: "Buffer Breeding", type: "breedingBuffer", rank: "D", description: "Buffer de rang D", icon: "⚗️" },
+  "buffer_C": { id: "buffer_C", name: "Buffer Breeding", type: "breedingBuffer", rank: "C", description: "Buffer de rang C", icon: "⚗️" },
+  "buffer_B": { id: "buffer_B", name: "Buffer Breeding", type: "breedingBuffer", rank: "B", description: "Buffer de rang B", icon: "⚗️" },
+  "buffer_A": { id: "buffer_A", name: "Buffer Breeding", type: "breedingBuffer", rank: "A", description: "Buffer de rang A", icon: "⚗️" },
+  "buffer_S": { id: "buffer_S", name: "Buffer Breeding", type: "breedingBuffer", rank: "S", description: "Buffer de rang S", icon: "⚗️" },
+  "buffer_S+": { id: "buffer_S+", name: "Buffer Breeding", type: "breedingBuffer", rank: "S+", description: "Buffer de rang S+", icon: "⚗️" }
+};
+
 // Rank colors (same as creature ranks)
 export const RARITY_COLORS: Record<Rank, string> = {
   "E": "text-gray-500 bg-gray-200",
@@ -173,7 +222,7 @@ export function addToInventory(plantIds: string[]): {
 
   // Update inventory
   current.items.forEach(item => {
-    if (grouped[item.plantId]) {
+    if (item.plantId && grouped[item.plantId]) {
       item.count += grouped[item.plantId];
       addedCount += grouped[item.plantId];
       delete grouped[item.plantId];
@@ -188,11 +237,14 @@ export function addToInventory(plantIds: string[]): {
       current.items.push({
         id: `inventory-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         type: "plant",
-        plantId,
-        plantName: plantDef.name,
+        name: plantDef.name,
         rank: plantDef.rank,
+        description: plantDef.description,
+        icon: plantDef.icon,
         count,
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
+        plantId,
+        plantName: plantDef.name
       });
       addedCount += count;
     }
@@ -284,4 +336,69 @@ export function loadInventory(): Inventory {
     items: [],
     totalLootObtained: 0
   };
+}
+
+/**
+ * Create essence or buffer item and add to inventory (for craft system)
+ */
+export function createItemInInventory(
+  type: ItemType,
+  rank: Rank,
+  count: number = 1
+): Inventory {
+  const inventory = loadInventory();
+  
+  let itemId: string;
+  let itemName: string;
+  let itemDesc: string;
+  let itemIcon: string;
+  
+  if (type === "insectEssence") {
+    const def = ESSENCE_DEFINITIONS[`essence_insect_${rank}`];
+    itemId = def.id;
+    itemName = def.name;
+    itemDesc = def.description;
+    itemIcon = def.icon;
+  } else if (type === "plantEssence") {
+    const def = ESSENCE_DEFINITIONS[`essence_plant_${rank}`];
+    itemId = def.id;
+    itemName = def.name;
+    itemDesc = def.description;
+    itemIcon = def.icon;
+  } else if (type === "breedingBuffer") {
+    const def = BUFFER_DEFINITIONS[`buffer_${rank}`];
+    itemId = def.id;
+    itemName = def.name;
+    itemDesc = def.description;
+    itemIcon = def.icon;
+  } else {
+    // plant type - not supported here, use addToInventory instead
+    return inventory;
+  }
+  
+  // Check if item already exists
+  const existing = inventory.items.find(item =>
+    item.type === type && item.rank === rank
+  );
+  
+  if (existing) {
+    existing.count += count;
+    existing.lastUpdated = Date.now();
+  } else {
+    inventory.items.push({
+      id: `inventory-${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type,
+      name: itemName,
+      rank,
+      description: itemDesc,
+      icon: itemIcon,
+      count,
+      lastUpdated: Date.now()
+    });
+  }
+  
+  localStorage.setItem("ecobio-inventory", JSON.stringify(inventory));
+  window.dispatchEvent(new CustomEvent("inventory-updated"));
+  
+  return inventory;
 }
