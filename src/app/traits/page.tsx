@@ -103,7 +103,7 @@ export default function TraitsPage() {
 
                   {getConditionText(trait.condition)}
 
-                  {trait.effects.length > 0 && (
+                  {trait.effects.length > 0 ? (
                     <div className="mt-3 pt-3 border-t border-green-200">
                       <p className="text-xs text-gray-600 font-semibold mb-1">Effets:</p>
                       <ul className="text-sm text-gray-700 space-y-1">
@@ -117,6 +117,14 @@ export default function TraitsPage() {
                         ))}
                       </ul>
                     </div>
+                  ) : (
+                    trait.type === TraitType.PASSIVE && (
+                      <div className="mt-3 pt-3 border-t border-green-200">
+                        <span className="inline-flex items-center px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
+                          ⚡ Effet spécial en combat
+                        </span>
+                      </div>
+                    )
                   )}
                 </div>
               ))}
