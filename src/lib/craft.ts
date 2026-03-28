@@ -204,3 +204,25 @@ export function removeFromCraftInventory(item: CraftItem): CraftInventory {
   saveCraftInventory(inventory);
   return inventory;
 }
+
+/**
+ * Transform a creature into essence (creature → essence)
+ * Returns essence with the same rank as the creature
+ */
+export function transformCreatureToEssence(creatureRank: Rank): {
+  essenceItem: CraftItem;
+  craftInventory: CraftInventory;
+} {
+  const essenceItem: CraftItem = {
+    id: `essence-insect-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    type: "insectEssence",
+    rank: creatureRank,
+    count: 1
+  };
+  
+  const inventory = loadCraftInventory();
+  inventory.items.push(essenceItem);
+  saveCraftInventory(inventory);
+  
+  return { essenceItem, craftInventory: inventory };
+}

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { CREATURES, Rank, Creature } from "@/lib/database";
 import { getVarianceRange, BattleStats } from "@/lib/battle";
 import { rollRandomTraits, getTraitsByIds } from "@/lib/traits";
+import { transformCreatureToEssence } from "@/lib/craft";
 import Link from "next/link";
 
 type HuntingPhase = "ready" | "spawned" | "viewing";
@@ -419,6 +420,31 @@ export default function HuntingPage() {
       setSelectedCreature(null);
       setPhase("ready");
     }
+  };
+  
+  const handleTransformToEssence = () => {
+    if (!selectedCreature) return;
+    if (selectedCreature.isFavorite) {
+      alert("Cette créature est en favori et ne peut pas être transformée !");
+      return;
+    }
+    
+    if (!confirm(`Transformer ${selectedCreature.name} (${selectedCreature.finalStats.rank}) en Essence Insecte ?`)) return;
+    
+    // Transform creature to essence
+    const { essenceItem } = transformCreatureToEssence(selectedCreature.finalStats.rank);
+    
+    // Remove creature from collection
+    const updated = collection.filter(c => c.id !== selectedCreature.id);
+    setCollection(updated);
+    
+    // Dispatch craft inventory update event
+    window.dispatchEvent(new CustomEvent("craft-inventory-updated"));
+    
+    setSelectedCreature(null);
+    setPhase("ready");
+    
+    alert(`✅ Essence créée: Insecte ${essenceItem.rank} !`);
   };
 
   const toggleFavorite = (creatureId: string) => {
@@ -888,6 +914,7 @@ export default function HuntingPage() {
                 </>
               )}
               <button onClick={handleReleaseCreature} className="w-full bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white rounded-lg p-3 mt-4 font-bold shadow-lg">❌ Relâcher</button>
+              <button onClick={handleTransformToEssence} className="w-full bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-600 hover:to-amber-500 text-white rounded-lg p-3 mt-3 font-bold shadow-lg">✨ Transformer en Essence</button>
             </div>
           </div>
         )}

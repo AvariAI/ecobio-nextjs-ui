@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   calculateAverageRank,
-  craftInsectEssence,
   craftPlantEssence,
   craftBreedingBuffer,
   loadCraftInventory,
@@ -18,15 +17,8 @@ import {
 import { loadInventory, type Inventory } from "@/lib/inventory";
 import { Rank } from "@/lib/database";
 
-interface HuntedCreature {
-  id: string;
-  name: string;
-  rank: Rank;
-  isOnMission: boolean;
-}
-
 export default function CraftPage() {
-  const [selectedRecipe, setSelectedRecipe] = useState<RecipeType>("insectEssence");
+  const [selectedRecipe, setSelectedRecipe] = useState<RecipeType>("plantEssence");
   const [ingredient1, setIngredient1] = useState<string>("");
   const [ingredient2, setIngredient2] = useState<string>("");
   const [preview, setPreview] = useState<{
@@ -34,20 +26,12 @@ export default function CraftPage() {
     canCraft: boolean;
   }>({ resultRank: null, canCraft: false });
   const [craftInventory, setCraftInventory] = useState<CraftInventory>({ items: [] });
-  const [collection, setCollection] = useState<HuntedCreature[]>([]);
   const [plantInventory, setPlantInventory] = useState<Inventory>({ items: [], totalLootObtained: 0 });
 
   // Load data
   useEffect(() => {
     const loadedCraft = loadCraftInventory();
     setCraftInventory(loadedCraft);
-
-    const savedCollection = localStorage.getItem("ecobio-collection");
-    if (savedCollection) {
-      try {
-        setCollection(JSON.parse(savedCollection));
-      } catch (e) {}
-    }
 
     const loadedPlants = loadInventory();
     setPlantInventory(loadedPlants);
@@ -59,25 +43,15 @@ export default function CraftPage() {
       const updatedCraft = loadCraftInventory();
       setCraftInventory(updatedCraft);
 
-      // Reload other inventories
-      const savedCollection = localStorage.getItem("ecobio-collection");
-      if (savedCollection) {
-        try {
-          setCollection(JSON.parse(savedCollection));
-        } catch (e) {}
-      }
-
       const loadedPlants = loadInventory();
       setPlantInventory(loadedPlants);
     };
 
     window.addEventListener("craft-inventory-updated", handleUpdate);
     window.addEventListener("inventory-updated", handleUpdate);
-    window.addEventListener("collection-updated", handleUpdate);
     return () => {
       window.removeEventListener("craft-inventory-updated", handleUpdate);
       window.removeEventListener("inventory-updated", handleUpdate);
-      window.removeEventListener("collection-updated", handleUpdate);
     };
   }, []);
 
@@ -88,20 +62,7 @@ export default function CraftPage() {
       return;
     }
 
-    if (selectedRecipe === "insectEssence") {
-      const creature1 = collection.find(c => c.id === ingredient1);
-      const creature2 = collection.find(c => c.id === ingredient2);
-
-      if (creature1 && creature2) {
-        const avgRank = calculateAverageRank(creature1.rank, creature2.rank);
-        setPreview({
-          resultRank: avgRank,
-          canCraft: creature1.id !== creature2.id
-        });
-      } else {
-        setPreview({ resultRank: null, canCraft: false });
-      }
-    } else if (selectedRecipe === "plantEssence") {
+    if (selectedRecipe === "plantEssence") {
       const plant1 = plantInventory.items.find(p => p.id === ingredient1);
       const plant2 = plantInventory.items.find(p => p.id === ingredient2);
 
@@ -128,35 +89,13 @@ export default function CraftPage() {
         setPreview({ resultRank: null, canCraft: false });
       }
     }
-  }, [selectedRecipe, ingredient1, ingredient2, collection, plantInventory, craftInventory]);
+  }, [selectedRecipe, ingredient1, ingredient2, plantInventory, craftInventory]);
 
   // Handle craft
   const handleCraft = () => {
     if (!preview.canCraft || !preview.resultRank) return;
 
-    if (selectedRecipe === "insectEssence") {
-      const creature1 = collection.find(c => c.id === ingredient1);
-      const creature2 = collection.find(c => c.id === ingredient2);
-
-      if (creature1 && creature2) {
-        const { resultItem } = craftInsectEssence(creature1.id, creature2.id, creature1.rank, creature2.rank);
-
-        if (resultItem) {
-          addToCraftInventory(resultItem);
-
-          // Remove creatures from collection (consume ingredients)
-          const updatedCollection = collection.filter(c => c.id !== creature1.id && c.id !== creature2.id);
-          localStorage.setItem("ecobio-collection", JSON.stringify(updatedCollection));
-          setCollection(updatedCollection);
-          window.dispatchEvent(new CustomEvent("collection-updated"));
-
-          // Reset form
-          setIngredient1("");
-          setIngredient2("");
-          setPreview({ resultRank: null, canCraft: false });
-        }
-      }
-    } else if (selectedRecipe === "plantEssence") {
+    if (selectedRecipe === "plantEssence") {
       const plant1 = plantInventory.items.find(p => p.id === ingredient1);
       const plant2 = plantInventory.items.find(p => p.id === ingredient2);
 
@@ -225,9 +164,7 @@ export default function CraftPage() {
 
   // Get available ingredients for selected recipe
   const getAvailableIngredients = () => {
-    if (selectedRecipe === "insectEssence") {
-      return collection.filter(c => !c.isOnMission); // Excluding mission creatures
-    } else if (selectedRecipe === "plantEssence") {
+    if (selectedRecipe === "plantEssence") {
       return plantInventory.items.filter(p => p.count > 0);
     } else if (selectedRecipe === "breedingBuffer") {
       return craftInventory.items.filter(i => i.count > 0);
@@ -236,10 +173,7 @@ export default function CraftPage() {
   };
 
   const getIngredientName = (id: string) => {
-    if (selectedRecipe === "insectEssence") {
-      const c = collection.find(creature => creature.id === id);
-      return c ? `${c.name} (${c.rank})` : "";
-    } else if (selectedRecipe === "plantEssence") {
+    if (selectedRecipe === "plantEssence") {
       const p = plantInventory.items.find(item => item.id === id);
       return p ? `${p.plantName} (${p.rank}) ${p.count}×` : "";
     } else if (selectedRecipe === "breedingBuffer") {
@@ -248,6 +182,32 @@ export default function CraftPage() {
       return e ? `${typeName} (${e.rank}) ${e.count}×` : "";
     }
     return "";
+  };
+
+  const getPlaceholderForSlot = (slot: number) => {
+    if (selectedRecipe === "plantEssence") {
+      return slot === 1 ? "Sélectionner plante 1..." : "Sélectionner plante 2...";
+    } else if (selectedRecipe === "breedingBuffer") {
+      return slot === 1 ? "Essence Insecte..." : "Essence Plante...";
+    }
+    return "Sélectionner...";
+  };
+
+  const filterIngredientsForSlot = (items: any[], slot: number) => {
+    if (selectedRecipe === "plantEssence") {
+      // For plant essence, filter out the other plant selection
+      return items.filter(item => item.id !== (slot === 1 ? ingredient2 : ingredient1));
+    } else if (selectedRecipe === "breedingBuffer") {
+      // For breeding buffer:
+      // Slot 1: only insectEssence
+      // Slot 2: only plantEssence
+      if (slot === 1) {
+        return items.filter(item => item.type === "insectEssence");
+      } else {
+        return items.filter(item => item.type === "plantEssence");
+      }
+    }
+    return items;
   };
 
   return (
@@ -268,11 +228,10 @@ export default function CraftPage() {
             Sélectionner Recette
           </h2>
 
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 gap-4">
             {[
-              { id: "insectEssence", label: "Essence d'Insecte", icon: "🐛", desc: "Insecte + Insecte" },
-              { id: "plantEssence", label: "Essence de Plante", icon: "🌿", desc: "Plante + Plante" },
-              { id: "breedingBuffer", label: "Buffer Breeding", icon: "🧬", desc: "Essences combinées" }
+              { id: "plantEssence", label: "Essence de Plante", icon: "🌿", desc: "Plante + Plante → Essence" },
+              { id: "breedingBuffer", label: "Buffer Breeding", icon: "🧬", desc: "Essence Insecte + Essence Plante → Buffer" }
             ].map(recipe => (
               <button
                 key={recipe.id}
@@ -303,14 +262,18 @@ export default function CraftPage() {
 
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold mb-2">Ingrédient 1</label>
+              <label className="block text-sm font-semibold mb-2">
+                {selectedRecipe === "plantEssence" ? "Plante 1" :
+                 selectedRecipe === "breedingBuffer" ? "Essence Insecte" :
+                 "Ingrédient 1"}
+              </label>
               <select
                 value={ingredient1}
                 onChange={(e) => setIngredient1(e.target.value)}
                 className="w-full p-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
               >
-                <option value="">Sélectionner...</option>
-                {getAvailableIngredients().map(item => (
+                <option value="">{getPlaceholderForSlot(1)}</option>
+                {filterIngredientsForSlot(getAvailableIngredients(), 1).map(item => (
                   <option key={item.id} value={item.id}>
                     {getIngredientName(item.id) || `Item ${item.id}`}
                   </option>
@@ -319,14 +282,18 @@ export default function CraftPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold mb-2">Ingrédient 2</label>
+              <label className="block text-sm font-semibold mb-2">
+                {selectedRecipe === "plantEssence" ? "Plante 2" :
+                 selectedRecipe === "breedingBuffer" ? "Essence Plante" :
+                 "Ingrédient 2"}
+              </label>
               <select
                 value={ingredient2}
                 onChange={(e) => setIngredient2(e.target.value)}
                 className="w-full p-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
               >
-                <option value="">Sélectionner...</option>
-                {getAvailableIngredients().filter(item => item.id !== ingredient1).map(item => (
+                <option value="">{getPlaceholderForSlot(2)}</option>
+                {filterIngredientsForSlot(getAvailableIngredients(), 2).map(item => (
                   <option key={item.id} value={item.id}>
                     {getIngredientName(item.id) || `Item ${item.id}`}
                   </option>
@@ -344,7 +311,9 @@ export default function CraftPage() {
                 <span className={`px-3 py-1 rounded-full ${RANK_COLORS[preview.resultRank as Rank]}`}>
                   {preview.resultRank}
                 </span>
-                <span className="text-sm text-gray-500">Essence {selectedRecipe === "insectEssence" ? "Insecte" : selectedRecipe === "plantEssence" ? "Plante" : "Buffer"}</span>
+                <span className="text-sm text-gray-500">
+                  {selectedRecipe === "plantEssence" ? "Essence Plante" : "Buffer Breeding"}
+                </span>
               </div>
             ) : (
               <p className="text-gray-500">Sélectionnez deux ingrédients pour voir la prévision</p>
