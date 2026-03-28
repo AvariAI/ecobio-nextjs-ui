@@ -496,9 +496,9 @@ export default function BattlePage() {
     logCopy.push(...turnResult);
     setLog(logCopy);
 
-    // Update team states
-    setPlayerTeam({ ...playerTeam });
-    setEnemyTeam({ ...enemyTeam });
+    // Update team states - create new references for React to detect changes
+    setPlayerTeam({ ...playerTeam, creatures: playerTeam.creatures.map(c => ({ ...c })) });
+    setEnemyTeam({ ...enemyTeam, creatures: enemyTeam.creatures.map(c => ({ ...c })) });
 
     // Check if battle ended after this turn
     if (isTeamBattleOver(playerTeam, enemyTeam)) {
@@ -741,11 +741,21 @@ export default function BattlePage() {
       const success = useSkill(currentActingCreature, logCopy, target);
 
       if (success) {
-        // Update the team with new state
+        // Update the team with new state - must create new references for React to detect changes
         if (playerTeam.creatures.includes(currentActingCreature)) {
-          setPlayerTeam({ ...playerTeam });
+          setPlayerTeam({
+            ...playerTeam,
+            creatures: playerTeam.creatures.map(c =>
+              c === currentActingCreature || c === target ? { ...c } : c
+            )
+          });
         } else {
-          setEnemyTeam({ ...enemyTeam });
+          setEnemyTeam({
+            ...enemyTeam,
+            creatures: enemyTeam.creatures.map(c =>
+              c === currentActingCreature || c === target ? { ...c } : c
+            )
+          });
         }
 
         setLog(logCopy);
