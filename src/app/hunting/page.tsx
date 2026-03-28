@@ -248,6 +248,7 @@ export default function HuntingPage() {
   const [confirmReleaseAll, setConfirmReleaseAll] = useState(false);
   const [selectedRank, setSelectedRank] = useState<Rank | null>(null);
   const [peekingCreature, setPeekingCreature] = useState<HuntedCreature | null>(null);
+  const [feedRankFilter, setFeedRankFilter] = useState<Rank | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("ecobio-collection");
@@ -286,6 +287,39 @@ export default function HuntingPage() {
   });
 
   const handleAutoSort = () => { setSortBy("rank"); setSortOrder("desc"); };
+
+  // Food collection with rank filter and auto-sort by rank then level
+  const RankOrder: Record<Rank, number> = {
+    "S+": 7,
+    "S": 6,
+    "A": 5,
+    "B": 4,
+    "C": 3,
+    "D": 2,
+    "E": 1,
+  };
+
+  const filteredFoodCollection = [...collection]
+    .filter(c => c.id !== selectedCreature?.id && !c.isFavorite)
+    .filter(c => feedRankFilter ? c.finalStats.rank === feedRankFilter : true)
+    .sort((a, b) => {
+      const rankDiff = RankOrder[b.finalStats.rank] - RankOrder[a.finalStats.rank];
+      if (rankDiff !== 0) return rankDiff;
+      return b.level - a.level;
+    });
+
+  // Auto-select functions for feeding
+  const autoSelectAll = () => {
+    const allIds = new Set(filteredFoodCollection.map(c => c.id));
+    setSelectedFoodIds(allIds);
+  };
+
+  const autoSelectByRank = (rank: Rank) => {
+    const rankIds = new Set(collection
+      .filter(c => c.id !== selectedCreature?.id && !c.isFavorite && c.finalStats.rank === rank)
+      .map(c => c.id));
+    setSelectedFoodIds(rankIds);
+  };
 
   const handleSpawn = () => {
     const spawned = spawnCreature();
@@ -613,7 +647,47 @@ export default function HuntingPage() {
             </div>
             <div className="border-t border-green-700 pt-6">
               <h3 className="text-xl font-bold text-green-100 mb-4">🍎 Nourrir</h3>
-              
+
+              {feedMode && (
+                <div className="mb-4 p-3 bg-green-900 bg-opacity-50 rounded-lg border border-green-600">
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <span className="text-green-200 font-semibold">Filtre rang:</span>
+                    {(["E", "D", "C", "B", "A", "S", "S+"] as Rank[]).map(rank => (
+                      <button
+                        key={rank}
+                        onClick={() => setFeedRankFilter(feedRankFilter === rank ? null : rank)}
+                        className={`px-3 py-1 rounded-full font-bold text-sm ${
+                          feedRankFilter === rank
+                            ? `${getRankBadgeColor(rank)} ring-2 ring-white`
+                            : `${getRankBadgeColor(rank)} opacity-60 hover:opacity-100`
+                        }`}
+                      >
+                        {rank}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <span className="text-green-200 font-semibold">Auto-sélection:</span>
+                    <button
+                      onClick={autoSelectAll}
+                      className="bg-gradient-to-r from-purple-700 to-purple-600 hover:from-purple-600 hover:to-purple-500 text-white rounded px-3 py-1 text-sm font-bold"
+                    >
+                      ✅ Tous
+                    </button>
+                    {(["E", "D", "C", "B", "A", "S", "S+"] as Rank[]).map(rank => (
+                      <button
+                        key={rank}
+                        onClick={() => autoSelectByRank(rank)}
+                        className={`px-3 py-1 rounded text-white text-sm font-bold ${getRankBadgeColor(rank)} hover:opacity-80`}
+                      >
+                        {rank}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {!feedMode ? (
                 <>
                   <button 
@@ -691,7 +765,7 @@ export default function HuntingPage() {
                   )}
                   
                   <div className="max-h-64 overflow-y-auto border-2 border-green-700 rounded-lg p-2">
-                    {collection.filter(c => c.id !== selectedCreature?.id).map(creature => (
+                    {filteredFoodCollection.map(creature => (
                       <div
                         key={creature.id}
                         onClick={() => !previewMode && toggleFoodCreature(creature.id)}
@@ -735,8 +809,10 @@ export default function HuntingPage() {
                         </div>
                       </div>
                     ))}
-                    {collection.filter(c => c.id !== selectedCreature?.id).length === 0 && (
-                      <p className="text-center text-green-400 py-4">Aucune autre créature disponible pour nourrir</p>
+                    {filteredFoodCollection.length === 0 && (
+                      <p className="text-center text-green-400 py-4">
+                        Aucune créature disponible pour nourrir (vérifie le filtre de rang)
+                      </p>
                     )}
                   </div>
                 </>
