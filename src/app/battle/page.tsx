@@ -15,8 +15,12 @@ import {
   getEffectiveSpeed,
   BattleLogEntry,
   createBattleCreature,
+  BattleElement,
 } from "@/lib/battle";
 import { getTraitsByIds, applyTraitStatModifiers } from "@/lib/traits";
+import { TeamSize, BattleTeam, getAllBattleElements, executeCreatureTurn, isTeamBattleOver, getTeamBattleWinner, validateTeamSize, createBattleTeam, countAliveCreatures } from "@/lib/battle-multi";
+import { MultiCreatureTestSelector, MultiCreatureCollectionSelector, SlotConfig } from "./multi-battle-components";
+import { MultiCreatureBattleDisplay, MultiCreatureBattleCompleteDisplay, BattleLogDisplay as MultiBattleLogDisplay } from "./multi-battle-display";
 import Link from "next/link";
 
 type HuntingPhase = "ready" | "spawned" | "viewing";
@@ -78,6 +82,9 @@ export default function BattlePage() {
   // Mode: "test" (default, brute stats) or "collection" (use hunting creatures)
   const [battleMode, setBattleMode] = useState<"test" | "collection">("test");
 
+  // Team size: 1v1, 3v3, or 5v5
+  const [teamSize, setTeamSize] = useState<TeamSize>(1);
+
   // Test mode state
   const [playerCreatureId, setPlayerCreatureId] = useState("ant");
   const [playerLevel, setPlayerLevel] = useState(10);
@@ -85,6 +92,26 @@ export default function BattlePage() {
   const [enemyCreatureId, setEnemyCreatureId] = useState("housefly");
   const [enemyLevel, setEnemyLevel] = useState(10);
   const [enemyRank, setEnemyRank] = useState<Rank>("E");
+
+  // Multi-slot test mode state
+  const [playerSlotConfigs, setPlayerSlotConfigs] = useState<SlotConfig[]>([
+    { creatureId: "ant", level: 10, rank: "E" },
+    { creatureId: "", level: 10, rank: "E" },
+    { creatureId: "", level: 10, rank: "E" },
+    { creatureId: "", level: 10, rank: "E" },
+    { creatureId: "", level: 10, rank: "E" },
+  ]);
+  const [enemySlotConfigs, setEnemySlotConfigs] = useState<SlotConfig[]>([
+    { creatureId: "housefly", level: 10, rank: "E" },
+    { creatureId: "", level: 10, rank: "E" },
+    { creatureId: "", level: 10, rank: "E" },
+    { creatureId: "", level: 10, rank: "E" },
+    { creatureId: "", level: 10, rank: "E" },
+  ]);
+
+  // Multi-creature selection state
+  const [playerTeamIds, setPlayerTeamIds] = useState<(string | null)[]>([null, null, null, null, null]);
+  const [enemyTeamIds, setEnemyTeamIds] = useState<(string | null)[]>([null, null, null, null, null]);
 
   // Collection mode state
   const [collection, setCollection] = useState<HuntedCreature[]>([]);
@@ -95,9 +122,13 @@ export default function BattlePage() {
   const [phase, setPhase] = useState<BattlePhase>("setup");
   const [player, setPlayer] = useState<BattleCreature | null>(null);
   const [enemy, setEnemy] = useState<BattleCreature | null>(null);
+  const [playerTeam, setPlayerTeam] = useState<BattleTeam | null>(null);
+  const [enemyTeam, setEnemyTeam] = useState<BattleTeam | null>(null);
   const [log, setLog] = useState<BattleLogEntry[]>([]);
   const [turn, setTurn] = useState<"player" | "enemy">("player");
+  const [currentActingCreature, setCurrentActingCreature] = useState<BattleCreature | null>(null);
   const [round, setRound] = useState(1);
+  const [turnOrder, setTurnOrder] = useState<BattleElement[]>([]);
 
   // Load collection from localStorage
   useEffect(() => {
@@ -118,6 +149,9 @@ export default function BattlePage() {
   const selectedPlayer = collection.find(c => c.id === selectedPlayerId);
   const selectedEnemy = collection.find(c => c.id === selectedEnemyId);
 
+  // Helper to check if we're in multi-creature mode
+  const isMultiCreatureMode = teamSize > 1;
+
   // Calculate stats with level scaling BUT NO RNG variance (deterministic for testing)
   const playerBattleStats = calculateScaledStats(playerCreature, playerLevel, playerRank);
   const enemyBattleStats = calculateScaledStats(enemyCreature, enemyLevel, enemyRank);
@@ -125,139 +159,428 @@ export default function BattlePage() {
   const playerPreviewStats = playerBattleStats;
   const enemyPreviewStats = enemyBattleStats;
 
-  // Auto-trigger enemy turn when it's their turn and battle has started
+  // Auto-trigger next turn based on current actor
   useEffect(() => {
-    if (phase === "battle" && turn === "enemy" && enemy && player) {
+    if (phase !== "battle") return;
+
+    // For 1v1 mode, use the old logic
+    if (teamSize === 1 && turn === "enemy" && enemy && player) {
       const timer = setTimeout(() => {
         enemyTurn();
       }, 1500);
-      
+
       return () => clearTimeout(timer);
     }
-  }, [phase, turn]);
+
+    // For multi-creature mode, check if it's enemy creature's turn
+    if (teamSize > 1 && currentActingCreature && enemyTeam && playerTeam) {
+      const isEnemyCreature = enemyTeam.creatures.some(c => c === currentActingCreature);
+
+      if (isEnemyCreature) {
+        const timer = setTimeout(() => {
+          executeMultiCreatureTurn(true);
+        }, 1500);
+
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [phase, turn, currentActingCreature, teamSize]);
 
   const startBattle = () => {
-    let p: BattleCreature;
-    let e: BattleCreature;
+    // Check team size validation for multi-creature mode
+    if (teamSize > 1) {
+      const playerValid = battleMode === "test"
+        ? validateTestSlotConfigs(playerSlotConfigs, teamSize)
+        : validateTeamSize(playerTeamIds, teamSize);
+      const enemyValid = battleMode === "test"
+        ? validateTestSlotConfigs(enemySlotConfigs, teamSize)
+        : validateTeamSize(enemyTeamIds, teamSize);
 
-    // Test mode: Calculate stats with level scaling (deterministic)
-    if (battleMode === "test") {
-      p = createBattleCreature(
-        playerCreature,
-        playerBattleStats,
-        `${playerCreature.name} (R${playerRank} L${playerLevel})`,
-        []  // Test mode: no traits
-      );
-
-      e = createBattleCreature(
-        enemyCreature,
-        enemyBattleStats,
-        `${enemyCreature.name} (R${enemyRank} L${enemyLevel})`,
-        []  // Test mode: no traits
-      );
-    } else {
-      // Collection mode: Use hunting creatures with RNG stats and traits
-      if (!selectedPlayer || !selectedEnemy) {
-        alert("Sélectionnez deux créatures de votre collection!");
+      if (!playerValid || !enemyValid) {
+        alert(`Pour ${teamSize}v${teamSize}, vous devez sélectionner ${teamSize} créatures par équipe!`);
         return;
       }
+    }
 
-      // Apply trait stat modifiers to base stats
-      const playerStatMods = applyTraitStatModifiers(
-        {
+    // 1v1 mode
+    if (teamSize === 1) {
+      let p: BattleCreature;
+      let e: BattleCreature;
+
+      // Test mode: Calculate stats with level scaling (deterministic)
+      if (battleMode === "test") {
+        p = createBattleCreature(
+          playerCreature,
+          playerBattleStats,
+          `${playerCreature.name} (R${playerRank} L${playerLevel})`,
+          []  // Test mode: no traits
+        );
+
+        e = createBattleCreature(
+          enemyCreature,
+          enemyBattleStats,
+          `${enemyCreature.name} (R${enemyRank} L${enemyLevel})`,
+          []  // Test mode: no traits
+        );
+      } else {
+        // Collection mode: Use hunting creatures with RNG stats and traits
+        if (!selectedPlayer || !selectedEnemy) {
+          alert("Sélectionnez deux créatures de votre collection!");
+          return;
+        }
+
+        // Apply trait stat modifiers to base stats
+        const playerStatMods = applyTraitStatModifiers(
+          {
+            hp: selectedPlayer.finalStats.hp,
+            attack: selectedPlayer.finalStats.attack,
+            defense: selectedPlayer.finalStats.defense,
+            speed: selectedPlayer.finalStats.speed,
+            crit: selectedPlayer.finalStats.crit,
+          },
+          selectedPlayer.traits || []
+        );
+
+        const enemyStatMods = applyTraitStatModifiers(
+          {
+            hp: selectedEnemy.finalStats.hp,
+            attack: selectedEnemy.finalStats.attack,
+            defense: selectedEnemy.finalStats.defense,
+            speed: selectedEnemy.finalStats.speed,
+            crit: selectedEnemy.finalStats.crit,
+          },
+          selectedEnemy.traits || []
+        );
+
+        p = createBattleCreature(
+          CREATURES[selectedPlayer.creatureId],
+          {
+            hp: playerStatMods.modifiedStats.hp,
+            attack: playerStatMods.modifiedStats.attack,
+            defense: playerStatMods.modifiedStats.defense,
+            speed: playerStatMods.modifiedStats.speed,
+            crit: playerStatMods.modifiedStats.crit,
+            rank: selectedPlayer.finalStats.rank,
+          },
+          `${selectedPlayer.name} (R${selectedPlayer.finalStats.rank} L${selectedPlayer.level})`,
+          selectedPlayer.traits || []
+        );
+        p.baseStats = {
           hp: selectedPlayer.finalStats.hp,
           attack: selectedPlayer.finalStats.attack,
           defense: selectedPlayer.finalStats.defense,
           speed: selectedPlayer.finalStats.speed,
           crit: selectedPlayer.finalStats.crit,
-        },
-        selectedPlayer.traits || []
-      );
+          rank: selectedPlayer.finalStats.rank,
+        };
+        p.statModifiers = playerStatMods.breakdown;
 
-      const enemyStatMods = applyTraitStatModifiers(
-        {
+        e = createBattleCreature(
+          CREATURES[selectedEnemy.creatureId],
+          {
+            hp: enemyStatMods.modifiedStats.hp,
+            attack: enemyStatMods.modifiedStats.attack,
+            defense: enemyStatMods.modifiedStats.defense,
+            speed: enemyStatMods.modifiedStats.speed,
+            crit: enemyStatMods.modifiedStats.crit,
+            rank: selectedEnemy.finalStats.rank,
+          },
+          `${selectedEnemy.name} (R${selectedEnemy.finalStats.rank} L${selectedEnemy.level})`,
+          selectedEnemy.traits || []
+        );
+        e.baseStats = {
           hp: selectedEnemy.finalStats.hp,
           attack: selectedEnemy.finalStats.attack,
           defense: selectedEnemy.finalStats.defense,
           speed: selectedEnemy.finalStats.speed,
           crit: selectedEnemy.finalStats.crit,
-        },
-        selectedEnemy.traits || []
-      );
-
-      p = createBattleCreature(
-        CREATURES[selectedPlayer.creatureId],
-        {
-          hp: playerStatMods.modifiedStats.hp,
-          attack: playerStatMods.modifiedStats.attack,
-          defense: playerStatMods.modifiedStats.defense,
-          speed: playerStatMods.modifiedStats.speed,
-          crit: playerStatMods.modifiedStats.crit,
-          rank: selectedPlayer.finalStats.rank,
-        },
-        `${selectedPlayer.name} (R${selectedPlayer.finalStats.rank} L${selectedPlayer.level})`,
-        selectedPlayer.traits || []
-      );
-      p.baseStats = {
-        hp: selectedPlayer.finalStats.hp,
-        attack: selectedPlayer.finalStats.attack,
-        defense: selectedPlayer.finalStats.defense,
-        speed: selectedPlayer.finalStats.speed,
-        crit: selectedPlayer.finalStats.crit,
-        rank: selectedPlayer.finalStats.rank,
-      };
-      p.statModifiers = playerStatMods.breakdown;
-
-      e = createBattleCreature(
-        CREATURES[selectedEnemy.creatureId],
-        {
-          hp: enemyStatMods.modifiedStats.hp,
-          attack: enemyStatMods.modifiedStats.attack,
-          defense: enemyStatMods.modifiedStats.defense,
-          speed: enemyStatMods.modifiedStats.speed,
-          crit: enemyStatMods.modifiedStats.crit,
           rank: selectedEnemy.finalStats.rank,
-        },
-        `${selectedEnemy.name} (R${selectedEnemy.finalStats.rank} L${selectedEnemy.level})`,
-        selectedEnemy.traits || []
+        };
+        e.statModifiers = enemyStatMods.breakdown;
+      }
+
+      setPlayer(p);
+      setEnemy(e);
+      setPlayerTeam(null);
+      setEnemyTeam(null);
+
+      // Determine who starts based on effective speed - higher speed goes first
+      const playerEffectiveSpeed = getEffectiveSpeed(p);
+      const enemyEffectiveSpeed = getEffectiveSpeed(e);
+      const firstAttacker = playerEffectiveSpeed >= enemyEffectiveSpeed ? "player" : "enemy";
+
+      setLog([
+        { text: `⚔️ BATTLE START!`, type: "info" },
+        { text: `—`.repeat(40), type: "info" },
+        { text: `—`.repeat(40), type: "info" },
+        { text: `C'est le tour de ${firstAttacker === "player" ? "Player" : "Enemy"} d'attaquer en premier!`, type: "info" },
+      ]);
+      setPhase("battle");
+      setTurn(firstAttacker as "player" | "enemy");
+      setRound(1);
+    } else {
+      // Multi-creature mode (3v3 or 5v5)
+      const playerCreatures: Array<{ creatureTemplate: any; stats: any; name: string; traits?: string[] }> = [];
+      const enemyCreatures: Array<{ creatureTemplate: any; stats: any; name: string; traits?: string[] }> = [];
+
+      // Build player team
+      for (let i = 0; i < teamSize; i++) {
+        const creatureId = playerTeamIds[i];
+        if (!creatureId && battleMode !== "test") continue;
+
+        if (battleMode === "test") {
+          // Test mode: Use slot-based creature configuration
+          const slotConfig = playerSlotConfigs[i];
+          if (!slotConfig || !slotConfig.creatureId) continue;
+
+          const testCreature = CREATURES[slotConfig.creatureId];
+          const testStats = calculateScaledStats(testCreature, slotConfig.level, slotConfig.rank);
+          playerCreatures.push({
+            creatureTemplate: testCreature,
+            stats: testStats,
+            name: `${testCreature.name} ${i + 1} (R${slotConfig.rank} L${slotConfig.level})`,
+            traits: [],
+          });
+        } else {
+          // Collection mode: Use selected creatures
+          const collected = collection.find(c => c.id === creatureId);
+          if (!collected) continue;
+
+          const statMods = applyTraitStatModifiers(
+            {
+              hp: collected.finalStats.hp,
+              attack: collected.finalStats.attack,
+              defense: collected.finalStats.defense,
+              speed: collected.finalStats.speed,
+              crit: collected.finalStats.crit,
+            },
+            collected.traits || []
+          );
+
+          playerCreatures.push({
+            creatureTemplate: CREATURES[collected.creatureId],
+            stats: {
+              hp: statMods.modifiedStats.hp,
+              attack: statMods.modifiedStats.attack,
+              defense: statMods.modifiedStats.defense,
+              speed: statMods.modifiedStats.speed,
+              crit: statMods.modifiedStats.crit,
+              rank: collected.finalStats.rank,
+            },
+            name: `${collected.name} (R${collected.finalStats.rank} L${collected.level})`,
+            traits: collected.traits || [],
+          });
+        }
+      }
+
+      // Build enemy team
+      for (let i = 0; i < teamSize; i++) {
+        const creatureId = enemyTeamIds[i];
+        if (!creatureId && battleMode !== "test") continue;
+
+        if (battleMode === "test") {
+          // Test mode: Use slot-based creature configuration
+          const slotConfig = enemySlotConfigs[i];
+          if (!slotConfig || !slotConfig.creatureId) continue;
+
+          const testCreature = CREATURES[slotConfig.creatureId];
+          const testStats = calculateScaledStats(testCreature, slotConfig.level, slotConfig.rank);
+          enemyCreatures.push({
+            creatureTemplate: testCreature,
+            stats: testStats,
+            name: `${testCreature.name} ${i + 1} (R${slotConfig.rank} L${slotConfig.level})`,
+            traits: [],
+          });
+        } else {
+          // Collection mode: Use selected creatures
+          const collected = collection.find(c => c.id === creatureId);
+          if (!collected) continue;
+
+          const statMods = applyTraitStatModifiers(
+            {
+              hp: collected.finalStats.hp,
+              attack: collected.finalStats.attack,
+              defense: collected.finalStats.defense,
+              speed: collected.finalStats.speed,
+              crit: collected.finalStats.crit,
+            },
+            collected.traits || []
+          );
+
+          enemyCreatures.push({
+            creatureTemplate: CREATURES[collected.creatureId],
+            stats: {
+              hp: statMods.modifiedStats.hp,
+              attack: statMods.modifiedStats.attack,
+              defense: statMods.modifiedStats.defense,
+              speed: statMods.modifiedStats.speed,
+              crit: statMods.modifiedStats.crit,
+              rank: collected.finalStats.rank,
+            },
+            name: `${collected.name} (R${collected.finalStats.rank} L${collected.level})`,
+            traits: collected.traits || [],
+          });
+        }
+      }
+
+      const pTeam = createBattleTeam(playerCreatures, "player");
+      const eTeam = createBattleTeam(enemyCreatures, "enemy");
+
+      // Set team reference on each creature (needed for turn logic)
+      pTeam.creatures.forEach(c => (c as any).team = "player");
+      eTeam.creatures.forEach(c => (c as any).team = "enemy");
+
+      setPlayerTeam(pTeam);
+      setEnemyTeam(eTeam);
+      setPlayer(null);
+      setEnemy(null);
+
+      // Create turn order based on speed
+      const allElements = getAllBattleElements(pTeam, eTeam);
+      const sortedTurnOrder = [...allElements].sort(
+        (a, b) => getEffectiveSpeed(b.creature) - getEffectiveSpeed(a.creature)
       );
-      e.baseStats = {
-        hp: selectedEnemy.finalStats.hp,
-        attack: selectedEnemy.finalStats.attack,
-        defense: selectedEnemy.finalStats.defense,
-        speed: selectedEnemy.finalStats.speed,
-        crit: selectedEnemy.finalStats.crit,
-        rank: selectedEnemy.finalStats.rank,
-      };
-      e.statModifiers = enemyStatMods.breakdown;
+
+      setTurnOrder(sortedTurnOrder);
+      const firstCreature = sortedTurnOrder[0];
+      setCurrentActingCreature(firstCreature.creature);
+      setTurn(firstCreature.team as "player" | "enemy");
+
+      setLog([
+        { text: `⚔️ ${teamSize}v${teamSize} BATTLE START!`, type: "info" },
+        { text: `—`.repeat(40), type: "info" },
+        { text: `Tour order (par vitesse):`, type: "info" },
+        ...sortedTurnOrder.map((el, i) => ({
+          text: `  ${i + 1}. ${el.name} (${el.team === "player" ? "Joueur" : "Ennemi"})`,
+          type: "info" as const,
+        })),
+      ]);
+      setPhase("battle");
+      setRound(1);
+    }
+  };
+
+  // Multi-creature battle turn execution
+  const executeMultiCreatureTurn = (isAuto: boolean = false) => {
+    if (!playerTeam || !enemyTeam || !currentActingCreature || phase !== "battle") return;
+
+    // Check if battle is over
+    if (isTeamBattleOver(playerTeam, enemyTeam)) {
+      const winner = getTeamBattleWinner(playerTeam, enemyTeam);
+      const logCopy = [...log];
+      logCopy.push({
+        text: winner === "player" ? "🏆 VICTORY!" : "💀 DEFEAT!",
+        type: winner === "player" ? "victory" : "defeat",
+      });
+      setLog(logCopy);
+      setPhase("complete");
+      return;
     }
 
-        setPlayer(p);
-    setEnemy(e);
+    const logCopy = [...log];
+    const turnResult = executeCreatureTurn(
+      currentActingCreature,
+      playerTeam,
+      enemyTeam,
+      isAuto
+    );
 
-    // Determine who starts based on effective speed - higher speed goes first
-    const playerEffectiveSpeed = getEffectiveSpeed(p);
-    const enemyEffectiveSpeed = getEffectiveSpeed(e);
-    const firstAttacker = playerEffectiveSpeed >= enemyEffectiveSpeed ? "player" : "enemy";
+    logCopy.push(...turnResult);
+    setLog(logCopy);
 
-    setLog([
-      { text: `⚔️ BATTLE START!`, type: "info" },
-      { text: `—`.repeat(40), type: "info" },
-      { text: `—`.repeat(40), type: "info" },
-      { text: `C'est le tour de ${firstAttacker === "player" ? "Player" : "Enemy"} d'attaquer en premier!`, type: "info" },
-    ]);
-    setPhase("battle");
-    setTurn(firstAttacker as "player" | "enemy");
-    setRound(1);
-    // No need to manually trigger enemy turn - useEffect handles it automatically
+    // Update team states
+    setPlayerTeam({ ...playerTeam });
+    setEnemyTeam({ ...enemyTeam });
+
+    // Check if battle ended after this turn
+    if (isTeamBattleOver(playerTeam, enemyTeam)) {
+      const winner = getTeamBattleWinner(playerTeam, enemyTeam);
+      logCopy.push({
+        text: winner === "player" ? "🏆 VICTORY!" : "💀 DEFEAT!",
+        type: winner === "player" ? "victory" : "defeat",
+      });
+      setLog(logCopy);
+      setPhase("complete");
+      return;
+    }
+
+    // Move to next creature in turn order that's still alive
+    const currentIndex = turnOrder.findIndex(el => el.creature === currentActingCreature);
+    let nextIndex = (currentIndex + 1) % turnOrder.length;
+    let nextCreature = turnOrder[nextIndex];
+
+    // Find next alive creature, handling wrap-around
+    let attempts = 0;
+    while (nextCreature.creature.currentHP <= 0 && attempts < turnOrder.length) {
+      nextIndex = (nextIndex + 1) % turnOrder.length;
+      nextCreature = turnOrder[nextIndex];
+      attempts++;
+    }
+
+    // If all creatures are dead, battle should have ended already
+    if (attempts >= turnOrder.length) {
+      const winner = getTeamBattleWinner(playerTeam, enemyTeam);
+      logCopy.push({
+        text: winner === "player" ? "🏆 VICTORY!" : "💀 DEFEAT!",
+        type: winner === "player" ? "victory" : "defeat",
+      });
+      setLog(logCopy);
+      setPhase("complete");
+      return;
+    }
+
+    setCurrentActingCreature(nextCreature.creature);
+    setTurn(nextCreature.team as "player" | "enemy");
+
+    // Increment round if we've cycled back to the first creature
+    if (nextIndex < currentIndex) {
+      setRound((prev) => prev + 1);
+    }
+  };
+
+  // Handle multi-creature selection
+  const handlePlayerTeamSelect = (slot: number, creatureId: string | null) => {
+    const newTeam = [...playerTeamIds];
+    newTeam[slot] = creatureId;
+    setPlayerTeamIds(newTeam);
+  };
+
+  const handleEnemyTeamSelect = (slot: number, creatureId: string | null) => {
+    const newTeam = [...enemyTeamIds];
+    newTeam[slot] = creatureId;
+    setEnemyTeamIds(newTeam);
+  };
+
+  // Handle multi-slot test mode configuration changes
+  const handlePlayerSlotChange = (slot: number, config: SlotConfig) => {
+    const newConfigs = [...playerSlotConfigs];
+    newConfigs[slot] = config;
+    setPlayerSlotConfigs(newConfigs);
+  };
+
+  const handleEnemySlotChange = (slot: number, config: SlotConfig) => {
+    const newConfigs = [...enemySlotConfigs];
+    newConfigs[slot] = config;
+    setEnemySlotConfigs(newConfigs);
+  };
+
+  // Validate slot configurations for test mode
+  const validateTestSlotConfigs = (configs: SlotConfig[], teamSize: TeamSize): boolean => {
+    return configs.slice(0, teamSize).every(config => config.creatureId !== "");
   };
 
   const handleAttack = () => {
+    // Multi-creature mode: auto-execute current creature's turn
+    if (teamSize > 1) {
+      executeMultiCreatureTurn(false);
+      return;
+    }
+
+    // 1v1 mode: use original logic
     if (!player || !enemy || phase !== "battle" || turn !== "player") return;
 
     const logCopy = [...log];
     logCopy.push({ text: `--- Round ${round}: Player Turn ---`, type: "info" });
-
     // Apply status effects at start of turn (check for stun)
     const turnSkipped = applyStatusEffects(player, logCopy);
 
@@ -312,6 +635,39 @@ export default function BattlePage() {
   };
 
   const handleSkill = () => {
+    // Multi-creature mode: use skill for current creature
+    if (teamSize > 1 && currentActingCreature && currentActingCreature.creature.skill) {
+      const skill = currentActingCreature.creature.skill;
+      const cooldownKey = `${skill.name}_${currentActingCreature.name}`;
+      const currentCooldown = currentActingCreature.skillCooldowns[cooldownKey] || 0;
+
+      if (currentCooldown > 0 || !playerTeam || !enemyTeam) return;
+
+      const logCopy = [...log];
+      const success = useSkill(currentActingCreature, logCopy);
+
+      if (success) {
+        logCopy.push({
+          text: `✨ ${currentActingCreature.name} utilise ${skill.name}!`,
+          type: "skill",
+        });
+
+        // Update the team with new state
+        if (playerTeam.creatures.includes(currentActingCreature)) {
+          setPlayerTeam({ ...playerTeam });
+        } else {
+          setEnemyTeam({ ...enemyTeam });
+        }
+
+        setLog(logCopy);
+
+        // Move to next turn
+        // (This will be handled by the auto-trigger effect)
+      }
+      return;
+    }
+
+    // 1v1 mode: use original logic
     if (!player || !player.creature.skill || phase !== "battle" || turn !== "player") return;
 
     const skill = player.creature.skill;
@@ -471,10 +827,100 @@ export default function BattlePage() {
             >
               📦 Collection ({collection.length})
             </button>
+
+            {/* Team Size Toggle */}
+            <span className="text-gray-700 font-semibold ml-8">Format:</span>
+            <button
+              onClick={() => {
+                setTeamSize(1);
+                setPlayerTeamIds([null, null, null, null, null]);
+                setEnemyTeamIds([null, null, null, null, null]);
+                // Reset test mode slot configs
+                setPlayerSlotConfigs([
+                  { creatureId: "ant", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                ]);
+                setEnemySlotConfigs([
+                  { creatureId: "housefly", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                ]);
+              }}
+              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                teamSize === 1
+                  ? "bg-green-600 text-white shadow-lg"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              1v1
+            </button>
+            <button
+              onClick={() => {
+                setTeamSize(3);
+                setPlayerTeamIds([null, null, null, null, null]);
+                setEnemyTeamIds([null, null, null, null, null]);
+                // Reset test mode slot configs for 3v3
+                setPlayerSlotConfigs([
+                  { creatureId: "ant", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                ]);
+                setEnemySlotConfigs([
+                  { creatureId: "housefly", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                ]);
+              }}
+              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                teamSize === 3
+                  ? "bg-orange-600 text-white shadow-lg"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              3v3
+            </button>
+            <button
+              onClick={() => {
+                setTeamSize(5);
+                setPlayerTeamIds([null, null, null, null, null]);
+                setEnemyTeamIds([null, null, null, null, null]);
+                // Reset test mode slot configs for 5v5
+                setPlayerSlotConfigs([
+                  { creatureId: "ant", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                ]);
+                setEnemySlotConfigs([
+                  { creatureId: "housefly", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                  { creatureId: "", level: 10, rank: "E" },
+                ]);
+              }}
+              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                teamSize === 5
+                  ? "bg-red-600 text-white shadow-lg"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              5v5
+            </button>
           </div>
         </header>
 
-        {phase === "setup" && battleMode === "test" && (
+        {phase === "setup" && battleMode === "test" && teamSize === 1 && (
           <div className="grid md:grid-cols-2 gap-8 mb-8">
             <CreatureSelector
               label="🔵 Your Creature"
@@ -504,7 +950,27 @@ export default function BattlePage() {
           </div>
         )}
 
-        {phase === "setup" && battleMode === "collection" && (
+        {phase === "setup" && battleMode === "test" && teamSize > 1 && (
+          <div className="grid md:grid-cols-2 gap-8 mb-8">
+            <MultiCreatureTestSelector
+              label={`🔵 Équipe Joueur (${teamSize} créatures)`}
+              slotConfigs={playerSlotConfigs}
+              onSlotChange={handlePlayerSlotChange}
+              teamSize={teamSize}
+              accent="blue"
+            />
+
+            <MultiCreatureTestSelector
+              label={`🔴 Équipe Ennemi (${teamSize} créatures)`}
+              slotConfigs={enemySlotConfigs}
+              onSlotChange={handleEnemySlotChange}
+              teamSize={teamSize}
+              accent="red"
+            />
+          </div>
+        )}
+
+        {phase === "setup" && battleMode === "collection" && teamSize === 1 && (
           <div className="grid md:grid-cols-2 gap-8 mb-8">
             <CollectionSelector
               label="🔵 Your Creature"
@@ -524,11 +990,37 @@ export default function BattlePage() {
           </div>
         )}
 
+        {phase === "setup" && battleMode === "collection" && teamSize > 1 && (
+          <div className="grid md:grid-cols-2 gap-8 mb-8">
+            <MultiCreatureCollectionSelector
+              label={`🔵 Équipe Joueur (${teamSize} créatures)`}
+              collection={collection}
+              teamIds={playerTeamIds}
+              onTeamSelect={handlePlayerTeamSelect}
+              teamSize={teamSize}
+              accent="blue"
+            />
+
+            <MultiCreatureCollectionSelector
+              label={`🔴 Équipe Ennemi (${teamSize} créatures)`}
+              collection={collection}
+              teamIds={enemyTeamIds}
+              onTeamSelect={handleEnemyTeamSelect}
+              teamSize={teamSize}
+              accent="red"
+            />
+          </div>
+        )}
+
         {phase === "setup" && (
           <div className="text-center mb-8">
             <button
               onClick={startBattle}
-              disabled={battleMode === "collection" && (!selectedPlayerId || !selectedEnemyId)}
+              disabled={
+                (teamSize === 1 && battleMode === "collection" && (!selectedPlayerId || !selectedEnemyId)) ||
+                (teamSize > 1 && battleMode === "test" && (!validateTestSlotConfigs(playerSlotConfigs, teamSize) || !validateTestSlotConfigs(enemySlotConfigs, teamSize))) ||
+                (teamSize > 1 && battleMode === "collection" && (!validateTeamSize(playerTeamIds, teamSize) || !validateTeamSize(enemyTeamIds, teamSize)))
+              }
               className="px-12 py-4 bg-gradient-to-r from-red-600 to-purple-600 text-white text-2xl font-bold rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               ⚔️ START BATTLE!
@@ -536,7 +1028,7 @@ export default function BattlePage() {
           </div>
         )}
 
-        {phase === "battle" && (
+        {phase === "battle" && teamSize === 1 && (
           <div className="grid md:grid-cols-3 gap-8">
             {player && (
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-2 border-blue-400">
@@ -593,13 +1085,26 @@ export default function BattlePage() {
           </div>
         )}
 
+        {phase === "battle" && teamSize > 1 && (
+          <MultiCreatureBattleDisplay
+            playerTeam={playerTeam}
+            enemyTeam={enemyTeam}
+            currentActingCreature={currentActingCreature}
+            turn={turn}
+            round={round}
+            turnOrder={turnOrder}
+            onAttack={executeMultiCreatureTurn}
+            onSkill={handleSkill}
+          />
+        )}
+
         {phase === "battle" && (
           <div className="mt-8">
-            <BattleLogDisplay log={log} />
+            {teamSize === 1 ? <BattleLogDisplay log={log} /> : <MultiBattleLogDisplay log={log} />}
           </div>
         )}
 
-        {phase === "complete" && (
+        {phase === "complete" && teamSize === 1 && (
           <BattleCompleteDisplay
             player={player}
             enemy={enemy}
@@ -609,6 +1114,25 @@ export default function BattlePage() {
               setLog([]);
               setRound(1);
               setTurn("player");
+            }}
+          />
+        )}
+
+        {phase === "complete" && teamSize > 1 && (
+          <MultiCreatureBattleCompleteDisplay
+            playerTeam={playerTeam}
+            enemyTeam={enemyTeam}
+            log={log}
+            teamSize={teamSize}
+            onReset={() => {
+              setPhase("setup");
+              setLog([]);
+              setRound(1);
+              setTurn("player");
+              setCurrentActingCreature(null);
+              setTurnOrder([]);
+              setPlayerTeam(null);
+              setEnemyTeam(null);
             }}
           />
         )}
