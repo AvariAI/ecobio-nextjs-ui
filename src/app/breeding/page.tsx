@@ -101,20 +101,26 @@ export default function BreedingPage() {
     return b.level - a.level;
   });
 
-  // Filter creatures for dropdown based on search
+  // Filter creatures for dropdown based on search and creature type
   const getDropdownCreatures = (search: string, otherParent: HuntedCreature | null) => {
     return filteredCollection.filter(creature => {
       const matchesSearch = creature.name.toLowerCase().includes(search.toLowerCase());
       const notSelectedAsOther = otherParent ? creature.id !== otherParent.id : true;
       const notSelectedAsSelf = parent1 ? creature.id !== parent1.id : true;
       const notSelectedAsSelf2 = parent2 ? creature.id !== parent2.id : true;
-      return matchesSearch && notSelectedAsOther && notSelectedAsSelf && notSelectedAsSelf2;
+      // Only show creatures of the same type as the selected parent
+      const matchesType = otherParent ? creature.creatureId === otherParent.creatureId : true;
+      return matchesSearch && notSelectedAsOther && notSelectedAsSelf && notSelectedAsSelf2 && matchesType;
     });
   };
 
   const handleSelectParent1 = (creature: HuntedCreature) => {
     if (parent2?.id === creature.id) {
       setError("Vous ne pouvez pas sélectionner la même créature deux fois");
+      return;
+    }
+    if (parent2 && parent2.creatureId !== creature.creatureId) {
+      setError(`La reproduction n'est possible qu'entre créatures du même type (${parent2.name} ≠ ${creature.name})`);
       return;
     }
     setParent1(creature);
@@ -126,6 +132,10 @@ export default function BreedingPage() {
   const handleSelectParent2 = (creature: HuntedCreature) => {
     if (parent1?.id === creature.id) {
       setError("Vous ne pouvez pas sélectionner la même créature deux fois");
+      return;
+    }
+    if (parent1 && parent1.creatureId !== creature.creatureId) {
+      setError(`La reproduction n'est possible qu'entre créatures du même type (${parent1.name} ≠ ${creature.name})`);
       return;
     }
     setParent2(creature);
@@ -152,10 +162,10 @@ export default function BreedingPage() {
       return "Aucune créature disponible.";
     }
     if (!parent1 || !parent2) {
-      return "Sélectionnez deux créatures pour reproduire";
+      return "Sélectionnez deux créatures du même type pour reproduire";
     }
-    if (parent1.id === parent2.id) {
-      return "Vous ne pouvez pas sélectionner la même créature deux fois";
+    if (parent1.creatureId !== parent2.creatureId) {
+      return `Les parents doivent être du même type (${parent1.name} ≠ ${parent2.name})`;
     }
     return "Prêt à reproduire!";
   };
