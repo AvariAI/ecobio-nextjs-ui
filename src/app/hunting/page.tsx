@@ -32,6 +32,7 @@ interface HuntedCreature extends Creature {
   createdAt: number;
   creatureId: string;
   traits: string[];  // Trait IDs
+  isFavorite: boolean;  // Protection contre la nutrition et le relâchement
 }
 
 function rollRarity(): RarityRank {
@@ -120,6 +121,7 @@ function spawnCreature(): HuntedCreature {
     createdAt: Date.now(),
     creatureId,
     traits,  // Random traits based on rank
+    isFavorite: false,  // Pas favori par défaut
   };
 }
 
@@ -311,6 +313,10 @@ export default function HuntingPage() {
 
   const handleReleaseCreature = () => {
     if (selectedCreature) {
+      if (selectedCreature.isFavorite) {
+        alert("Cette créature est en favori et ne peut pas être relâchée !");
+        return;
+      }
       const updated = collection.filter(c => c.id !== selectedCreature.id);
       setCollection(updated);
       setSelectedCreature(null);
@@ -318,9 +324,24 @@ export default function HuntingPage() {
     }
   };
 
+  const toggleFavorite = (creatureId: string) => {
+    const updated = collection.map(c => {
+      if (c.id === creatureId) {
+        return { ...c, isFavorite: !c.isFavorite };
+      }
+      return c;
+    });
+    setCollection(updated);
+    if (selectedCreature?.id === creatureId) {
+      setSelectedCreature({ ...selectedCreature, isFavorite: !selectedCreature.isFavorite });
+    }
+  };
+
   const handleReleaseAll = () => {
     if (confirmReleaseAll) {
-      setCollection([]);
+      // Ne relâche que les créatures qui ne sont pas favorites
+      const nonFavorites = collection.filter(c => !c.isFavorite);
+      setCollection(nonFavorites);
       setConfirmReleaseAll(false);
     } else {
       setConfirmReleaseAll(true);
@@ -335,6 +356,11 @@ export default function HuntingPage() {
 
   // Toggle selection de créature comme nourriture
   const toggleFoodCreature = (creatureId: string) => {
+    const creature = collection.find(c => c.id === creatureId);
+    if (creature?.isFavorite) {
+      alert("Cette créature est en favori et ne peut pas être utilisée comme nourriture !");
+      return;
+    }
     const newSelection = new Set(selectedFoodIds);
     if (newSelection.has(creatureId)) {
       newSelection.delete(creatureId);
@@ -508,6 +534,13 @@ export default function HuntingPage() {
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h2 className="text-3xl font-bold text-green-100">{selectedCreature.name}</h2>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleFavorite(selectedCreature.id); }}
+                    className="text-2xl hover:scale-125 transition-transform"
+                    title={selectedCreature.isFavorite ? "Retirer des favoris" : "Mettre en favori"}
+                  >
+                    {selectedCreature.isFavorite ? "❤️" : "🤍"}
+                  </button>
                   <span className={`text-2xl font-bold ${getRankBadgeColor(selectedCreature.finalStats.rank)} text-white px-3 py-1 rounded-full`}>{selectedCreature.finalStats.rank}</span>
                 </div>
                 <p className="text-green-200 mb-4">{selectedCreature.desc}</p>
@@ -658,21 +691,28 @@ export default function HuntingPage() {
                   
                   <div className="max-h-64 overflow-y-auto border-2 border-green-700 rounded-lg p-2">
                     {collection.filter(c => c.id !== selectedCreature?.id).map(creature => (
-                      <div 
+                      <div
                         key={creature.id}
                         onClick={() => !previewMode && toggleFoodCreature(creature.id)}
-                        className={`flex items-center gap-3 p-2 rounded-lg mb-2 cursor-pointer transition-colors ${
+                        className={`flex items-center gap-2 p-2 rounded-lg mb-2 cursor-pointer transition-colors ${
                           selectedFoodIds.has(creature.id) ? 'bg-yellow-700 bg-opacity-50' : 'hover:bg-green-700 bg-opacity-30'
                         } ${previewMode ? 'cursor-not-allowed' : ''}`}
                       >
-                        <input 
+                        <input
                           type="checkbox"
                           checked={selectedFoodIds.has(creature.id)}
                           onChange={() => !previewMode && toggleFoodCreature(creature.id)}
-                          disabled={previewMode}
+                          disabled={previewMode || creature.isFavorite}
                           className="w-5 h-5"
                         />
-                        <img 
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleFavorite(creature.id); }}
+                          className="text-lg hover:scale-125 transition-transform"
+                          title={creature.isFavorite ? "Retirer des favoris" : "Mettre en favori"}
+                        >
+                          {creature.isFavorite ? "❤️" : "🤍"}
+                        </button>
+                        <img
                           src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
                           alt={creature.name}
                           className="w-12 h-12 object-cover rounded"
@@ -729,7 +769,7 @@ export default function HuntingPage() {
                 {confirmReleaseAll && (
                   <div className="flex items-center gap-2">
                     <p className="text-yellow-200 text-sm">Confirmer tout relâcher? C'est l'irréversible!</p>
-                    <button onClick={() => { setCollection([]); setConfirmReleaseAll(false); }} className="bg-gradient-to-r from-red-800 to-red-700 hover:from-red-700 hover:to-red-600 text-white rounded px-3 py-1 text-sm font-bold">OUI</button>
+                    <button onClick={() => { setCollection(collection.filter(c => !c.isFavorite)); setConfirmReleaseAll(false); }} className="bg-gradient-to-r from-red-800 to-red-700 hover:from-red-700 hover:to-red-600 text-white rounded px-3 py-1 text-sm font-bold">OUI</button>
                     <button onClick={() => setConfirmReleaseAll(false)} className="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded px-3 py-1 text-sm font-bold">Annuler</button>
                   </div>
                 )}
@@ -741,6 +781,13 @@ export default function HuntingPage() {
               {sortedCollection.map(c => (
                 <div key={c.id} onClick={() => handleViewCreature(c)} className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-4 border border-green-700 hover:border-green-600 cursor-pointer hover:scale-105 transition-all duration-200 relative">
                   <div className="flex items-start gap-3 mb-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleFavorite(c.id); }}
+                      className="text-xl hover:scale-125 transition-transform"
+                      title={c.isFavorite ? "Retirer des favoris" : "Mettre en favori"}
+                    >
+                      {c.isFavorite ? "❤️" : "🤍"}
+                    </button>
                     <div className="w-16 h-16 flex-shrink-0">
                       <img
                         src={getCreatureImage(c.creatureId, c.finalStats.rank)}
