@@ -395,6 +395,24 @@ export default function BreedingPage() {
     return cooldowns;
   };
 
+  // Get remaining cooldown time for a creature
+  const getCreatureCooldownTime = (creatureId: string): number => {
+    for (const egg of eggs) {
+      if (!egg.isHatched && (egg.parent1Id === creatureId || egg.parent2Id === creatureId)) {
+        return getEggRemainingTime(egg);
+      }
+    }
+    return 0;
+  };
+
+  // Format cooldown time for display
+  const formatCooldownTime = (ms: number): string => {
+    if (ms <= 0) return "Prêt";
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    return `${minutes}m ${seconds}s`;
+  };
+
   // Calculate baby preview
   const babyPreview = parent1 && parent2 && babyCreatureType ? {
     stats: previewBabyStats(parent1, parent2, babyCreatureType),
@@ -405,13 +423,20 @@ export default function BreedingPage() {
   const renderCreatureCard = (creature: CollectionItem, index: number) => {
     const traits = getTraitsByIds(creature.traits);
     const isOnMission = 'isOnMission' in creature && (creature as HuntedCreature).isOnMission;
+    const parentCooldowns = getParentCooldowns();
+    const isOnBreedingCooldown = parentCooldowns.has(creature.id);
+    const cooldownTime = getCreatureCooldownTime(creature.id);
 
     return (
       <div
         key={creature.id}
-        onClick={() => !isOnMission && (index === 1 ? handleSelectParent1(creature) : handleSelectParent2(creature))}
+        onClick={() =>
+          !isOnMission &&
+          !isOnBreedingCooldown &&
+          (index === 1 ? handleSelectParent1(creature) : handleSelectParent2(creature))
+        }
         className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-          isOnMission
+          isOnMission || isOnBreedingCooldown
             ? 'bg-gray-700 opacity-50 cursor-not-allowed'
             : 'hover:bg-green-700'
         }`}
@@ -426,6 +451,7 @@ export default function BreedingPage() {
             <p className="font-bold text-green-100">{creature.name}</p>
             {creature.isFavorite && <span className="text-red-400">❤️</span>}
             {isOnMission && <span className="text-orange-400" title="En mission d'exploration">🗺️</span>}
+            {isOnBreedingCooldown && <span className="text-purple-400" title="En incubation">🥚</span>}
           </div>
           <div className="flex items-center gap-2 mt-1">
             <span className="text-yellow-300 text-sm">Lvl {creature.level}</span>
@@ -433,6 +459,7 @@ export default function BreedingPage() {
               {creature.finalStats.rank}
             </span>
             {isOnMission && <span className="text-xs text-orange-400">En mission</span>}
+            {isOnBreedingCooldown && <span className="text-xs text-purple-400">Cooldown: {formatCooldownTime(cooldownTime)}</span>}
           </div>
           <div className="flex flex-wrap gap-1 mt-1">
             {traits.slice(0, 3).map(trait => (

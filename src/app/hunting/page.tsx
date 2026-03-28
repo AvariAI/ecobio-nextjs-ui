@@ -5,6 +5,7 @@ import { CREATURES, Rank, Creature } from "@/lib/database";
 import { getVarianceRange, BattleStats } from "@/lib/battle";
 import { rollRandomTraits, getTraitsByIds } from "@/lib/traits";
 import { transformCreatureToEssence } from "@/lib/craft";
+import { loadBreedingEggs, getEggRemainingTime } from "@/lib/breeding";
 import Link from "next/link";
 
 type HuntingPhase = "ready" | "spawned" | "viewing";
@@ -306,6 +307,7 @@ export default function HuntingPage() {
   const [selectedRank, setSelectedRank] = useState<Rank | null>(null);
   const [peekingCreature, setPeekingCreature] = useState<HuntedCreature | null>(null);
   const [feedRankFilter, setFeedRankFilter] = useState<Rank | null>(null);
+  const [breedingEggs, setBreedingEggs] = useState<any[]>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem("ecobio-collection");
@@ -326,7 +328,32 @@ export default function HuntingPage() {
         console.error("Failed load collection", e);
       }
     }
+
+    // Load breeding eggs
+    const eggs = loadBreedingEggs();
+    setBreedingEggs(eggs);
   }, []);
+
+  // Listen for breeding eggs updates
+  useEffect(() => {
+    const handleEggsUpdate = () => {
+      const eggs = loadBreedingEggs();
+      setBreedingEggs(eggs);
+    };
+
+    window.addEventListener("breeding-eggs-updated", handleEggsUpdate);
+    return () => window.removeEventListener("breeding-eggs-updated", handleEggsUpdate);
+  }, []);
+
+  // Check if creature is on breeding cooldown
+  const isCreatureOnBreedingCooldown = (creatureId: string): boolean => {
+    for (const egg of breedingEggs) {
+      if (!egg.isHatched && (egg.parent1Id === creatureId || egg.parent2Id === creatureId)) {
+        return getEggRemainingTime(egg) > 0;
+      }
+    }
+    return false;
+  };
 
   useEffect(() => {
     if (collection.length > 0) {
@@ -957,39 +984,60 @@ export default function HuntingPage() {
 
             <h2 className="text-2xl font-bold text-green-100 mb-4">📦 Collection ({collection.length})</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sortedCollection.map(c => (
-                <div key={c.id} onClick={() => handleViewCreature(c)} className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-4 border border-green-700 hover:border-green-600 cursor-pointer hover:scale-105 transition-all duration-200 relative">
-                  {/* Exploration level badge */}
-                  <div className="absolute top-2 right-2 bg-amber-500 text-white text-xs px-2 py-1 rounded-lg font-semibold">
-                    🗺️ Lvl {c.explorationLevel || 0}
-                  </div>
-                  <div className="flex items-start gap-3 mb-2">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); toggleFavorite(c.id); }}
-                      className="text-xl hover:scale-125 transition-transform"
-                      title={c.isFavorite ? "Retirer des favoris" : "Mettre en favori"}
-                    >
-                      {c.isFavorite ? "❤️" : "🤍"}
-                    </button>
-                    <div className="w-16 h-16 flex-shrink-0">
-                      <img
-                        src={getCreatureImage(c.creatureId, c.finalStats.rank)}
-                        alt={c.name}
-                        className="w-full h-full object-cover rounded border border-green-700"
-                      />
+              {sortedCollection.map(c => {
+                const onBreedingCooldown = isCreatureOnBreedingCooldown(c.id);
+                return (
+                  <div
+                    key={c.id}
+                    onClick={() => handleViewCreature(c)}
+                    className={`bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-4 border border-green-700 hover:border-green-600 cursor-pointer hover:scale-105 transition-all duration-200 relative ${onBreedingCooldown ? "opacity-60" : ""}`}
+                  >
+                    {/* Breeding cooldown indicator */}
+                    {onBreedingCooldown && (
+                      <div className="absolute top-2 left-2 bg-purple-600 text-white text-lg px-2 py-1 rounded-lg" title="En incubation">
+                        🥚
+                      </div>
+                    )}
+
+                    {/* Exploration level badge */}
+                    <div className="absolute top-2 right-2 bg-amber-500 text-white text-xs px-2 py-1 rounded-lg font-semibold">
+                      🗺️ Lvl {c.explorationLevel || 0}
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-xl font-bold text-green-100">{c.name}</h3>
-                        <span className={`font-bold ${getRankBadgeColor(c.finalStats.rank)} text-white px-2 py-1 rounded-full text-sm`}>{c.finalStats.rank}</span>
+
+                    {/* Exploration mission indicator */}
+                    {c.isOnMission && (
+                      <div className="absolute top-10 right-2 bg-orange-600 text-white text-xs px-2 py-1 rounded-lg" title="En mission d'exploration">
+                        🗺️ Mission
                       </div>
-                      <p className="text-yellow-300 text-sm mt-1">Level {c.level}</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        {renderStars(c.stars || 0)}
+                    )}
+
+                    <div className="flex items-start gap-3 mb-2">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleFavorite(c.id); }}
+                        className="text-xl hover:scale-125 transition-transform"
+                        title={c.isFavorite ? "Retirer des favoris" : "Mettre en favori"}
+                      >
+                        {c.isFavorite ? "❤️" : "🤍"}
+                      </button>
+                      <div className="w-16 h-16 flex-shrink-0">
+                        <img
+                          src={getCreatureImage(c.creatureId, c.finalStats.rank)}
+                          alt={c.name}
+                          className={`w-full h-full object-cover rounded border border-green-700 ${onBreedingCooldown ? "grayscale" : ""}`}
+                        />
                       </div>
-                      <div className="text-xs text-gray-300 mt-1">
-                        Combat XP: {c.combatXP || 0}/{c.combatXPToNextStar || "MAX"}
-                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-xl font-bold text-green-100">{c.name}</h3>
+                          <span className={`font-bold ${getRankBadgeColor(c.finalStats.rank)} text-white px-2 py-1 rounded-full text-sm`}>{c.finalStats.rank}</span>
+                        </div>
+                        <p className="text-yellow-300 text-sm mt-1">Level {c.level}</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          {renderStars(c.stars || 0)}
+                        </div>
+                        <div className="text-xs text-gray-300 mt-1">
+                          Combat XP: {c.combatXP || 0}/{c.combatXPToNextStar || "MAX"}
+                        </div>
                       {c.stars !== undefined && c.stars < 5 && c.combatXPToNextStar > 0 && (
                         <div className="w-full bg-gray-700 rounded-full h-1.5 mt-2">
                           <div
@@ -1015,6 +1063,7 @@ export default function HuntingPage() {
                     </div>
                   </div>
                   {c.feedCount > 0 && <p className="text-yellow-300 text-sm mt-1">Nourri {c.feedCount}x</p>}
+                  {onBreedingCooldown && <p className="text-purple-300 text-sm mt-1">🥚 Incubation</p>}
                   <div className="grid grid-cols-5 gap-1 mt-3 text-center text-xs pointer-events-none">
                     <div className="bg-green-950 rounded p-1"><p className="text-green-200">HP</p><p className="text-green-100 font-bold">{c.finalStats.hp}</p></div>
                     <div className="bg-green-950 rounded p-1"><p className="text-green-200">ATK</p><p className="text-green-100 font-bold">{c.finalStats.attack}</p></div>
@@ -1023,7 +1072,8 @@ export default function HuntingPage() {
                     <div className="bg-green-950 rounded p-1"><p className="text-green-200">CRIT</p><p className="text-green-100 font-bold">{c.finalStats.crit}</p></div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
