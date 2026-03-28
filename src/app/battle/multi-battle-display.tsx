@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { BattleCreature, BattleElement } from "@/lib/battle";
-import { BattleTeam, TeamSize, countAliveCreatures } from "@/lib/battle-multi";
+import { BattleTeam, TeamSize, countAliveCreatures, isFrontRow, getFrontRowPositions, getBackRowPositions } from "@/lib/battle-multi";
 
 // Define locally to avoid import issues
 export interface BattleLogEntry {
@@ -50,8 +50,10 @@ interface MultiCreatureBattleDisplayProps {
   turn: "player" | "enemy";
   round: number;
   turnOrder: BattleElement[];
+  teamSize: TeamSize;
   onAttack: () => void;
   onSkill: () => void;
+  onSwitchPosition?: (creatureA: BattleCreature, creatureB: BattleCreature) => void;
 }
 
 export function MultiCreatureBattleDisplay({
@@ -61,12 +63,19 @@ export function MultiCreatureBattleDisplay({
   turn,
   round,
   turnOrder,
+  teamSize,
   onAttack,
   onSkill,
+  onSwitchPosition,
 }: MultiCreatureBattleDisplayProps) {
   const isPlayerTurn = turn === "player";
   const currentCreature = currentActingCreature;
   const canUseSkill = currentCreature && currentCreature.creature.skill;
+
+  // Sort creatures into front/back rows
+  const sortCreaturesByPosition = (creatures: BattleCreature[]) => {
+    return [...creatures].sort((a, b) => (a.position || 0) - (b.position || 0));
+  };
 
   return (
     <div className="space-y-6">
@@ -120,7 +129,7 @@ export function MultiCreatureBattleDisplay({
         </div>
       </div>
 
-      {/* Teams Display */}
+      {/* Teams Display with Front/Back Row separation */}
       <div className="grid md:grid-cols-2 gap-6">
         {/* Player Team */}
         {playerTeam && (
@@ -128,18 +137,26 @@ export function MultiCreatureBattleDisplay({
             <h3 className="text-xl font-bold text-blue-600 dark:text-blue-400">
               🎮 Équipe Joueur ({countAliveCreatures(playerTeam)}/{turnOrder.filter(el => el.team === "player").length})
             </h3>
-            {playerTeam.creatures.map((creature, i) => (
-              <div
-                key={i}
-                className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 border-2 transition-all ${
-                  creature === currentActingCreature
-                    ? "border-yellow-400 ring-2 ring-yellow-400"
-                    : "border-gray-200 dark:border-gray-700"
-                } ${creature.currentHP <= 0 ? "opacity-50" : ""}`}
-              >
-                <CompactCreatureDisplay creature={creature} />
-              </div>
-            ))}
+
+            {/* Front Row */}
+            <TeamRowDisplay
+              team={playerTeam}
+              rowType="front"
+              teamSize={teamSize}
+              currentActingCreature={currentActingCreature}
+              canSwitch={(isPlayerTurn && currentCreature && currentCreature.currentHP > 0 && onSwitchPosition !== undefined) ?? false}
+              onSwitchPosition={onSwitchPosition}
+            />
+
+            {/* Back Row */}
+            <TeamRowDisplay
+              team={playerTeam}
+              rowType="back"
+              teamSize={teamSize}
+              currentActingCreature={currentActingCreature}
+              canSwitch={(isPlayerTurn && currentCreature && currentCreature.currentHP > 0 && onSwitchPosition !== undefined) ?? false}
+              onSwitchPosition={onSwitchPosition}
+            />
           </div>
         )}
 
@@ -149,18 +166,26 @@ export function MultiCreatureBattleDisplay({
             <h3 className="text-xl font-bold text-red-600 dark:text-red-400">
               ⚔️ Équipe Ennemi ({countAliveCreatures(enemyTeam)}/{turnOrder.filter(el => el.team === "enemy").length})
             </h3>
-            {enemyTeam.creatures.map((creature, i) => (
-              <div
-                key={i}
-                className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 border-2 transition-all ${
-                  creature === currentActingCreature
-                    ? "border-yellow-400 ring-2 ring-yellow-400"
-                    : "border-gray-200 dark:border-gray-700"
-                } ${creature.currentHP <= 0 ? "opacity-50" : ""}`}
-              >
-                <CompactCreatureDisplay creature={creature} />
-              </div>
-            ))}
+
+            {/* Front Row */}
+            <TeamRowDisplay
+              team={enemyTeam}
+              rowType="front"
+              teamSize={teamSize}
+              currentActingCreature={currentActingCreature}
+              canSwitch={false}
+              onSwitchPosition={undefined}
+            />
+
+            {/* Back Row */}
+            <TeamRowDisplay
+              team={enemyTeam}
+              rowType="back"
+              teamSize={teamSize}
+              currentActingCreature={currentActingCreature}
+              canSwitch={false}
+              onSwitchPosition={undefined}
+            />
           </div>
         )}
       </div>
@@ -190,7 +215,108 @@ export function MultiCreatureBattleDisplay({
               ✨ SKILL: {currentCreature.creature.skill.name}
             </button>
           )}
+          {/* No global switch button - switch is handled per-creature */}
         </div>
+      )}
+    </div>
+  );
+}
+
+interface TeamRowDisplayProps {
+  team: BattleTeam;
+  rowType: "front" | "back";
+  teamSize: TeamSize;
+  currentActingCreature: BattleCreature | null;
+  canSwitch: boolean;
+  onSwitchPosition?: (creatureA: BattleCreature, creatureB: BattleCreature) => void;
+}
+
+function TeamRowDisplay({
+  team,
+  rowType,
+  teamSize,
+  currentActingCreature,
+  canSwitch,
+  onSwitchPosition,
+}: TeamRowDisplayProps) {
+  const isFrontRow = rowType === "front";
+  const positions = isFrontRow ? getFrontRowPositions(teamSize) : getBackRowPositions(teamSize);
+
+  // Filter creatures for this row and sort by position
+  const rowCreatures = team.creatures
+    .filter(c => c.position !== undefined && positions.includes(c.position))
+    .sort((a, b) => (a.position || 0) - (b.position || 0));
+
+  if (rowCreatures.length === 0) return null;
+
+  return (
+    <div className="relative">
+      <div className="flex items-center gap-2 mb-2">
+        <span className={`text-xs font-bold px-2 py-1 rounded ${
+          isFrontRow
+            ? "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300"
+            : "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+        }`}>
+          {isFrontRow ? "🛡️ AVANT" : "⚔️ ARRIÈRE"}
+        </span>
+        <span className="text-xs text-gray-500">Positions {positions.map(p => p + 1).join(", ")}</span>
+      </div>
+
+      <div
+        className={`flex gap-2 ${isFrontRow ? "flex-col" : "flex-col ml-8"}`}
+        style={{ zIndex: isFrontRow ? 10 : 5 }}
+      >
+        {rowCreatures.map((creature, i) => (
+          <div
+            key={i}
+            className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 border-2 transition-all relative ${
+              creature === currentActingCreature
+                ? "border-yellow-400 ring-2 ring-yellow-400"
+                : "border-gray-200 dark:border-gray-700"
+            } ${isFrontRow ? "" : "opacity-90"} ${creature.currentHP <= 0 ? "opacity-50" : ""}`}
+          >
+            <CompactCreatureDisplay creature={creature} />
+
+            {/* Position indicator */}
+            <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300">
+              {(creature.position || 0) + 1}
+            </div>
+
+            {/* Switch button (only on player team) */}
+            {canSwitch && team.teamId === "player" && creature.currentHP > 0 && (
+              <button
+                onClick={() => {
+                  // This would open a modal or prompt to select another creature to swap with
+                  // For now, just log that position switching is available
+                  if (onSwitchPosition) {
+                    // Find a living creature in the other row
+                    const otherRowType = isFrontRow ? "back" : "front";
+                    const otherPositions = otherRowType === "front"
+                      ? getFrontRowPositions(teamSize)
+                      : getBackRowPositions(teamSize);
+
+                    const otherCreatures = team.creatures
+                      .filter(c => c.position !== undefined && otherPositions.includes(c.position) && c.currentHP > 0 && c !== creature);
+
+                    if (otherCreatures.length > 0) {
+                      // Swap with the first available creature
+                      onSwitchPosition(creature, otherCreatures[0]);
+                    }
+                  }
+                }}
+                className="absolute bottom-2 right-2 px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-full transition-colors"
+                title="Change position"
+              >
+                🔄
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Row separator line */}
+      {isFrontRow && getBackRowPositions(teamSize).length > 0 && (
+        <div className="ml-4 my-2 border-l-2 border-dashed border-gray-300 dark:border-gray-600 h-4"></div>
       )}
     </div>
   );
@@ -215,13 +341,20 @@ function CompactCreatureDisplay({ creature }: CompactCreatureDisplayProps) {
 
   return (
     <div className={isDead ? "grayscale" : ""}>
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-2 pr-8">
         <h4 className="font-bold text-lg">{creature.name}</h4>
         <div className="flex gap-1">
           {hasStun && <span className="px-2 py-0.5 bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 text-xs rounded-full">💫</span>}
           {hasPoison && <span className="px-2 py-0.5 bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200 text-xs rounded-full">☠️</span>}
           {hasSlow && <span className="px-2 py-0.5 bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 text-xs rounded-full">🐌</span>}
         </div>
+      </div>
+
+      {/* Position Badge */}
+      <div className="mb-1">
+        <span className="text-xs font-semibold px-2 py-0.5 rounded bg-gradient-to-r from-emerald-100 to-teal-100 dark:from-emerald-900 dark:to-teal-900 text-emerald-700 dark:text-emerald-300">
+          Pos {(creature.position || 0) + 1}
+        </span>
       </div>
 
       {/* HP Bar */}

@@ -73,6 +73,7 @@ export interface BattleCreature {
   statModifiers?: StatModifiers;  // Bonus breakdown from traits
   statusEffects: StatusEffect[];  // Active status effects
   attackCounter: number;  // Track attack count for "every X attacks" traits
+  position?: number;  // Slot position (0-4) for multi-row battles
 }
 
 /**
@@ -708,7 +709,8 @@ export function createBattleCreature(
   creature: Creature,
   stats: BattleStats,
   name?: string,
-  traits?: string[]
+  traits?: string[],
+  position?: number
 ): BattleCreature {
   return {
     creature,
@@ -727,6 +729,7 @@ export function createBattleCreature(
     traits: traits || [],
     statusEffects: [],
     attackCounter: 0,
+    position,
   };
 }
 

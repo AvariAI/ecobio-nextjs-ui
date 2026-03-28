@@ -6,6 +6,8 @@ export interface BaseStats {
   crit: number;
 }
 
+export type SkillTargetType = "front" | "back" | "all" | "random" | "self";
+
 export interface Creature {
   id: string;
   name: string;
@@ -26,6 +28,7 @@ export interface Creature {
     value: number;
     duration: number;
     cooldown: number;
+    target?: SkillTargetType;
   };
 }
 
@@ -58,6 +61,7 @@ export const CREATURES: Record<string, Creature> = {
       value: 0.50,
       duration: 2,
       cooldown: 3,
+      target: "self",
     },
   },
   housefly: {
@@ -80,6 +84,7 @@ export const CREATURES: Record<string, Creature> = {
       value: 0.40,
       duration: 2,
       cooldown: 3,
+      target: "self",
     },
   },
   honeybee: {

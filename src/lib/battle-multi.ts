@@ -25,6 +25,145 @@ export interface BattleTeam {
 }
 
 /**
+ * Position Structure:
+ * 3v3:
+ * - Front Row: Position 0
+ * - Back Row: Position 1 (priority) → Position 2
+ *
+ * 5v5:
+ * - Front Row: Position 0 → Position 1
+ * - Back Row: Position 2 → Position 3 → Position 4
+ */
+
+/**
+ * Determine if a position is in the front row based on team size
+ */
+export function isFrontRow(position: number, teamSize: TeamSize): boolean {
+  if (teamSize === 3) {
+    return position === 0;
+  } else if (teamSize === 5) {
+    return position === 0 || position === 1;
+  }
+  return true; // 1v1: single position treated as front row
+}
+
+/**
+ * Determine if a position is in the back row based on team size
+ */
+export function isBackRow(position: number, teamSize: TeamSize): boolean {
+  return !isFrontRow(position, teamSize);
+}
+
+/**
+ * Get front row positions for a given team size
+ */
+export function getFrontRowPositions(teamSize: TeamSize): number[] {
+  if (teamSize === 3) return [0];
+  if (teamSize === 5) return [0, 1];
+  return [0]; // 1v1
+}
+
+/**
+ * Get back row positions for a given team size
+ */
+export function getBackRowPositions(teamSize: TeamSize): number[] {
+  if (teamSize === 3) return [1, 2];
+  if (teamSize === 5) return [2, 3, 4];
+  return [];
+}
+
+/**
+ * Get alive creatures in front row (sorted by position priority)
+ */
+export function getFrontRowAlive(team: BattleTeam, teamSize: TeamSize): BattleCreature[] {
+  const frontPositions = getFrontRowPositions(teamSize);
+  return team.creatures
+    .filter(c => c.currentHP > 0 && c.position !== undefined && frontPositions.includes(c.position))
+    .sort((a, b) => (a.position || 0) - (b.position || 0)); // Lower position = higher priority
+}
+
+/**
+ * Get alive creatures in back row (sorted by position priority)
+ */
+export function getBackRowAlive(team: BattleTeam, teamSize: TeamSize): BattleCreature[] {
+  const backPositions = getBackRowPositions(teamSize);
+  return team.creatures
+    .filter(c => c.currentHP > 0 && c.position !== undefined && backPositions.includes(c.position))
+    .sort((a, b) => (a.position || 0) - (b.position || 0)); // Lower position = higher priority
+}
+
+/**
+ * Select target based on position-aware targeting rules
+ * Priority: Front row > Back row, with position index priority within row
+ */
+export function selectTargetByPosition(
+  attacker: BattleCreature,
+  targetTeam: BattleTeam,
+  teamSize: TeamSize,
+  targetType: "front" | "back" | "random" | "self" = "front"
+): BattleCreature | null {
+  const allAlive = targetTeam.creatures.filter(c => c.currentHP > 0);
+  if (allAlive.length === 0) return null;
+
+  // Self targeting returns null (handled by useSkill directly)
+  if (targetType === "self") return null;
+
+  // If targeting specifically back row, skip front row check
+  if (targetType === "back") {
+    const backRowAlive = getBackRowAlive(targetTeam, teamSize);
+    if (backRowAlive.length > 0) {
+      return backRowAlive[0]; // Return highest priority in back row
+    }
+    // Fallback to front row if back row empty
+    const frontRowAlive = getFrontRowAlive(targetTeam, teamSize);
+    return frontRowAlive.length > 0 ? frontRowAlive[0] : null;
+  }
+
+  // Default front-row priority targeting
+  if (targetType === "front" || targetType === "random") {
+    // Check front row first
+    const frontRowAlive = getFrontRowAlive(targetTeam, teamSize);
+    if (frontRowAlive.length > 0) {
+      return frontRowAlive[0]; // Return highest priority (lowest position index)
+    }
+
+    // If front row wiped, target back row
+    const backRowAlive = getBackRowAlive(targetTeam, teamSize);
+    return backRowAlive.length > 0 ? backRowAlive[0] : null;
+  }
+
+  // Random target from all alive
+  return allAlive[Math.floor(Math.random() * allAlive.length)];
+}
+
+/**
+ * Switch positions of two creatures within a team
+ * Consumes entire turn (no attack, no skill use)
+ */
+export function switchPositions(
+  team: BattleTeam,
+  creatureA: BattleCreature,
+  creatureB: BattleCreature,
+  log: BattleLogEntry[]
+): boolean {
+  if (creatureA.position === undefined || creatureB.position === undefined) {
+    return false; // Both creatures must have positions
+  }
+
+  // Swap positions
+  const tempPos = creatureA.position;
+  creatureA.position = creatureB.position;
+  creatureB.position = tempPos;
+
+  log.push({
+    text: `🔄 ${creatureA.name} et ${creatureB.name} ont échangé de position!`,
+    type: "info",
+  });
+
+  return true;
+}
+
+/**
  * Check if a battle is over
  * @param playerTeam Player's team
  * @param enemyTeam Enemy's team
@@ -73,13 +212,15 @@ export function getAllBattleElements(playerTeam: BattleTeam, enemyTeam: BattleTe
  * @param playerTeam Player's team
  * @param enemyTeam Enemy's team
  * @param isAuto Whether to auto-play enemy moves
+ * @param teamSize Team size (for position calculations)
  * @returns Updated battle log entries
  */
 export function executeCreatureTurn(
   activeCreature: BattleCreature,
   playerTeam: BattleTeam,
   enemyTeam: BattleTeam,
-  isAuto: boolean = false
+  isAuto: boolean = false,
+  teamSize: TeamSize = 3
 ): BattleLogEntry[] {
   const log: BattleLogEntry[] = [];
   const isPlayerCreature = playerTeam.creatures.includes(activeCreature);
@@ -107,25 +248,39 @@ export function executeCreatureTurn(
   tickCooldownsAndBuffs(activeCreature);
   tickStatusEffects(activeCreature, log);
 
-  // For auto-play (AI), choose an action
+  // For auto-play (AI), choose an action with position-aware targeting
   if (isAuto) {
-    // Simple AI: Use skill if available and beneficial, otherwise attack
+    const targetTeam = isPlayerCreature ? enemyTeam : playerTeam;
+
+    // AI uses skill 30% of the time when available
     let usedSkill = false;
     if (activeCreature.creature.skill && canUseSkill(activeCreature)) {
-      // Use skill 30% of the time when available
       if (Math.random() < 0.3) {
-        useSkill(activeCreature, log);
-        usedSkill = true;
+        const skill = activeCreature.creature.skill;
+        const targetType = skill.target || "front";
+
+        // Handle different skill targeting modes
+        if (targetType === "all") {
+          useSkill(activeCreature, log);
+          usedSkill = true;
+          // Apply skill effect to all enemies if it's a damage skill
+          // (This is a placeholder - actual damage-all logic would need skill effect types)
+        } else {
+          // Use skill on single target based on targeting rules
+          const target = selectTargetByPosition(activeCreature, targetTeam, teamSize, targetType);
+          if (target) {
+            // For now, just use the self-buff effect
+            useSkill(activeCreature, log);
+            usedSkill = true;
+          }
+        }
       }
     }
 
     if (!usedSkill) {
-      // Attack the first alive enemy
-      const enemies = isPlayerCreature ? enemyTeam.creatures : playerTeam.creatures;
-      const aliveEnemies = enemies.filter(e => e.currentHP > 0);
-      
-      if (aliveEnemies.length > 0) {
-        const target = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
+      // Attack with position-aware targeting (front row priority)
+      const target = selectTargetByPosition(activeCreature, targetTeam, teamSize, "front");
+      if (target) {
         executeAttack(activeCreature, target, log);
       }
     }
@@ -149,6 +304,7 @@ export function canUseSkill(creature: BattleCreature): boolean {
 
 /**
  * Create a battle team from creature templates with given size
+ * Automatically assigns positions based on order in array
  */
 export function createBattleTeam(
   creatureConfigs: Array<{
@@ -159,12 +315,13 @@ export function createBattleTeam(
   }>,
   teamId: "player" | "enemy"
 ): BattleTeam {
-  const creatures = creatureConfigs.map(config =>
+  const creatures = creatureConfigs.map((config, index) =>
     createBattleCreature(
       config.creatureTemplate,
       config.stats,
       config.name,
-      config.traits
+      config.traits,
+      index // Position is assigned based on array order
     )
   );
 

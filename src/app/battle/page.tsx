@@ -18,7 +18,7 @@ import {
   BattleElement,
 } from "@/lib/battle";
 import { getTraitsByIds, applyTraitStatModifiers } from "@/lib/traits";
-import { TeamSize, BattleTeam, getAllBattleElements, executeCreatureTurn, isTeamBattleOver, getTeamBattleWinner, validateTeamSize, createBattleTeam, countAliveCreatures } from "@/lib/battle-multi";
+import { TeamSize, BattleTeam, getAllBattleElements, executeCreatureTurn, isTeamBattleOver, getTeamBattleWinner, validateTeamSize, createBattleTeam, countAliveCreatures, switchPositions } from "@/lib/battle-multi";
 import { MultiCreatureTestSelector, MultiCreatureCollectionSelector, SlotConfig } from "./multi-battle-components";
 import { MultiCreatureBattleDisplay, MultiCreatureBattleCompleteDisplay, BattleLogDisplay as MultiBattleLogDisplay } from "./multi-battle-display";
 import Link from "next/link";
@@ -482,7 +482,8 @@ export default function BattlePage() {
       currentActingCreature,
       playerTeam,
       enemyTeam,
-      isAuto
+      isAuto,
+      teamSize  // Pass teamSize for position-aware targeting
     );
 
     logCopy.push(...turnResult);
@@ -631,6 +632,21 @@ export default function BattlePage() {
       setPhase("complete");
     } else {
       setTimeout(() => enemyTurn(logCopy), 1500);
+    }
+  };
+
+  const handleSwitchPosition = (creatureA: BattleCreature, creatureB: BattleCreature) => {
+    if (!playerTeam || phase !== "battle" || turn !== "player") return;
+
+    const logCopy = [...log];
+    const success = switchPositions(playerTeam, creatureA, creatureB, logCopy);
+
+    if (success) {
+      setLog(logCopy);
+      setPlayerTeam({ ...playerTeam });
+
+      // Switching position consumes the entire turn - move to next creature
+      setTimeout(() => executeMultiCreatureTurn(false), 1000);
     }
   };
 
@@ -1093,8 +1109,10 @@ export default function BattlePage() {
             turn={turn}
             round={round}
             turnOrder={turnOrder}
+            teamSize={teamSize}
             onAttack={executeMultiCreatureTurn}
             onSkill={handleSkill}
+            onSwitchPosition={handleSwitchPosition}
           />
         )}
 
