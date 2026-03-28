@@ -9,7 +9,7 @@ export default function Home() {
             🐛 ÉcoBio
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300">
-            Collection d'insectes & Combat Génétique
+            Collection d'Insectes & Combat Génétique
           </p>
         </header>
 
@@ -89,13 +89,41 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="flex gap-4 mb-8 max-w-lg mx-auto justify-center">
-          <Link href="/formulas" className="text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600">
-            Formules
+        <div className="grid md:grid-cols-3 gap-8 mb-8">
+          <Link href="/craft">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-teal-500">
+              <div className="text-6xl mb-4">🧪</div>
+              <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
+                Atelier
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                Craft ressources pour breeding.
+              </p>
+            </div>
           </Link>
-          <span className="text-gray-400">|</span>
-          <Link href="/traits" className="text-sm text-gray-600 dark:text-gray-400 hover:text-purple-600">
-            Traits
+
+          <Link href="/formulas">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-cyan-500">
+              <div className="text-6xl mb-4">📐</div>
+              <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
+                Formules
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                Consulte les formules de jeu.
+              </p>
+            </div>
+          </Link>
+
+          <Link href="/traits">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-purple-400">
+              <div className="text-6xl mb-4">⭐</div>
+              <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
+                Traits
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                Découvre les traits spéciaux des créatures.
+              </p>
+            </div>
           </Link>
         </div>
 
