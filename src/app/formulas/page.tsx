@@ -15,7 +15,7 @@ export default function FormulasPage() {
             <h2 className="text-xl font-semibold mb-3">🎲 Spawn & Rarity</h2>
             <ul className="space-y-2 ml-4 text-sm">
               <li><strong>Weights:</strong> E (81.75%), D (10%), C (6%), B (1.5%), A (0.5%), S (0.2%), S+ (0.05%)</li>
-              <li><strong>Variance rang:</strong> E (-25%±10%), D (-20%±10%), C (-15%±15%), B (-10%±20%), A (0%±25%), S (+15%±30%), S+ (+20%±40%)</li>
+              <li><strong>Variance rang:</strong> E (-25% +10%), D (-20% +10%), C (-15% +15%), B (-10% +20%), A (0% +25%), S (+15% +30%), S+ (+20% +40%)</li>
               <li><strong>Formule:</strong> baseStat × variance (0.75-1.40)</li>
             </ul>
           </section>
@@ -23,11 +23,11 @@ export default function FormulasPage() {
           <section>
             <h2 className="text-xl font-semibold mb-3">📊 Level Scaling</h2>
             <ul className="space-y-2 ml-4 text-sm">
-              <li><strong>HP (1-10):</strong> ×(1 + level × 0.1)</li>
-              <li><strong>HP (10-25):</strong> 1.9 + (level-10) × 0.05</li>
-              <li><strong>HP (25+):</strong> 2.65 × 1.01^(level-25)</li>
-              <li><strong>ATK/DEF/SPD/CRIT (<=25):</strong> 1 + level × 0.15</li>
-              <li><strong>ATK/DEF/SPD/CRIT (>=25):</strong> 4.6 × 1.005^(level-25)</li>
+              <li><strong>HP (1 a 10):</strong> ×(1 + level × 0.1)</li>
+              <li><strong>HP (10 a 25):</strong> 1.9 + (level-10) × 0.05</li>
+              <li><strong>HP (25 et plus):</strong> 2.65 × 1.01^(level-25)</li>
+              <li><strong>ATK/DEF/SPD/CRIT (niveau max 25):</strong> 1 + level × 0.15</li>
+              <li><strong>ATK/DEF/SPD/CRIT (niveau 25+):</strong> 4.6 × 1.005^(level-25)</li>
             </ul>
           </section>
 
@@ -35,9 +35,9 @@ export default function FormulasPage() {
             <h2 className="text-xl font-semibold mb-3">💥 Combat</h2>
             <ul className="space-y-2 ml-4 text-sm">
               <li><strong>Dégâts:</strong> atk × (atk / (atk + def)) × buffs</li>
-              <li><strong>Buffs:</strong> ATK +40%, DEF -50%, lasts 2 tours</li>
+              <li><strong>Buffs:</strong> ATK +40%, DEF -50%, dure 2 tours</li>
               <li><strong>Tour order:</strong> SPD le plus haut gagne</li>
-              <li><strong>Esquive:</strong> base = log10(spdPlayer / (spdEnemy + 1)) × 0.5, max 25%</li>
+              <li><strong>Esquive:</strong> base = log10(spdAttacker / (spdDefender + 1)) × 0.5, max 25%</li>
             </ul>
           </section>
 
@@ -62,7 +62,7 @@ export default function FormulasPage() {
           <section>
             <h2 className="text-xl font-semibold mb-3">⭐ Stars</h2>
             <ul className="space-y-2 ml-4 text-sm">
-              <li><strong>XP combat:</strong> (damage contributed / enemyHP × 50) + kill bonus 20 + win bonus 30</li>
+              <li><strong>XP combat:</strong> (damage proportionnel × 50) + kill bonus 20 + win bonus 30</li>
               <li><strong>Star thresholds:</strong> 0→1: 100 XP, 1→2: 200 XP, 2→3: 300 XP, 3→4: 400 XP, 4→5: 500 XP</li>
               <li><strong>Stars: 0-5 (visual only, no unlocks)</strong></li>
             </ul>
@@ -75,13 +75,13 @@ export default function FormulasPage() {
               <li><strong>XP par durée:</strong> 15min (20), 30min (35), 1h (60), 2h (100), 4h (150), 8h (200)</li>
               <li><strong>Déblocages:</strong> 30min (50 XP), 1h (150 XP), 2h (400 XP), 4h (800 XP), 8h (1500 XP)</li>
               <li><strong>Death chance:</strong> niveau 50: -50%, niveau 1: base (15min=5%, 8h=70%)</li>
-              <li><strong>Loot:</strong> plantes (common → epic), le plus long = plus épique</li>
+              <li><strong>Loot:</strong> plantes (common → epic), plus long = plus epique</li>
             </ul>
           </section>
         </div>
 
         <div className="mt-8 text-xs text-gray-500">
-          <p>Note: Informations pour Sang and Nephila. Pas une vraie fonctionnalité usuario.</p>
+          <p>Note: Informations pour Sang and Nephila. Pas fonctionnalité utilisateur.</p>
         </div>
       </div>
     </div>
