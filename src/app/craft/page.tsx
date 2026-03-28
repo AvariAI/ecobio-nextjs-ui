@@ -105,9 +105,11 @@ export default function CraftPage() {
 
       if (plant1 && plant2) {
         const avgRank = calculateAverageRank(plant1.rank, plant2.rank);
+        // Allow crafting with the same plant only if we have at least 2 copies
+        const canCraftSamePlant = plant1.id === plant2.id && plant1.count >= 2;
         setPreview({
           resultRank: avgRank,
-          canCraft: plant1.id !== plant2.id
+          canCraft: plant1.id !== plant2.id || canCraftSamePlant
         });
       } else {
         setPreview({ resultRank: null, canCraft: false });
@@ -143,8 +145,13 @@ export default function CraftPage() {
         addCraftedItemToInventory("plantEssence", resultRank, 1);
 
         // Remove plants from inventory (consume ingredients)
-        removeFromInventory(plant1.id, 1);
-        removeFromInventory(plant2.id, 1);
+        // If same plant selected, remove 2 copies; otherwise remove 1 from each
+        if (plant1.id === plant2.id) {
+          removeFromInventory(plant1.id, 2);
+        } else {
+          removeFromInventory(plant1.id, 1);
+          removeFromInventory(plant2.id, 1);
+        }
 
         // Reset form
         setIngredient1("");
@@ -210,19 +217,26 @@ export default function CraftPage() {
 
   const filterIngredientsForSlot = (items: InventoryItem[], slot: number) => {
     if (selectedRecipe === "plantEssence") {
-      // For plant essence, filter out the other plant selection AND enforce same rank
+      // For plant essence, enforce same rank first
       const otherSlotId = slot === 1 ? ingredient2 : ingredient1;
-      let filtered = items.filter(item => item.id !== otherSlotId);
 
       // If the other slot has an ingredient, only show items with the same rank
+      let filtered = items;
       if (otherSlotId) {
         const otherItem = mainInventory.items.find(i => i.id === otherSlotId);
         if (otherItem) {
-          filtered = filtered.filter(item => item.rank === otherItem.rank);
+          filtered = items.filter(item => item.rank === otherItem.rank);
+
+          // Allow selecting the same plant if we have at least 2 copies
+          if (otherItem.count >= 2) {
+            // Don't filter out the already selected item
+            return filtered;
+          }
         }
       }
 
-      return filtered;
+      // Otherwise, filter out the already selected plant
+      return filtered.filter(item => item.id !== otherSlotId);
     } else if (selectedRecipe === "breedingBuffer") {
       // For breeding buffer:
       // Slot 1: only insectEssence
