@@ -310,7 +310,7 @@ export function generateBabyCreature(
 // 6. Create baby creature object (compatible with HuntedCreature)
   const baby: BreededCreature = {
     id: `baby-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    name: `${baseCreature.name} ${rank}`,
+    name: baseCreature.name,
     creatureId: baseCreature.id,
     creature: baseCreature, // Include base creature for baseStats compatibility
     creatureType: babyCreatureType.toLowerCase(),
