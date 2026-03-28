@@ -1030,6 +1030,22 @@ function CollectionSelector({
     "S+": "bg-purple-600",
   };
 
+  const RankOrder: Record<Rank, number> = {
+    "S+": 7,
+    "S": 6,
+    "A": 5,
+    "B": 4,
+    "C": 3,
+    "D": 2,
+    "E": 1,
+  };
+
+  const sortedCollection = [...collection].sort((a, b) => {
+    const rankDiff = RankOrder[b.finalStats.rank] - RankOrder[a.finalStats.rank];
+    if (rankDiff !== 0) return rankDiff;
+    return b.level - a.level;
+  });
+
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-2 ${accentColors[accent]} hover:shadow-2xl transition-all`}>
       <h2 className="text-3xl font-bold mb-4">{label}</h2>
@@ -1044,7 +1060,7 @@ function CollectionSelector({
         )}
 
         <div className="space-y-3">
-          {collection.map((creature) => (
+          {sortedCollection.map((creature) => (
             <button
               key={creature.id}
               onClick={() => onSelect(creature.id === selectedId ? null : creature.id)}
