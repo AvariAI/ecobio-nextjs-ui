@@ -682,30 +682,12 @@ export default function HuntingPage() {
               )}
 
               {!feedMode ? (
-                <>
-                  <button 
-                    onClick={() => setFeedMode(true)}
-                    className="w-full bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white rounded-lg p-3 font-bold mb-4"
-                  >
-                    🌱 Nourrir avec d'autres créatures
-                  </button>
-                  
-                  <div className="text-center text-green-300 mb-4">OU</div>
-                  
-                  {!feedChoice ? (
-                    <div className="grid grid-cols-5 gap-2 mb-4">
-                      {(["hp", "atk", "def", "spd", "crit"] as const).map(stat => (
-                        <button key={stat} onClick={() => handleFeedSelect(stat)} className="bg-gradient-to-r from-green-700 to-green-600 hover:from-green-600 hover:to-green-500 text-white rounded-lg p-2 font-bold">{stat.toUpperCase()}</button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3 mb-4">
-                      <p className="text-green-200">Nourrir <strong>{feedChoice.toUpperCase()}</strong> (+10%)?</p>
-                      <button onClick={handleFeedOldSystem} className="bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white rounded-lg px-4 py-2 font-bold">✅ OK</button>
-                      <button onClick={() => setFeedChoice(null)} className="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-lg px-4 py-2 font-bold">❌ Annuler</button>
-                    </div>
-                  )}
-                </>
+                <button
+                  onClick={() => setFeedMode(true)}
+                  className="w-full bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white rounded-lg p-3 font-bold mb-4"
+                >
+                  🌱 Nourrir avec d'autres créatures
+                </button>
               ) : (
                 <>
                   <div className="flex items-center gap-3 mb-4">
