@@ -6,6 +6,30 @@
 import { Creature, Rank, CREATURES } from "./database";
 import { TRAITS, getAllTraitsForRank } from "./traits";
 
+// Egg structure for incubation
+export interface BreedingEgg {
+  id: string;
+  parent1Id: string;
+  parent2Id: string;
+  babyCreatureType: string;
+  babyName: string;
+  babyRank: Rank;
+  babyStats: {
+    hp: number;
+    attack: number;
+    defense: number;
+    speed: number;
+    crit: number;
+  };
+  babyTraits: string[];
+  buffer1Id: string;
+  buffer2Id: string;
+  createdAt: number; // timestamp
+  incubationDuration: number; // duration in milliseconds
+  readyAt: number; // timestamp when egg will hatch
+  isHatched: boolean;
+}
+
 /**
  * Reverse level scaling to get a stat at level 1 from a stat at a higher level
  * Uses the same formula as getLevelScale from battle.ts
@@ -510,4 +534,160 @@ export function getValidCreatureType(parent1: any | null, parent2: any | null): 
   }
 
   return p1Type;
+}
+
+/**
+ * Create breeding egg with incubation timer
+ * Default incubation: 10 minutes (600000 ms)
+ */
+export function createBreedingEgg(
+  parent1: any,
+  parent2: any,
+  babyCreatureType: string,
+  buffer1Id: string,
+  buffer2Id: string,
+  customDuration?: number
+): BreedingEgg {
+  const babyName = getCreatureName(babyCreatureType);
+  const babyRank = previewBabyRank(parent1, parent2);
+  const babyStats = previewBabyStats(parent1, parent2, babyCreatureType);
+  const babyTraits = previewBabyTraits(parent1, parent2, babyRank);
+
+  const incubationDuration = customDuration || 10 * 60 * 1000; // 10 minutes default
+  const createdAt = Date.now();
+
+  const egg: BreedingEgg = {
+    id: `egg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    parent1Id: parent1.id,
+    parent2Id: parent2.id,
+    babyCreatureType,
+    babyName,
+    babyRank,
+    babyStats,
+    babyTraits,
+    buffer1Id,
+    buffer2Id,
+    createdAt,
+    incubationDuration,
+    readyAt: createdAt + incubationDuration,
+    isHatched: false
+  };
+
+  return egg;
+}
+
+/**
+ * Load breeding eggs from localStorage
+ */
+export function loadBreedingEggs(): BreedingEgg[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  const saved = localStorage.getItem("ecobio-breeding-eggs");
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch (e) {
+      console.error("Failed to load breeding eggs", e);
+    }
+  }
+  return [];
+}
+
+/**
+ * Save breeding eggs to localStorage
+ */
+export function saveBreedingEggs(eggs: BreedingEgg[]): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  localStorage.setItem("ecobio-breeding-eggs", JSON.stringify(eggs));
+  window.dispatchEvent(new CustomEvent("breeding-eggs-updated"));
+}
+
+/**
+ * Add egg to storage
+ */
+export function addBreedingEgg(egg: BreedingEgg): void {
+  const eggs = loadBreedingEggs();
+  eggs.push(egg);
+  saveBreedingEggs(eggs);
+}
+
+/**
+ * Remove egg from storage
+ */
+export function removeBreedingEgg(eggId: string): void {
+  const eggs = loadBreedingEggs().filter(e => e.id !== eggId);
+  saveBreedingEggs(eggs);
+}
+
+/**
+ * Check if egg is ready to hatch
+ */
+export function isEggReady(egg: BreedingEgg): boolean {
+  return Date.now() >= egg.readyAt && !egg.isHatched;
+}
+
+/**
+ * Get remaining time for egg (in milliseconds)
+ */
+export function getEggRemainingTime(egg: BreedingEgg): number {
+  if (egg.isHatched) {
+    return 0;
+  }
+  return Math.max(0, egg.readyAt - Date.now());
+}
+
+/**
+ * Format remaining time for display
+ */
+export function formatRemainingTime(ms: number): string {
+  if (ms <= 0) {
+    return "Prêt";
+  }
+
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  }
+  return `${seconds}s`;
+}
+
+/**
+ * Hatch egg and return baby creature
+ */
+export function hatchEgg(egg: BreedingEgg): BreededCreature {
+  const baby: BreededCreature = {
+    id: `baby-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    name: egg.babyName,
+    creatureId: egg.babyCreatureType,
+    creatureType: egg.babyCreatureType,
+    creature: CREATURES[egg.babyCreatureType] || {},
+    level: 1,
+    rank: egg.babyRank,
+    stats: egg.babyStats,
+    currentXP: 0,
+    xpToNextLevel: 100,
+    feedCount: 0,
+    feedStat: null,
+    createdAt: Date.now(),
+    traits: egg.babyTraits,
+    isFavorite: false,
+    breeded: true,
+    parentIds: [egg.parent1Id, egg.parent2Id],
+    breedDate: Date.now(),
+    finalStats: {
+      ...egg.babyStats,
+      rank: egg.babyRank
+    },
+    skill: CREATURES[egg.babyCreatureType]?.skill || null,
+    desc: CREATURES[egg.babyCreatureType]?.desc || ""
+  };
+
+  return baby;
 }

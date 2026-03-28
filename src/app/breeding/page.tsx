@@ -11,7 +11,16 @@ import {
   previewBabyTraits,
   getCreatureName,
   getValidCreatureType,
-  BreededCreature
+  BreededCreature,
+  createBreedingEgg,
+  loadBreedingEggs,
+  addBreedingEgg,
+  removeBreedingEgg,
+  isEggReady,
+  getEggRemainingTime,
+  formatRemainingTime,
+  hatchEgg,
+  type BreedingEgg
 } from "@/lib/breeding";
 import Link from "next/link";
 import { loadInventory, removeFromInventory, Inventory, type InventoryItem } from "@/lib/inventory";
@@ -107,6 +116,7 @@ export default function BreedingPage() {
   const [inventory, setInventory] = useState<Inventory>({ items: [], totalLootObtained: 0 });
   const [selectedBuffer1, setSelectedBuffer1] = useState<string>("");
   const [selectedBuffer2, setSelectedBuffer2] = useState<string>("");
+  const [eggs, setEggs] = useState<BreedingEgg[]>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem("ecobio-collection");
@@ -133,6 +143,33 @@ export default function BreedingPage() {
 
     window.addEventListener("inventory-updated", handleInventoryUpdate);
     return () => window.removeEventListener("inventory-updated", handleInventoryUpdate);
+  }, []);
+
+  // Load breeding eggs
+  useEffect(() => {
+    const loadedEggs = loadBreedingEggs();
+    setEggs(loadedEggs);
+  }, []);
+
+  // Listen for egg updates
+  useEffect(() => {
+    const handleEggsUpdate = () => {
+      const loadedEggs = loadBreedingEggs();
+      setEggs(loadedEggs);
+    };
+
+    window.addEventListener("breeding-eggs-updated", handleEggsUpdate);
+    return () => window.removeEventListener("breeding-eggs-updated", handleEggsUpdate);
+  }, []);
+
+  // Update egg timers every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Force re-render to update timers
+      setEggs(prev => [...prev]);
+    }, 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Auto-set baby creature type when both parents selected and they match
@@ -165,6 +202,7 @@ export default function BreedingPage() {
 
   // Filter creatures for dropdown based on search and creature type
   const getDropdownCreatures = (search: string, otherParent: CollectionItem | null) => {
+    const parentCooldowns = getParentCooldowns();
     return filteredCollection.filter(creature => {
       const matchesSearch = creature.name.toLowerCase().includes(search.toLowerCase());
       const notSelectedAsOther = otherParent ? creature.id !== otherParent.id : true;
@@ -172,7 +210,8 @@ export default function BreedingPage() {
       const notSelectedAsSelf2 = parent2 ? creature.id !== parent2.id : true;
       const matchesType = otherParent ? creature.creatureId === otherParent.creatureId : true;
       const notOnMission = 'isOnMission' in creature ? !(creature as HuntedCreature).isOnMission : true;
-      return matchesSearch && notSelectedAsOther && notSelectedAsSelf1 && notSelectedAsSelf2 && matchesType && notOnMission;
+      const notOnCooldown = !parentCooldowns.has(creature.id);
+      return matchesSearch && notSelectedAsOther && notSelectedAsSelf1 && notSelectedAsSelf2 && matchesType && notOnMission && notOnCooldown;
     });
   };
 
@@ -272,19 +311,25 @@ export default function BreedingPage() {
     if (!parent1 || !parent2 || !babyCreatureType) return;
 
     try {
-      const baby = generateBabyCreature(parent1, parent2, babyCreatureType);
-      setCollection([...collection, baby]);
+      // Create breeding egg instead of directly generating baby
+      const egg = createBreedingEgg(
+        parent1,
+        parent2,
+        babyCreatureType,
+        selectedBuffer1,
+        selectedBuffer2
+      );
+      addBreedingEgg(egg);
+
+      // Consume breeding buffers
+      removeFromInventory(selectedBuffer1, 1);
+      removeFromInventory(selectedBuffer2, 1);
+      setSelectedBuffer1("");
+      setSelectedBuffer2("");
+      window.dispatchEvent(new CustomEvent("inventory-updated"));
+
       setBreedingSuccess(true);
       setShowConfirmDialog(false);
-
-      // Consume breeding buffers if selected
-      if (selectedBuffer1 && selectedBuffer2) {
-        removeFromInventory(selectedBuffer1, 1);
-        removeFromInventory(selectedBuffer2, 1);
-        setSelectedBuffer1("");
-        setSelectedBuffer2("");
-        window.dispatchEvent(new CustomEvent("inventory-updated"));
-      }
 
       // Reset form after success
       setTimeout(() => {
@@ -297,8 +342,29 @@ export default function BreedingPage() {
         setSelectedBuffer2("");
       }, 2000);
     } catch (err) {
-      setError("Failed to generate baby creature");
+      setError("Failed to create breeding egg");
       setShowConfirmDialog(false);
+    }
+  };
+
+  // Handle egg hatching
+  const handleHatchEgg = (egg: BreedingEgg) => {
+    if (!isEggReady(egg)) return;
+
+    try {
+      const baby = hatchEgg(egg);
+      setCollection([...collection, baby]);
+
+      // Remove egg from storage
+      removeBreedingEgg(egg.id);
+
+      // Update eggs state
+      setEggs(eggs.filter(e => e.id !== egg.id));
+
+      setBreedingSuccess(true);
+      setTimeout(() => setBreedingSuccess(false), 2000);
+    } catch (err) {
+      setError("Failed to hatch egg");
     }
   };
 
@@ -316,6 +382,17 @@ export default function BreedingPage() {
       return `Les parents doivent être du même type (${parent1.name} ≠ ${parent2.name})`;
     }
     return "Prêt à reproduire!";
+  };
+
+  // Get cooldown hashes for parents (cannot be used while eggs are incubating)
+  const getParentCooldowns = (): Set<string> => {
+    const activeEggs = eggs.filter(e => !e.isHatched && getEggRemainingTime(e) > 0);
+    const cooldowns = new Set<string>();
+    activeEggs.forEach(egg => {
+      cooldowns.add(egg.parent1Id);
+      cooldowns.add(egg.parent2Id);
+    });
+    return cooldowns;
   };
 
   // Calculate baby preview
@@ -587,6 +664,127 @@ export default function BreedingPage() {
             </p>
           </div>
         </div>
+
+        {/* Incubating Eggs */}
+        {eggs.filter(egg => !egg.isHatched).length > 0 && (
+          <div className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-6 mb-6 border border-green-700">
+            <h2 className="text-2xl font-bold text-green-100 mb-4">🥚 Œufs en incubation</h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              {eggs.filter(egg => !egg.isHatched).map(egg => {
+                const isReady = isEggReady(egg);
+                const remainingTime = getEggRemainingTime(egg);
+                const parent1Name = collection.find(c => c.id === egg.parent1Id)?.name || "Inconnu";
+                const parent2Name = collection.find(c => c.id === egg.parent2Id)?.name || "Inconnu";
+
+                return (
+                  <div
+                    key={egg.id}
+                    className={`rounded-lg p-4 border-2 transition-all ${
+                      isReady
+                        ? "bg-gradient-to-br from-yellow-800 to-yellow-900 border-yellow-500 animate-pulse"
+                        : "bg-gradient-to-br from-green-800 to-green-900 border-green-700"
+                    }`}
+                  >
+                    {/* Egg Icon and Name */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="text-xl font-bold text-green-100 flex items-center gap-2">
+                          <span className="text-3xl">🥚</span>
+                          {egg.babyName}
+                        </h3>
+                        <p className={`text-sm font-semibold mt-1 ${isReady ? "text-yellow-200" : "text-green-300"}`}>
+                          {isReady ? "✨ Prêt à éclore!" : "⏳ Incubation en cours"}
+                        </p>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-sm font-bold text-white ${getRankBadgeColor(egg.babyRank)}`}>
+                        {egg.babyRank}
+                      </span>
+                    </div>
+
+                    {/* Timer */}
+                    <div className="bg-green-950 rounded-lg p-3 mb-3">
+                      <p className="text-green-200 text-sm mb-1">Temps restant:</p>
+                      <p className={`text-2xl font-bold ${isReady ? "text-yellow-300" : "text-green-100"}`}>
+                        {formatRemainingTime(remainingTime)}
+                      </p>
+                    </div>
+
+                    {/* Baby Preview Stats */}
+                    <div className="bg-green-950 rounded-lg p-3 mb-3">
+                      <p className="text-green-200 text-sm mb-2">Stats du bébé:</p>
+                      <div className="grid grid-cols-5 gap-2 text-center text-xs">
+                        <div className="bg-green-900 rounded p-1.5">
+                          <p className="text-green-300 text-[9px]">HP</p>
+                          <p className="text-green-100 font-bold">{egg.babyStats.hp}</p>
+                        </div>
+                        <div className="bg-green-900 rounded p-1.5">
+                          <p className="text-green-300 text-[9px]">ATK</p>
+                          <p className="text-green-100 font-bold">{egg.babyStats.attack}</p>
+                        </div>
+                        <div className="bg-green-900 rounded p-1.5">
+                          <p className="text-green-300 text-[9px]">DEF</p>
+                          <p className="text-green-100 font-bold">{egg.babyStats.defense}</p>
+                        </div>
+                        <div className="bg-green-900 rounded p-1.5">
+                          <p className="text-green-300 text-[9px]">SPD</p>
+                          <p className="text-green-100 font-bold">{egg.babyStats.speed}</p>
+                        </div>
+                        <div className="bg-green-900 rounded p-1.5">
+                          <p className="text-green-300 text-[9px]">CRIT</p>
+                          <p className="text-green-100 font-bold">{egg.babyStats.crit}%</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Traits */}
+                    {egg.babyTraits.length > 0 && (
+                      <div className="bg-green-950 rounded-lg p-3 mb-3">
+                        <p className="text-green-200 text-sm mb-2">Traits prévus:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {egg.babyTraits.slice(0, 3).map(traitId => {
+                            const trait = getTraitsByIds([traitId])[0];
+                            return trait ? (
+                              <span key={traitId} className="px-2 py-0.5 text-xs rounded bg-purple-700 text-white">
+                                {trait.name}
+                              </span>
+                            ) : null;
+                          })}
+                          {egg.babyTraits.length > 3 && (
+                            <span className="px-2 py-0.5 text-xs rounded bg-purple-900 text-purple-200">
+                              +{egg.babyTraits.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Parent Info */}
+                    <div className="bg-green-950 rounded-lg p-3 mb-3">
+                      <p className="text-green-200 text-sm mb-1">Parents:</p>
+                      <p className="text-green-100">🧬 {parent1Name} × {parent2Name}</p>
+                    </div>
+
+                    {/* Hatch Button */}
+                    {isReady && (
+                      <button
+                        onClick={() => handleHatchEgg(egg)}
+                        className="w-full bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-white rounded-lg p-3 text-lg font-bold shadow-lg transition-all duration-200"
+                      >
+                        🐣 ÉCLORE
+                      </button>
+                    )}
+
+                    {!isReady && (
+                      <div className="w-full bg-green-950 rounded-lg p-3 text-center">
+                        <p className="text-green-400 text-sm">L'œuf doit finir son incubation</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Baby Preview */}
         {parent1 && parent2 && parent1.id !== parent2.id && validCreatureType && (
