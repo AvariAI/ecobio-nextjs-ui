@@ -252,7 +252,30 @@ export function loadInventory(): Inventory {
   const savedInventory = localStorage.getItem("ecobio-inventory");
   if (savedInventory) {
     try {
-      return JSON.parse(savedInventory);
+      const inventory: Inventory = JSON.parse(savedInventory);
+      
+      // Migration: Add rank field to items without it (legacy data)
+      let needsSave = false;
+      inventory.items.forEach(item => {
+        if (!item.rank && item.plantId) {
+          const plantDef = PLANT_DEFINITIONS[item.plantId];
+          if (plantDef) {
+            item.rank = plantDef.rank;
+            needsSave = true;
+          } else {
+            // Fallback to E rank if plant definition not found
+            item.rank = "E";
+            needsSave = true;
+          }
+        }
+      });
+      
+      // Save migrated data if any items were updated
+      if (needsSave) {
+        localStorage.setItem("ecobio-inventory", JSON.stringify(inventory));
+      }
+      
+      return inventory;
     } catch (e) {
       console.error("Failed to load inventory", e);
     }

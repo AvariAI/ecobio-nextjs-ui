@@ -43,8 +43,17 @@ export default function InventoryPage() {
     }
   };
 
+  // Filter items with missing definitions (legacy data migration fixes)
+  const filteredItems = inventory.items.filter(item => {
+    // Find plant name from PLANT_DEFINITIONS by case-insensitive match
+    const plantDef = Object.values(PLANT_DEFINITIONS).find(def => 
+      def.name.toLowerCase() === item.plantName.toLowerCase()
+    );
+    return plantDef !== undefined;
+  });
+  
   // Sort items
-  const sortedItems = [...inventory.items].sort((a, b) => {
+  const sortedItems = [...filteredItems].sort((a, b) => {
     if (sortBy === "rarity") {
       const rarityOrder = ["E", "D", "C", "B", "A", "S", "S+"];
       return rarityOrder.indexOf(a.rank) - rarityOrder.indexOf(b.rank);
@@ -155,7 +164,10 @@ export default function InventoryPage() {
                 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {itemsInRarity.map(item => {
-                    const plantDef = PLANT_DEFINITIONS[item.plantId];
+                    // Find plant definition by case-insensitive name match (for legacy data migration)
+                    const plantDef = Object.values(PLANT_DEFINITIONS).find(def => 
+                      def.name.toLowerCase() === item.plantName.toLowerCase()
+                    );
                     
                     if (!plantDef) {
                       return (
