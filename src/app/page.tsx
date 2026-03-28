@@ -51,7 +51,7 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 mb-8">
+        <div className="grid md:grid-cols-3 gap-8 mb-8">
           <Link href="/breeding">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-pink-400">
               <div className="text-6xl mb-4">🧬</div>
@@ -72,6 +72,18 @@ export default function Home() {
               </h2>
               <p className="text-gray-600 dark:text-gray-300">
                 Envois tes créatures en mission pour récolter des ressources.
+              </p>
+            </div>
+          </Link>
+
+          <Link href="/inventory">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-emerald-500">
+              <div className="text-6xl mb-4">📦</div>
+              <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
+                Inventaire
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                Gère tes ressources de looting.
               </p>
             </div>
           </Link>

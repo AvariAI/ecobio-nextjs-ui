@@ -14,6 +14,7 @@ import {
 } from "@/lib/exploration";
 import { PlantResource } from "@/lib/resources";
 import { Rank, CREATURES } from "@/lib/database";
+import { addExplorationLoot } from "@/lib/inventory";
 
 type DurationOption = "15min" | "30min" | "1h" | "2h" | "4h" | "8h";
 
@@ -245,6 +246,18 @@ export default function ExplorationPage() {
   // Collect mission results
   const handleCollectResults = (mission: ExplorationMission) => {
     if (!mission.results) return;
+
+    // Add loot to inventory if mission was successful
+    if (mission.results.missionSuccess && mission.results.loot.length > 0) {
+      const { addedCount } = addExplorationLoot(mission.results.loot);
+      console.log(`Added ${addedCount} plants to inventory`);
+
+      // Dispatch inventory update event
+      window.dispatchEvent(new Event("inventory-updated"));
+
+      // Show notification
+      alert(`${addedCount} plante(s) ajoutée(s) à ton inventaire!`);
+    }
 
     // Apply exploration XP to survivors and clear mission status
     const xpGained = calculateExplorationXP(mission.duration);
