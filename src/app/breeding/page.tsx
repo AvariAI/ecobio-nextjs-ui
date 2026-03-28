@@ -40,6 +40,7 @@ interface HuntedCreature extends Creature {
   creatureId: string;
   traits: string[];
   isFavorite: boolean;
+  isOnMission: boolean; // True if creature is on exploration mission
 }
 
 function getCreatureImage(creatureId: string, rank: Rank): string {
@@ -151,7 +152,8 @@ export default function BreedingPage() {
       const notSelectedAsSelf1 = parent1 ? creature.id !== parent1.id : true;
       const notSelectedAsSelf2 = parent2 ? creature.id !== parent2.id : true;
       const matchesType = otherParent ? creature.creatureId === otherParent.creatureId : true;
-      return matchesSearch && notSelectedAsOther && notSelectedAsSelf1 && notSelectedAsSelf2 && matchesType;
+      const notOnMission = 'isOnMission' in creature ? !(creature as HuntedCreature).isOnMission : true;
+      return matchesSearch && notSelectedAsOther && notSelectedAsSelf1 && notSelectedAsSelf2 && matchesType && notOnMission;
     });
   };
 
@@ -273,11 +275,17 @@ export default function BreedingPage() {
 
   const renderCreatureCard = (creature: CollectionItem, index: number) => {
     const traits = getTraitsByIds(creature.traits);
+    const isOnMission = 'isOnMission' in creature && (creature as HuntedCreature).isOnMission;
+
     return (
       <div
         key={creature.id}
-        onClick={() => index === 1 ? handleSelectParent1(creature) : handleSelectParent2(creature)}
-        className="flex items-center gap-3 p-3 hover:bg-green-700 rounded-lg cursor-pointer transition-colors"
+        onClick={() => !isOnMission && (index === 1 ? handleSelectParent1(creature) : handleSelectParent2(creature))}
+        className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+          isOnMission
+            ? 'bg-gray-700 opacity-50 cursor-not-allowed'
+            : 'hover:bg-green-700'
+        }`}
       >
         <img
           src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
@@ -288,12 +296,14 @@ export default function BreedingPage() {
           <div className="flex items-center gap-2">
             <p className="font-bold text-green-100">{creature.name}</p>
             {creature.isFavorite && <span className="text-red-400">❤️</span>}
+            {isOnMission && <span className="text-orange-400" title="En mission d'exploration">🗺️</span>}
           </div>
           <div className="flex items-center gap-2 mt-1">
             <span className="text-yellow-300 text-sm">Lvl {creature.level}</span>
             <span className={`text-xs font-bold ${getRankBadgeColor(creature.finalStats.rank)} text-white px-2 py-0.5 rounded-full`}>
               {creature.finalStats.rank}
             </span>
+            {isOnMission && <span className="text-xs text-orange-400">En mission</span>}
           </div>
           <div className="flex flex-wrap gap-1 mt-1">
             {traits.slice(0, 3).map(trait => (

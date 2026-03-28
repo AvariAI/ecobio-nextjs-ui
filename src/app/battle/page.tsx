@@ -58,6 +58,9 @@ interface HuntedCreature extends Creature {
   combatXPToNextStar: number;
   battlesWon: number;
   battlesTotal: number;
+
+  // Exploration system
+  isOnMission: boolean; // True if creature is on exploration mission
 }
 
 function getCreatureImage(creatureId: string, rank: Rank): string {

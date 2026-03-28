@@ -29,6 +29,7 @@ interface HuntedCreature {
   traits: string[];
   isFavorite: boolean;
   name: string;
+  isOnMission: boolean; // True if creature is on exploration mission
 }
 
 function getCreatureImage(creatureId: string, rank: Rank): string {
@@ -253,11 +254,13 @@ export function MultiCreatureCollectionSelector({
     "E": 1,
   };
 
-  const sortedCollection = [...collection].sort((a, b) => {
-    const rankDiff = RankOrder[b.finalStats.rank] - RankOrder[a.finalStats.rank];
-    if (rankDiff !== 0) return rankDiff;
-    return b.level - a.level;
-  });
+  const sortedCollection = [...collection]
+    .filter(c => !c.isOnMission) // Filter out creatures on exploration missions
+    .sort((a, b) => {
+      const rankDiff = RankOrder[b.finalStats.rank] - RankOrder[a.finalStats.rank];
+      if (rankDiff !== 0) return rankDiff;
+      return b.level - a.level;
+    });
 
   const selectedCreatures = teamIds.filter(id => id !== null).map(id => collection.find(c => c.id === id)).filter(Boolean) as HuntedCreature[];
   const isTeamValid = selectedCreatures.length === teamSize;
@@ -320,6 +323,7 @@ export function MultiCreatureCollectionSelector({
             return (
               <button
                 key={creature.id}
+                disabled={creature.isOnMission}
                 onClick={() => {
                   const existingSlot = teamIds.indexOf(creature.id);
                   if (existingSlot !== -1) {
@@ -334,6 +338,8 @@ export function MultiCreatureCollectionSelector({
                 className={`w-full text-left rounded-lg p-2 transition-all ${
                   isSelected
                     ? "ring-2 ring-offset-1 ring-offset-white dark:ring-offset-gray-800 bg-white dark:bg-gray-700 shadow-md"
+                    : creature.isOnMission
+                    ? "bg-gray-300 dark:bg-gray-600 opacity-50 cursor-not-allowed"
                     : "bg-white/50 dark:bg-gray-700/50 hover:bg-white dark:hover:bg-gray-700"
                 }`}
               >
@@ -350,6 +356,11 @@ export function MultiCreatureCollectionSelector({
                         R{creature.finalStats.rank}
                       </span>
                       <span className="text-xs">L{creature.level}</span>
+                      {creature.isOnMission && (
+                        <span className="text-xs text-orange-600 dark:text-orange-400">
+                          🗺️ En mission
+                        </span>
+                      )}
                     </div>
                   </div>
                   {isSelected && <span className="text-green-600 font-bold">✓</span>}

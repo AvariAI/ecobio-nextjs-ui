@@ -40,6 +40,12 @@ interface HuntedCreature extends Creature {
   combatXPToNextStar: number; // XP needed for next star
   battlesWon: number; // Track battle wins for stats
   battlesTotal: number; // Total battles fought
+
+  // Exploration system (NEW)
+  explorationXP: number; // Exploration experience points
+  explorationLevel: number; // Current exploration level
+  explorationXPToNext: number; // XP needed for next exploration level
+  isOnMission: boolean; // True if creature is currently on exploration mission
 }
 
 function rollRarity(): RarityRank {
@@ -136,6 +142,12 @@ function spawnCreature(): HuntedCreature {
     combatXPToNextStar: 100,
     battlesWon: 0,
     battlesTotal: 0,
+
+    // Exploration system initialization
+    explorationXP: 0,
+    explorationLevel: 0,
+    explorationXPToNext: 100,
+    isOnMission: false,
   };
 }
 
@@ -326,7 +338,7 @@ export default function HuntingPage() {
   };
 
   const filteredFoodCollection = [...collection]
-    .filter(c => c.id !== selectedCreature?.id && !c.isFavorite)
+    .filter(c => c.id !== selectedCreature?.id && !c.isFavorite && !c.isOnMission)
     .filter(c => feedRankFilter ? c.finalStats.rank === feedRankFilter : true)
     .sort((a, b) => {
       const rankDiff = RankOrder[b.finalStats.rank] - RankOrder[a.finalStats.rank];
@@ -734,9 +746,12 @@ export default function HuntingPage() {
               {!feedMode ? (
                 <button
                   onClick={() => setFeedMode(true)}
-                  className="w-full bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white rounded-lg p-3 font-bold mb-4"
+                  className={`w-full bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white rounded-lg p-3 font-bold mb-4 ${
+                    selectedCreature.isOnMission ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={selectedCreature.isOnMission}
                 >
-                  🌱 Nourrir avec d'autres créatures
+                  {selectedCreature.isOnMission ? ".🌱 Créature en mission d'exploration" : "🌱 Nourrir avec d'autres créatures"}
                 </button>
               ) : (
                 <>

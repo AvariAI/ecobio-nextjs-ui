@@ -89,6 +89,20 @@ export default function Home() {
           </Link>
         </div>
 
+        <div className="grid md:grid-cols-1 gap-8 mb-8 max-w-xl mx-auto">
+          <Link href="/exploration">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-amber-500">
+              <div className="text-6xl mb-4">🗺️</div>
+              <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
+                Exploration
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                Envois tes créatures en mission pour récolter des ressources rares.
+              </p>
+            </div>
+          </Link>
+        </div>
+
         <footer className="text-center mt-12 text-gray-600 dark:text-gray-400">
           <p>ÉcoBio Pokedex & Battle Simulator • Next.js v16 • Made with 🕷️ by Nephila</p>
         </footer>
