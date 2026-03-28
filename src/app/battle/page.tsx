@@ -131,6 +131,10 @@ export default function BattlePage() {
   const [turnOrder, setTurnOrder] = useState<BattleElement[]>([]);
   const [isActionProcessing, setIsActionProcessing] = useState(false);
 
+  // Swap selector state
+  const [showSwapSelector, setShowSwapSelector] = useState(false);
+  const [swapSourceCreature, setSwapSourceCreature] = useState<BattleCreature | null>(null);
+
   // Load collection from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("ecobio-collection");
@@ -669,6 +673,21 @@ export default function BattlePage() {
     }
   };
 
+  // Open swap selector modal for a creature
+  const handleOpenSwapSelector = (creature: BattleCreature) => {
+    setSwapSourceCreature(creature);
+    setShowSwapSelector(true);
+  };
+
+  // Confirm swap with selected target creature from modal
+  const handleConfirmSwap = (targetCreature: BattleCreature) => {
+    if (swapSourceCreature) {
+      handleSwitchPosition(swapSourceCreature, targetCreature);
+      setShowSwapSelector(false);
+      setSwapSourceCreature(null);
+    }
+  };
+
   const handleSkill = () => {
     if (isActionProcessing) return; // Prevent multiple actions in same turn
 
@@ -1168,6 +1187,14 @@ export default function BattlePage() {
             onSkill={handleSkill}
             onSwitchPosition={handleSwitchPosition}
             isActionProcessing={isActionProcessing}
+            showSwapSelector={showSwapSelector}
+            swapSourceCreature={swapSourceCreature}
+            onOpenSwapSelector={handleOpenSwapSelector}
+            onConfirmSwap={handleConfirmSwap}
+            onCloseSwapSelector={() => {
+              setShowSwapSelector(false);
+              setSwapSourceCreature(null);
+            }}
           />
         )}
 

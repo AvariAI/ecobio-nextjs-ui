@@ -55,6 +55,11 @@ interface MultiCreatureBattleDisplayProps {
   onSkill: () => void;
   onSwitchPosition?: (creatureA: BattleCreature, creatureB: BattleCreature) => void;
   isActionProcessing?: boolean;
+  showSwapSelector?: boolean;
+  swapSourceCreature?: BattleCreature | null;
+  onCloseSwapSelector?: () => void;
+  onOpenSwapSelector?: (creature: BattleCreature) => void;
+  onConfirmSwap?: (targetCreature: BattleCreature) => void;
 }
 
 export function MultiCreatureBattleDisplay({
@@ -69,6 +74,11 @@ export function MultiCreatureBattleDisplay({
   onSkill,
   onSwitchPosition,
   isActionProcessing = false,
+  showSwapSelector = false,
+  swapSourceCreature = null,
+  onCloseSwapSelector,
+  onOpenSwapSelector,
+  onConfirmSwap,
 }: MultiCreatureBattleDisplayProps) {
   const isPlayerTurn = turn === "player";
   const currentCreature = currentActingCreature;
@@ -80,8 +90,9 @@ export function MultiCreatureBattleDisplay({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Turn Info */}
+    <>
+      <div className="space-y-6">
+        {/* Turn Info */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -148,6 +159,7 @@ export function MultiCreatureBattleDisplay({
               currentActingCreature={currentActingCreature}
               canSwitch={(isPlayerTurn && currentCreature && currentCreature.currentHP > 0 && onSwitchPosition !== undefined) ?? false}
               onSwitchPosition={onSwitchPosition}
+              onOpenSwapSelector={onOpenSwapSelector}
             />
 
             {/* Back Row */}
@@ -158,6 +170,7 @@ export function MultiCreatureBattleDisplay({
               currentActingCreature={currentActingCreature}
               canSwitch={(isPlayerTurn && currentCreature && currentCreature.currentHP > 0 && onSwitchPosition !== undefined) ?? false}
               onSwitchPosition={onSwitchPosition}
+              onOpenSwapSelector={onOpenSwapSelector}
             />
           </div>
         )}
@@ -177,6 +190,7 @@ export function MultiCreatureBattleDisplay({
               currentActingCreature={currentActingCreature}
               canSwitch={false}
               onSwitchPosition={undefined}
+              onOpenSwapSelector={undefined}
             />
 
             {/* Back Row */}
@@ -187,6 +201,7 @@ export function MultiCreatureBattleDisplay({
               currentActingCreature={currentActingCreature}
               canSwitch={false}
               onSwitchPosition={undefined}
+              onOpenSwapSelector={undefined}
             />
           </div>
         )}
@@ -227,7 +242,19 @@ export function MultiCreatureBattleDisplay({
           {/* No global switch button - switch is handled per-creature */}
         </div>
       )}
-    </div>
+
+      {/* Swap Target Selector Modal */}
+      {showSwapSelector && swapSourceCreature && playerTeam && (
+        <SwapTargetSelector
+          team={playerTeam}
+          sourceCreature={swapSourceCreature}
+          teamSize={teamSize}
+          onSelectTarget={onConfirmSwap || (() => {})}
+          onClose={onCloseSwapSelector || (() => {})}
+        />
+      )}
+      </div>
+    </>
   );
 }
 
@@ -238,6 +265,7 @@ interface TeamRowDisplayProps {
   currentActingCreature: BattleCreature | null;
   canSwitch: boolean;
   onSwitchPosition?: (creatureA: BattleCreature, creatureB: BattleCreature) => void;
+  onOpenSwapSelector?: (creature: BattleCreature) => void;
 }
 
 function TeamRowDisplay({
@@ -247,6 +275,7 @@ function TeamRowDisplay({
   currentActingCreature,
   canSwitch,
   onSwitchPosition,
+  onOpenSwapSelector,
 }: TeamRowDisplayProps) {
   const isFrontRow = rowType === "front";
   const positions = isFrontRow ? getFrontRowPositions(teamSize) : getBackRowPositions(teamSize);
@@ -295,22 +324,8 @@ function TeamRowDisplay({
             {canSwitch && team.teamId === "player" && creature.currentHP > 0 && (
               <button
                 onClick={() => {
-                  // This would open a modal or prompt to select another creature to swap with
-                  // For now, just log that position switching is available
-                  if (onSwitchPosition) {
-                    // Find a living creature in the other row
-                    const otherRowType = isFrontRow ? "back" : "front";
-                    const otherPositions = otherRowType === "front"
-                      ? getFrontRowPositions(teamSize)
-                      : getBackRowPositions(teamSize);
-
-                    const otherCreatures = team.creatures
-                      .filter(c => c.position !== undefined && otherPositions.includes(c.position) && c.currentHP > 0 && c !== creature);
-
-                    if (otherCreatures.length > 0) {
-                      // Swap with the first available creature
-                      onSwitchPosition(creature, otherCreatures[0]);
-                    }
+                  if (onOpenSwapSelector) {
+                    onOpenSwapSelector(creature);
                   }
                 }}
                 className="absolute bottom-2 right-2 px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-full transition-colors"
@@ -327,6 +342,105 @@ function TeamRowDisplay({
       {isFrontRow && getBackRowPositions(teamSize).length > 0 && (
         <div className="ml-4 my-2 border-l-2 border-dashed border-gray-300 dark:border-gray-600 h-4"></div>
       )}
+    </div>
+  );
+}
+
+interface SwapTargetSelectorProps {
+  team: BattleTeam;
+  sourceCreature: BattleCreature;
+  teamSize: TeamSize;
+  onSelectTarget: (targetCreature: BattleCreature) => void;
+  onClose: () => void;
+}
+
+function SwapTargetSelector({
+  team,
+  sourceCreature,
+  teamSize,
+  onSelectTarget,
+  onClose,
+}: SwapTargetSelectorProps) {
+  // Get all living creatures in the same team (excluding the source creature)
+  const availableSwapTargets = team.creatures.filter(
+    c => c !== sourceCreature && c.currentHP > 0 && c.position !== undefined
+  ).sort((a, b) => (a.position || 0) - (b.position || 0));
+
+  // Get helper to determine row type
+  const getRowType = (position: number): "front" | "back" => {
+    const frontPositions = getFrontRowPositions(teamSize);
+    return frontPositions.includes(position) ? "front" : "back";
+  };
+
+  if (availableSwapTargets.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-md w-full mx-4">
+          <h2 className="text-xl font-bold mb-4">🔄 Échanger Position</h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            Aucune créature disponible pour l'échange.
+          </p>
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+          >
+            Annuler
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-md w-full mx-4">
+        <h2 className="text-xl font-bold mb-4">🔄 Échanger Position</h2>
+        <p className="text-sm font-semibold mb-2 text-gray-600 dark:text-gray-300">
+          Échanger avec :
+        </p>
+        <div className="space-y-2 max-h-96 overflow-y-auto mb-4">
+          {availableSwapTargets.map((creature) => (
+            <button
+              key={creature.name}
+              onClick={() => onSelectTarget(creature)}
+              className="w-full text-left p-3 bg-gray-50 dark:bg-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg transition-colors border-2 border-transparent hover:border-blue-400 dark:hover:border-blue-600"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {/* Position indicator */}
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-sm font-bold px-2 py-1 rounded bg-gradient-to-r from-emerald-100 to-teal-100 dark:from-emerald-900 dark:to-teal-900 text-emerald-700 dark:text-emerald-300">
+                      Pos {(creature.position || 0) + 1}
+                    </span>
+                    <span className="text-xs text-gray-500 capitalize">
+                      {getRowType(creature.position || 0) === "front" ? "Avant" : "Arrière"}
+                    </span>
+                  </div>
+
+                  {/* Creature info */}
+                  <div className="flex-1">
+                    <p className="font-bold text-lg">{creature.name}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      HP: {creature.currentHP} / {creature.stats.hp}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Arrow icon */}
+                <span className="text-2xl">Swap</span>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Cancel button */}
+        <button
+          onClick={onClose}
+          className="w-full px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg transition-colors font-semibold"
+        >
+          ❌ Annuler
+        </button>
+      </div>
     </div>
   );
 }
