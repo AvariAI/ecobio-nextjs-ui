@@ -330,7 +330,7 @@ export default function BreedingPage() {
     </div>
   );
 
-  const renderSelectedSlot = (creature: HuntedCreature, slotNumber: number) => {
+  const renderSelectedSlot = (creature: CollectionItem, slotNumber: number) => {
     const traits = getTraitsByIds(creature.traits);
     return (
       <div className="flex-1 border-2 border-green-600 rounded-lg p-4 bg-gradient-to-br from-green-800 to-green-900">
