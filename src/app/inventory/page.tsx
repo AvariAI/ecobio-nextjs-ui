@@ -41,7 +41,7 @@ export default function InventoryPage() {
   const sortedItems = [...inventory.items].sort((a, b) => {
     if (sortBy === "rarity") {
       const rarityOrder = ["E", "D", "C", "B", "A", "S", "S+"];
-      return rarityOrder.indexOf(a.rarity) - rarityOrder.indexOf(b.rarity);
+      return rarityOrder.indexOf(a.rank) - rarityOrder.indexOf(b.rank);
     } else if (sortBy === "count") {
       return b.count - a.count;
     } else {
@@ -49,8 +49,8 @@ export default function InventoryPage() {
     }
   });
 
-  // Group by rarity
-  const groupedByRarity: Record<string, typeof inventory.items> = {
+  // Group by rank
+  const groupedByRank: Record<string, typeof inventory.items> = {
     "E": [],
     "D": [],
     "C": [],
@@ -61,7 +61,7 @@ export default function InventoryPage() {
   };
 
   sortedItems.forEach(item => {
-    groupedByRarity[item.rarity].push(item);
+    groupedByRank[item.rank].push(item);
   });
 
   return (
@@ -116,26 +116,26 @@ export default function InventoryPage() {
           </button>
         </div>
 
-        {/* Items grouped by rarity */}
+        {/* Items grouped by rank */}
         <div className="space-y-8">
-          {["E", "D", "C", "B", "A", "S", "S+"].map(rarity => {
-            const itemsInRarity = groupedByRarity[rarity];
-            if (itemsInRarity.length === 0) return null;
+          {["E", "D", "C", "B", "A", "S", "S+"].map(rank => {
+            const itemsInRank = groupedByRank[rank];
+            if (itemsInRank.length === 0) return null;
 
             return (
-              <div key={rarity} className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+              <div key={rank} className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
                 <h3 className="text-3xl font-bold mb-4">
-                  Rareté {rarity}
+                  Rank {rank}
                 </h3>
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {itemsInRarity.map(item => {
+                  {itemsInRank.map(item => {
                     const plantDef = PLANT_DEFINITIONS[item.plantId];
 
                     return (
                       <div
                         key={item.id}
-                        className={`border-4 rounded-xl p-4 ${RARITY_COLORS[item.rarity]}`}
+                        className={`border-4 rounded-xl p-4 ${RARITY_COLORS[item.rank]}`}
                       >
                         <div className="flex justify-between items-start mb-2">
                           <div className="flex items-center gap-2">

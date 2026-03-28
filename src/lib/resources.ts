@@ -1,9 +1,9 @@
 export interface PlantResource {
   id: string;
   name: string;
-  rarity: "common" | "uncommon" | "rare" | "epic";
+  rarity: Rank;
   description: string;
-  icon?: string;
+  icon: string;
 }
 
 export interface ExplorationLoot {
@@ -12,47 +12,89 @@ export interface ExplorationLoot {
   plantCounts: Record<string, number>;
 }
 
+import { Rank } from "./database";
+
+// Plant definitions with ranks (E-S+)
 export const PLANTS: PlantResource[] = [
-  // Common plants
+  // E
   {
     id: "herbe_commune",
     name: "Herbe Commune",
-    rarity: "common",
-    description: "Plante trouvée dans les prés, utilisée pour le breeding basique"
+    rarity: "E",
+    description: "Plante commune trouvée dans les prés",
+    icon: "🌿"
   },
-
-  // Uncommon plants
+  
+  // D
+  {
+    id: "herbe_houleuse",
+    name: "Herbe Houleuse",
+    rarity: "D",
+    description: "Herbe résistante aux tempêtes et au vent",
+    icon: "🌿"
+  },
+  {
+    id: "pissenlit",
+    name: "Pissenlit",
+    rarity: "D",
+    description: "Petite fleur jaune très commune",
+    icon: "🌼"
+  },
+  
+  // C
+  {
+    id: "herbe_prairie",
+    name: "Herbe de Prairie",
+    rarity: "C",
+    description: "Herbe qui pousse dans les prairies vastes",
+    icon: "🌿"
+  },
+  
+  // B
   {
     id: "fleur_rouge",
     name: "Fleur Rouge",
-    rarity: "uncommon",
-    description: "Fleur médicinale, utilisée pour le breeding amélioré"
+    rarity: "B",
+    description: "Fleur vibrante aux pétales rouges",
+    icon: "🌸"
   },
-
-  // Rare plants
+  
+  // A
+  {
+    id: "fleur_bleue",
+    name: "Fleur Bleue",
+    rarity: "A",
+    description: "Fleur rare aux propriétés magiques",
+    icon: "💙"
+  },
+  
+  // S
   {
     id: "tige_mystique",
     name: "Tige Mystique",
-    rarity: "rare",
-    description: "Plante rare à puissantes propriétés magiques"
+    rarity: "S",
+    description: "Tige chargée d'énergie ancienne",
+    icon: "✨"
   },
-
-  // Epic plants
+  
+  // S+
   {
     id: "lotus_ancien",
     name: "Lotus Ancien",
-    rarity: "epic",
-    description: "Plante légendaire, utilisée pour le breeding avancé"
+    rarity: "S+",
+    description: "Plante légendaire utilisée pour le breeding avancé",
+    icon: "🌺"
   }
 ];
 
+// Rarity spawn chances by mission duration
 export const PLANT_RARITY_CHANCES: Record<string, Record<string, number>> = {
-  "15min": { common: 0.70, uncommon: 0.25, rare: 0.05, epic: 0 },
-  "30min": { common: 0.60, uncommon: 0.30, rare: 0.08, epic: 0.02 },
-  "1h": { common: 0.50, uncommon: 0.35, rare: 0.12, epic: 0.03 },
-  "2h": { common: 0.40, uncommon: 0.40, rare: 0.15, epic: 0.05 },
-  "4h": { common: 0.30, uncommon: 0.45, rare: 0.20, epic: 0.05 },
-  "8h": { common: 0.20, uncommon: 0.45, rare: 0.25, epic: 0.10 }
+  "15min": { "E": 0.60, "D": 0.30, "C": 0.08, "B": 0.02, "A": 0, "S": 0, "S+": 0 },
+  "30min": { "E": 0.50, "D": 0.30, "C": 0.12, "B": 0.06, "A": 0.02, "S": 0, "S+": 0 },
+  "1h":    { "E": 0.40, "D": 0.30, "C": 0.15, "B": 0.10, "A": 0.03, "S": 0.02, "S+": 0 },
+  "2h":    { "E": 0.30, "D": 0.30, "C": 0.18, "B": 0.14, "A": 0.05, "S": 0.02, "S+": 0.01 },
+  "4h":    { "E": 0.25, "D": 0.25, "C": 0.20, "B": 0.18, "A": 0.08, "S": 0.03, "S+": 0.01 },
+  "8h":    { "E": 0.20, "D": 0.20, "C": 0.22, "B": 0.20, "A": 0.12, "S": 0.05, "S+": 0.01 }
 };
 
 export const MISSION_XP_VALUES: Record<string, number> = {
@@ -63,3 +105,23 @@ export const MISSION_XP_VALUES: Record<string, number> = {
   "4h": 150,
   "8h": 200
 };
+
+// Helper to get rank from rarity (for inventory compatibility)
+export function getPlantRank(rarity: string): Rank {
+  const rankMap: Record<string, Rank> = {
+    "E": "E",
+    "D": "D",
+    "C": "C",
+    "B": "B",
+    "A": "A",
+    "S": "S",
+    "S+": "S+"
+  };
+  return rankMap[rarity] || "E";
+}
+
+// Helper function to convert rarity string to Rank
+// No longer needed - using native Rank system now
+export function getPlantRankFromLegacy(rarity: string): Rank {
+  return "E"; // Default to E
+}

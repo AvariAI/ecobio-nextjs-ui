@@ -94,14 +94,26 @@ function calculateInjuryChance(
  * Generate loot for exploration mission
  * Loot quantity depends on team size and duration
  * Rarity chances depend on duration
+ * Uses native rank system (E-S+)
  */
-function generateLoot(
+export function generateLoot(
   teamSize: number,
   missionDuration: string,
   lootReduction: number // 0-1 based on casualties
 ): PlantResource[] {
   const rarityChances = PLANT_RARITY_CHANCES[missionDuration] ?? PLANT_RARITY_CHANCES["15min"];
   const loot: PlantResource[] = [];
+
+  // Determine eligible plants by rank
+  const eligiblePlants = new Map<Rank, PlantResource[]>();
+  
+  PLANTS.forEach(plant => {
+    const rank = plant.rarity;
+    if (!eligiblePlants.has(rank)) {
+      eligiblePlants.set(rank, []);
+    }
+    eligiblePlants.get(rank)!.push(plant);
+  });
 
   // Base loot count based on team size and duration
   // 15min: 1-2 loot, 8h: 3-6 loot
@@ -117,23 +129,23 @@ function generateLoot(
       continue;
     }
 
+    // Roll for rarity based on mission duration chances
     const roll = Math.random();
-    let rarity: "common" | "uncommon" | "rare" | "epic";
-
-    if (roll < rarityChances.common) {
-      rarity = "common";
-    } else if (roll < rarityChances.common + rarityChances.uncommon) {
-      rarity = "uncommon";
-    } else if (roll < rarityChances.common + rarityChances.uncommon + rarityChances.rare) {
-      rarity = "rare";
-    } else {
-      rarity = "epic";
+    let selectedRank: Rank = "E";
+    let cumulativeChance = 0;
+    
+    for (const [rank, chance] of Object.entries(rarityChances)) {
+      cumulativeChance += chance;
+      if (roll <= cumulativeChance) {
+        selectedRank = rank as Rank;
+        break;
+      }
     }
-
-    // Select random plant of that rarity
-    const eligiblePlants = PLANTS.filter(p => p.rarity === rarity);
-    if (eligiblePlants.length > 0) {
-      const selectedPlant = eligiblePlants[Math.floor(Math.random() * eligiblePlants.length)];
+    
+    // Randomly select a plant of that rarity
+    const rankPlants = eligiblePlants.get(selectedRank) || [];
+    if (rankPlants.length > 0) {
+      const selectedPlant = rankPlants[Math.floor(Math.random() * rankPlants.length)];
       loot.push(selectedPlant);
     }
   }

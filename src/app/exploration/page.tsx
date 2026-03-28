@@ -13,6 +13,7 @@ import {
   DURATION_UNLOCK_THRESHOLDS
 } from "@/lib/exploration";
 import { PlantResource } from "@/lib/resources";
+import { RARITY_COLORS, RANK_BORDER_COLORS } from "@/lib/inventory";
 import { Rank, CREATURES } from "@/lib/database";
 import { addExplorationLoot } from "@/lib/inventory";
 
@@ -675,21 +676,16 @@ export default function ExplorationPage() {
                         selectedMission.results.loot.map((plant, i) => (
                           <div
                             key={i}
-                            className={`border-2 rounded-xl p-4 ${
-                              plant.rarity === "common"
-                                ? "border-green-600 bg-green-50 dark:bg-green-900"
-                                : plant.rarity === "uncommon"
-                                ? "border-blue-600 bg-blue-50 dark:bg-blue-900"
-                                : plant.rarity === "rare"
-                                ? "border-purple-600 bg-purple-50 dark:bg-purple-900"
-                                : "border-orange-600 bg-orange-50 dark:bg-orange-900"
-                            }`}
+                            className={`border-2 rounded-xl p-4 ${RANK_BORDER_COLORS[plant.rarity] || "border-gray-600 bg-gray-50"}`}
                           >
-                            <p className="font-bold text-lg">{plant.name}</p>
+                            <div className="flex justify-between items-start mb-2">
+                              <p className="font-bold text-lg">{plant.name}</p>
+                              <span className={`text-xs px-2 py-1 rounded ${RARITY_COLORS[plant.rarity] || "text-gray-600 bg-gray-200"}`}>
+                                Rank {plant.rarity}
+                              </span>
+                            </div>
                             <p className="text-sm text-gray-600 dark:text-gray-400">{plant.description}</p>
-                            <p className="text-sm font-semibold mt-2 uppercase">
-                              {plant.rarity}
-                            </p>
+                            <p className="text-2xl mt-2">{plant.icon}</p>
                           </div>
                         ))
                       ) : (

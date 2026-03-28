@@ -1,9 +1,11 @@
+import { Rank } from "./database";
+
 export interface InventoryItem {
   id: string;
   type: "plant";
   plantId: string;
   plantName: string;
-  rarity: "E" | "D" | "C" | "B" | "A" | "S" | "S+";
+  rank: Rank;
   count: number; // Number of this plant owned
   lastUpdated: number;
 }
@@ -13,19 +15,19 @@ export interface Inventory {
   totalLootObtained: number; // Total count across all items
 }
 
-// Plant definitions with rarity groups
+// Plant definitions with rank groups (E-S+)
 export const PLANT_DEFINITIONS: Record<string, {
   id: string;
   name: string;
-  rarity: "E" | "D" | "C" | "B" | "A" | "S" | "S+";
+  rank: Rank;
   description: string;
   icon: string;
 }> = {
-  // Common (E)
+  // E
   "herbe_commune": {
     id: "herbe_commune",
     name: "Herbe Commune",
-    rarity: "E",
+    rank: "E",
     description: "Plante commune trouvée dans les prés",
     icon: "🌿"
   },
@@ -34,59 +36,66 @@ export const PLANT_DEFINITIONS: Record<string, {
   "herbe_houleuse": {
     id: "herbe_houleuse",
     name: "Herbe Houleuse",
-    rarity: "D",
+    rank: "D",
     description: "Herbe résistante aux tempêtes et au vent",
     icon: "🌿"
+  },
+  "pissenlit": {
+    id: "pissenlit",
+    name: "Pissenlit",
+    rank: "D",
+    description: "Petite fleur jaune très commune",
+    icon: "🌼"
   },
 
   // C
   "herbe_prairie": {
     id: "herbe_prairie",
     name: "Herbe de Prairie",
-    rarity: "C",
+    rank: "C",
     description: "Herbe qui pousse dans les prairies vastes",
     icon: "🌿"
   },
 
-  // B (Uncommon)
+  // B
   "fleur_rouge": {
     id: "fleur_rouge",
     name: "Fleur Rouge",
-    rarity: "B",
-    description: "Fleur aux pétales vibrants et puissants",
+    rank: "B",
+    description: "Fleur vibrante aux pétales rouges",
     icon: "🌸"
   },
 
-  // A (Rare)
+  // A
   "fleur_bleue": {
     id: "fleur_bleue",
     name: "Fleur Bleue",
-    rarity: "A",
-    description: "Fleur rare aux propriétés magiques subtiles",
+    rank: "A",
+    description: "Fleur rare aux propriétés magiques",
     icon: "💙"
   },
 
-  // S (Epic)
+  // S
   "tige_mystique": {
     id: "tige_mystique",
     name: "Tige Mystique",
-    rarity: "S",
+    rank: "S",
     description: "Tige chargée d'énergie ancienne",
     icon: "✨"
   },
 
-  // S+ (Legendary)
+  // S+
   "lotus_ancien": {
     id: "lotus_ancien",
     name: "Lotus Ancien",
-    rarity: "S+",
+    rank: "S+",
     description: "Plante légendaire utilisée pour le breeding avancé",
     icon: "🌺"
   }
 };
 
-// Rarity colors (same as creature ranks)
-export const RARITY_COLORS: Record<string, string> = {
+// Rank colors (same as creature ranks)
+export const RARITY_COLORS: Record<Rank, string> = {
   "E": "text-gray-500 bg-gray-200",
   "D": "text-green-600 bg-green-200",
   "C": "text-blue-600 bg-blue-200",
@@ -94,6 +103,17 @@ export const RARITY_COLORS: Record<string, string> = {
   "A": "text-orange-600 bg-orange-200",
   "S": "text-red-600 bg-red-200",
   "S+": "text-purple-600 bg-purple-200"
+};
+
+// Rank border colors for loot display
+export const RANK_BORDER_COLORS: Record<Rank, string> = {
+  "E": "border-green-600 bg-green-50 dark:bg-green-900",
+  "D": "text-green-600 bg-green-200",
+  "C": "border-blue-600 bg-blue-50 dark:bg-blue-900",
+  "B": "border-yellow-600 bg-yellow-50 dark:bg-yellow-900",
+  "A": "border-orange-600 bg-orange-50 dark:bg-orange-900",
+  "S": "border-red-600 bg-red-50 dark:bg-red-900",
+  "S+": "border-purple-600 bg-purple-50 dark:bg-purple-900"
 };
 
 /**
@@ -170,7 +190,7 @@ export function addToInventory(plantIds: string[]): {
         type: "plant",
         plantId,
         plantName: plantDef.name,
-        rarity: plantDef.rarity,
+        rank: plantDef.rank,
         count,
         lastUpdated: Date.now()
       });
@@ -190,19 +210,15 @@ export function addToInventory(plantIds: string[]): {
 }
 
 /**
- * Add loot items to inventory from exploration (accepts old PlantResource format)
+ * Add loot items to inventory from exploration (accepts PlantResource with native Rank)
  */
-export function addExplorationLoot(loot: Array<{ id: string; name: string; rarity: "common" | "uncommon" | "rare" | "epic" }>): {
+export function addExplorationLoot(loot: Array<{ id: string; name: string; rarity: Rank }>): {
   updated: Inventory;
   addedCount: number;
 } {
-  // Map old plant IDs and rarities to new system
-  const mappedPlantIds = loot.map(plant => {
-    const mappedId = mapPlantId(plant.id, plant.rarity);
-    return mappedId;
-  });
-
-  return addToInventory(mappedPlantIds);
+  // PlantResource already uses native Rank system
+  const plantIds = loot.map(plant => plant.id);
+  return addToInventory(plantIds);
 }
 
 /**

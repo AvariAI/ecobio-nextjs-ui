@@ -106,7 +106,7 @@ export default function CraftPage() {
       const plant2 = plantInventory.items.find(p => p.id === ingredient2);
 
       if (plant1 && plant2) {
-        const avgRank = calculateAverageRank(plant1.rarity, plant2.rarity);
+        const avgRank = calculateAverageRank(plant1.rank, plant2.rank);
         setPreview({
           resultRank: avgRank,
           canCraft: plant1.id !== plant2.id
@@ -161,7 +161,7 @@ export default function CraftPage() {
       const plant2 = plantInventory.items.find(p => p.id === ingredient2);
 
       if (plant1 && plant2 && plant1.count > 0 && plant2.count > 0) {
-        const { resultItem } = craftPlantEssence(plant1.id, plant2.id, plant1.rarity, plant2.rarity);
+        const { resultItem } = craftPlantEssence(plant1.id, plant2.id, plant1.rank, plant2.rank);
 
         if (resultItem) {
           addToCraftInventory(resultItem);
@@ -241,7 +241,7 @@ export default function CraftPage() {
       return c ? `${c.name} (${c.rank})` : "";
     } else if (selectedRecipe === "plantEssence") {
       const p = plantInventory.items.find(item => item.id === id);
-      return p ? `${p.plantName} (${p.rarity}) ${p.count}×` : "";
+      return p ? `${p.plantName} (${p.rank}) ${p.count}×` : "";
     } else if (selectedRecipe === "breedingBuffer") {
       const e = craftInventory.items.find(item => item.id === id);
       const typeName = e?.type === "insectEssence" ? "Essence Insecte" : e?.type === "plantEssence" ? "Essence Plante" : "";
