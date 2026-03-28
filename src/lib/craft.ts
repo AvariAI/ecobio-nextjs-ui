@@ -2,7 +2,7 @@ import { Rank } from "./database";
 import { createItemInInventory } from "./inventory";
 
 // Recipe types
-export type RecipeType = "insectEssence" | "plantEssence" | "breedingBuffer";
+export type RecipeType = "plantEssence" | "breedingBuffer" | "upgrade";
 
 // Craft items (produced by crafting)
 export interface CraftItem {
@@ -27,6 +27,21 @@ export const RANK_TO_NUMBER: Record<Rank, number> = {
   "S": 6,
   "S+": 7
 };
+
+// Rank progression order for upgrade
+export const RANK_UPGRADE_ORDER: Rank[] = ["E", "D", "C", "B", "A", "S", "S+"];
+
+/**
+ * Get next rank from current rank
+ * Returns S+ for S+ (no upgrade possible beyond)
+ */
+export function getNextRank(currentRank: Rank): Rank | null {
+  const currentIndex = RANK_UPGRADE_ORDER.indexOf(currentRank);
+  if (currentIndex === -1 || currentIndex >= RANK_UPGRADE_ORDER.length - 1) {
+    return null; // Already max rank
+  }
+  return RANK_UPGRADE_ORDER[currentIndex + 1];
+}
 
 export const NUMBER_TO_RANK: Record<number, Rank> = {
   1: "E",
@@ -144,6 +159,38 @@ export function craftBreedingBuffer(
 }
 
 /**
+ * Upgrade an item by combining two identical items of same rank/type
+ * Returns item of next rank (S+ cannot be upgraded)
+ */
+export function craftUpgrade(
+  itemType: "insectEssence" | "plantEssence" | "breedingBuffer",
+  currentRank: Rank
+): {
+  resultRank: Rank | null;
+  resultItem: CraftItem | null;
+  error?: string;
+} {
+  const nextRank = getNextRank(currentRank);
+
+  if (!nextRank) {
+    return {
+      resultRank: null,
+      resultItem: null,
+      error: "Cannot upgrade S+ items"
+    };
+  }
+
+  const resultItem: CraftItem = {
+    id: `${itemType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    type: itemType,
+    rank: nextRank,
+    count: 1
+  };
+
+  return { resultRank: nextRank, resultItem };
+}
+
+/**
  * Add item to craft inventory
  * @deprecated Use addCraftedItemToInventory() instead
  */
@@ -234,9 +281,9 @@ export function transformCreatureToEssence(creatureRank: Rank): {
  * Add crafted essence/buffer to main inventory (replaces old craft inventory)
  */
 export function addCraftedItemToInventory(
-  type: RecipeType,
+  type: "insectEssence" | "plantEssence" | "breedingBuffer",
   rank: Rank,
   count: number = 1
 ): void {
-  createItemInInventory(type as "insectEssence" | "plantEssence" | "breedingBuffer", rank, count);
+  createItemInInventory(type, rank, count);
 }
