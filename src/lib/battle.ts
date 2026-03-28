@@ -74,6 +74,7 @@ export interface BattleCreature {
   statusEffects: StatusEffect[];  // Active status effects
   attackCounter: number;  // Track attack count for "every X attacks" traits
   position?: number;  // Slot position (0-4) for multi-row battles
+  logBuffExpiration?: string[];  // Buff types that expired this turn (for logging)
 }
 
 /**
@@ -487,57 +488,42 @@ export function useSkill(
 
   // Determine target for logging
   const isSelfBuff = skill.target === "self" || !target || target === battleCreature;
-  const targetName = isSelfBuff ? "(soi-même)" : target.name;
+  const targetCreature = isSelfBuff ? battleCreature : (target || battleCreature);
+  const targetName = isSelfBuff ? "soi-même" : target.name;
 
-  // Apply skill effect based on skill type
+  // Apply skill effect based on skill type with detailed logging
   if (skill.effect === "defense") {
-    const targetCreature = isSelfBuff ? battleCreature : (target || battleCreature);
     targetCreature.buffs.defenseBuff = skill.value;
     targetCreature.buffs.defenseBuffTurns = skill.duration;
 
-    if (isSelfBuff) {
-      log.push({
-        text: `${battleCreature.name} utilise ${skill.name} (soi-même)!`,
-        type: "skill",
-      });
-    } else {
-      log.push({
-        text: `${battleCreature.name} utilise ${skill.name} sur ${targetName}!`,
-        type: "skill",
-      });
-    }
+    const buffedDef = Math.floor(targetCreature.stats.defense * (1 + skill.value));
+    log.push({
+      text: `${battleCreature.name} utilise ${skill.name} sur ${targetName} (DEF ${targetCreature.stats.defense} → ${buffedDef}, +${Math.floor(skill.value * 100)}% pour ${skill.duration} tours)`,
+      type: "skill",
+    });
   } else if (skill.effect === "dodge") {
-    const targetCreature = isSelfBuff ? battleCreature : (target || battleCreature);
     targetCreature.buffs.dodgeBuff = skill.value;
     targetCreature.buffs.dodgeBuffTurns = skill.duration;
 
-    if (isSelfBuff) {
-      log.push({
-        text: `${battleCreature.name} utilise ${skill.name} (soi-même)!`,
-        type: "skill",
-      });
-    } else {
-      log.push({
-        text: `${battleCreature.name} utilise ${skill.name} sur ${targetName}!`,
-        type: "skill",
-      });
-    }
+    log.push({
+      text: `${battleCreature.name} utilise ${skill.name} sur ${targetName} (Dodge +${Math.floor(skill.value * 100)}% pour ${skill.duration} tours)`,
+      type: "skill",
+    });
   } else if (skill.effect === "attack") {
-    const targetCreature = isSelfBuff ? battleCreature : (target || battleCreature);
     targetCreature.buffs.attackBuff = skill.value;
     targetCreature.buffs.attackBuffTurns = skill.duration;
 
-    if (isSelfBuff) {
-      log.push({
-        text: `${battleCreature.name} utilise ${skill.name} (soi-même)!`,
-        type: "skill",
-      });
-    } else {
-      log.push({
-        text: `${battleCreature.name} utilise ${skill.name} sur ${targetName}!`,
-        type: "skill",
-      });
-    }
+    const buffedAtk = Math.floor(targetCreature.stats.attack * (1 + skill.value));
+    log.push({
+      text: `${battleCreature.name} utilise ${skill.name} sur ${targetName} (ATK ${targetCreature.stats.attack} → ${buffedAtk}, +${Math.floor(skill.value * 100)}% pour ${skill.duration} tours)`,
+      type: "skill",
+    });
+  } else {
+    // Fallback for other skill types
+    log.push({
+      text: `${battleCreature.name} utilise ${skill.name} sur ${targetName}!`,
+      type: "skill",
+    });
   }
 
   battleCreature.skillCooldowns[cooldownKey] = skill.cooldown;
@@ -558,21 +544,37 @@ export function tickCooldownsAndBuffs(battleCreature: BattleCreature): void {
     battleCreature.buffs.defenseBuffTurns--;
     if (battleCreature.buffs.defenseBuffTurns === 0) {
       battleCreature.buffs.defenseBuff = 0;
+      battleCreature.logBuffExpiration = battleCreature.logBuffExpiration || [];
+      battleCreature.logBuffExpiration.push("DEF");
     }
   }
   if (battleCreature.buffs.dodgeBuffTurns > 0) {
     battleCreature.buffs.dodgeBuffTurns--;
     if (battleCreature.buffs.dodgeBuffTurns === 0) {
       battleCreature.buffs.dodgeBuff = 0;
+      battleCreature.logBuffExpiration = battleCreature.logBuffExpiration || [];
+      battleCreature.logBuffExpiration.push("Dodge");
     }
   }
   if (battleCreature.buffs.attackBuffTurns > 0) {
     battleCreature.buffs.attackBuffTurns--;
     if (battleCreature.buffs.attackBuffTurns === 0) {
       battleCreature.buffs.attackBuff = 0;
+      battleCreature.logBuffExpiration = battleCreature.logBuffExpiration || [];
+      battleCreature.logBuffExpiration.push("ATK");
     }
   }
 }
+
+/**
+ * Get and clear buff expiration messages for logging
+ */
+export function getBuffExpirationMessages(battleCreature: BattleCreature): string[] {
+  const messages = battleCreature.logBuffExpiration || [];
+  battleCreature.logBuffExpiration = [];
+  return messages;
+}
+
 
 /**
  * Apply trait regeneration during each turn

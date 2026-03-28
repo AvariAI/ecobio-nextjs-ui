@@ -15,6 +15,7 @@ import {
   applyStatusEffects,
   getEffectiveSpeed,
   createBattleCreature,
+  getBuffExpirationMessages,
 } from "./battle";
 
 export type TeamSize = 1 | 3 | 5;
@@ -253,6 +254,16 @@ export function executeCreatureTurn(
   // Tick cooldowns and status effects for the active creature
   tickCooldownsAndBuffs(activeCreature);
   tickStatusEffects(activeCreature, log);
+
+  // Log buff expirations
+  const expiredBuffs = getBuffExpirationMessages(activeCreature);
+  if (expiredBuffs.length > 0) {
+    const buffNames = expiredBuffs.join(", ");
+    log.push({
+      text: `✨ Buff expiré sur ${activeCreature.name}: ${buffNames}`,
+      type: "info",
+    });
+  }
 
   // For auto-play (AI), choose an action with position-aware targeting
   if (isAuto) {

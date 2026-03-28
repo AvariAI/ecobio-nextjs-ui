@@ -16,6 +16,7 @@ import {
   BattleLogEntry,
   createBattleCreature,
   BattleElement,
+  getBuffExpirationMessages,
 } from "@/lib/battle";
 import { getTraitsByIds, applyTraitStatModifiers } from "@/lib/traits";
 import { TeamSize, BattleTeam, getAllBattleElements, executeCreatureTurn, isTeamBattleOver, getTeamBattleWinner, validateTeamSize, createBattleTeam, countAliveCreatures, switchPositions, selectTargetByPosition } from "@/lib/battle-multi";
@@ -626,14 +627,24 @@ export default function BattlePage() {
 
     const oldDefenseBuff = player.buffs.defenseBuff;
     const oldDodgeBuff = player.buffs.dodgeBuff;
+    const oldAttackBuff = player.buffs.attackBuff;
     tickCooldownsAndBuffs(player);
     tickStatusEffects(player, logCopy);
+
+    // Log buff expirations
+    const expiredBuffs = getBuffExpirationMessages(player);
+    if (expiredBuffs.length > 0) {
+      logCopy.push({ text: `✨ Buff expiré sur ${player.name}: ${expiredBuffs.join(", ")}`, type: "info" });
+    }
 
     if (oldDefenseBuff !== player.buffs.defenseBuff) {
       logCopy.push({ text: `✨ ${player.name}: ${formatBuffChange("DEF buff", oldDefenseBuff, player.buffs.defenseBuff)}`, type: "info" });
     }
     if (oldDodgeBuff !== player.buffs.dodgeBuff) {
       logCopy.push({ text: `${player.name}: ${formatBuffChange("Dodge buff", oldDodgeBuff, player.buffs.dodgeBuff)}`, type: "info" });
+    }
+    if (oldAttackBuff !== player.buffs.attackBuff) {
+      logCopy.push({ text: `${player.name}: ${formatBuffChange("ATK buff", oldAttackBuff, player.buffs.attackBuff)}`, type: "info" });
     }
 
     const damage = executeAttack(player, enemy, logCopy);
@@ -853,14 +864,24 @@ export default function BattlePage() {
 
     const oldDefenseBuff = enemy.buffs.defenseBuff;
     const oldDodgeBuff = enemy.buffs.dodgeBuff;
+    const oldAttackBuff = enemy.buffs.attackBuff;
     tickCooldownsAndBuffs(enemy);
     tickStatusEffects(enemy, logCopy);
+
+    // Log buff expirations
+    const expiredBuffsEnemy = getBuffExpirationMessages(enemy);
+    if (expiredBuffsEnemy.length > 0) {
+      logCopy.push({ text: `✨ Buff expiré sur ${enemy.name}: ${expiredBuffsEnemy.join(", ")}`, type: "info" });
+    }
 
     if (oldDefenseBuff !== enemy.buffs.defenseBuff) {
       logCopy.push({ text: `${enemy.name}: ${formatBuffChange("DEF buff", oldDefenseBuff, enemy.buffs.defenseBuff)}`, type: "info" });
     }
     if (oldDodgeBuff !== enemy.buffs.dodgeBuff) {
       logCopy.push({ text: `${enemy.name}: ${formatBuffChange("Dodge buff", oldDodgeBuff, enemy.buffs.dodgeBuff)}`, type: "info" });
+    }
+    if (oldAttackBuff !== enemy.buffs.attackBuff) {
+      logCopy.push({ text: `${enemy.name}: ${formatBuffChange("ATK buff", oldAttackBuff, enemy.buffs.attackBuff)}`, type: "info" });
     }
 
     logCopy.push({ text: `--- Round ${round}: Enemy Turn ---`, type: "info" });
