@@ -106,16 +106,7 @@ export default function ExplorationPage() {
     }
   }, []);
 
-  // Save missions when they change
-  useEffect(() => {
-    if (missions.length > 0) {
-      localStorage.setItem("ecobio-exploration-missions", JSON.stringify(missions));
-    } else {
-      localStorage.removeItem("ecobio-exploration-missions");
-    }
-  }, [missions]);
-
-  // Check for completed missions (run every 30 seconds while page is open)
+  // Check for completed missions every 30 seconds
   useEffect(() => {
     const checkMissions = () => {
       const completedMissions = missions.filter(m => m.status === "active" && isMissionComplete(m));
@@ -131,8 +122,14 @@ export default function ExplorationPage() {
               ...mission,
               status: results.survivors.length > 0 ? ("completed" as const) : ("failed" as const),
               results: {
-                ...results,
-                missionSuccess: results.survivors.length > 0
+                loot: results.loot,
+                totalLoot: results.loot.length,
+                casualties: results.casualties,
+                casualtyIds: results.casualtyIds,
+                casualtiesData: results.casualtiesData,
+                survivors: results.survivors,
+                missionSuccess: results.survivors.length > 0,
+                lootReduction: results.lootReduction
               }
             };
           }
@@ -176,6 +173,15 @@ export default function ExplorationPage() {
     };
   }, [missions, collection]);
 
+  // Save missions when updated
+  useEffect(() => {
+    if (missions.length > 0) {
+      localStorage.setItem("ecobio-exploration-missions", JSON.stringify(missions));
+    } else {
+      localStorage.removeItem("ecobio-exploration-missions");
+    }
+  }, [missions]);
+
   // End mission immediately (instant completion, no cost for now)
   const handleEndMissionNow = (mission: ExplorationMission) => {
     const teamCreatures = collection.filter(c => mission.team.includes(c.id));
@@ -191,6 +197,8 @@ export default function ExplorationPage() {
             loot: results.loot,
             totalLoot: results.loot.length,
             casualties: results.casualties,
+            casualtyIds: results.casualtyIds,
+            casualtiesData: results.casualtiesData,
             survivors: results.survivors,
             missionSuccess: results.survivors.length > 0,
             lootReduction: results.lootReduction,
@@ -277,9 +285,8 @@ export default function ExplorationPage() {
         };
       }
 
-      // Dead creatures mark as not on mission (they're back, just dead)
+      // Dead creatures are removed from collection
       if (mission.results!.casualties > 0 && mission.team.includes(creature.id) && !mission.results!.survivors.includes(creature.id)) {
-        // Remove from collection - they died
         return null;
       }
 
@@ -297,435 +304,423 @@ export default function ExplorationPage() {
     setShowResults(false);
 
     if (mission.results && mission.results.casualties > 0) {
-      alert(`${mission.results.casualties} créature(s) sont morte(s) dans la mission. Elles ont été retirées de ta collection.`);
+      alert(`${mission.results.casualties} créature(s) sont mortes pendant la mission.`);
     }
   };
 
-  // Select creature for team slot
-  const handleCreatureSelect = (creatureId: string) => {
-    if (selectedSlotIndex === null) return;
+  // Remove creature from team
+  const handleRemoveFromTeam = (creatureId: string) => {
+    setSelectedTeam(selectedTeam.filter(id => id !== creatureId));
+  };
+
+  // Select creature slot
+  const handleSelectCreatureSlot = (index: number) => {
+    setSelectedSlotIndex(index);
+    setShowCreatureSelector(true);
+  };
+
+  // Select creature for slot
+  const handleSelectCreature = (creature: HuntedCreature) => {
+    if (selectedSlotIndex === null || selectedSlotIndex >= 5) return;
 
     const newTeam = [...selectedTeam];
-    // Remove from any existing slot
-    const existingIndex = newTeam.indexOf(creatureId);
-    if (existingIndex !== -1) {
-      newTeam[existingIndex] = "";
-    }
-    // Set in selected slot
-    newTeam[selectedSlotIndex] = creatureId;
-
-    setSelectedTeam(newTeam.filter(id => id !== ""));
+    newTeam[selectedSlotIndex] = creature.id;
+    setSelectedTeam(newTeam);
     setShowCreatureSelector(false);
     setSelectedSlotIndex(null);
   };
 
-  const durationOptions: DurationOption[] = ["15min", "30min", "1h", "2h", "4h", "8h"];
+  // Get available creatures for selection
+  const getAvailableCreatures = () => {
+    return collection.filter(c =>
+      !c.isOnMission &&
+      !selectedTeam.includes(c.id)
+    );
+  };
 
-  // Calculate average exploration level
-  const teamCreatures = collection.filter(c => selectedTeam.includes(c.id));
-  const avgExplorationLevel = selectedTeam.length > 0
-    ? teamCreatures.reduce((sum, c) => sum + (c.explorationLevel || 0), 0) / selectedTeam.length
-    : 0;
-  const unlockedDurations = getUnlockedDurations(Math.floor(avgExplorationLevel));
-  const maxConcurrent = getMaxConcurrentMissions(Math.floor(avgExplorationLevel));
-  const activeMissions = missions.filter(m => m.status === "active").length;
-  const availableCreatures = collection.filter(c => !c.isOnMission && !c.isFavorite);
+  // Format time remaining
+  const formatTimeRemaining = (endTime: number): string => {
+    const remaining = endTime - Date.now();
+    if (remaining <= 0) return "Prêt";
+
+    const minutes = Math.floor(remaining / 60000);
+    const seconds = Math.floor((remaining % 60000) / 1000);
+
+    return `${minutes}m ${seconds}s`;
+  };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-8">
+    <main className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
       <div className="max-w-6xl mx-auto">
-        <header className="text-center mb-8">
-          <h1 className="text-6xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent mb-4">
-            🗺️ Exploration
-          </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300">
-            Envois tes créatures en mission pour récolter des plantes rares
-          </p>
-        </header>
+        <Link href="/" className="text-amber-700 dark:text-amber-300 mb-6 inline-block">← Retour</Link>
+        <h1 className="text-5xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent mb-2">🗺️ Exploration</h1>
+        <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">Envoie tes créatures en mission pour récolter des ressources rares!</p>
 
-        {/* Exploration Level Display */}
-        {selectedTeam.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
-            <h3 className="text-2xl font-bold text-amber-800 dark:text-amber-200 mb-4">
-              📊 Niveau d'Exploration Moyen: {Math.floor(avgExplorationLevel)}
-            </h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-lg">Missions simultanées: {activeMissions}/{maxConcurrent}</p>
-              </div>
-              <div>
-                <p className="text-lg">Durées débloquées:</p>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {durationOptions.map(d => (
-                    <span
-                      key={d}
-                      className={`px-3 py-1 rounded-full text-sm ${
-                        unlockedDurations.includes(d)
-                          ? "bg-green-600 text-white"
-                          : "bg-gray-600 text-gray-400"
-                      }`}
-                    >
-                      {d}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Start New Mission */}
+        {/* Mission Creation Section */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-8">
-          <h2 className="text-3xl font-bold text-amber-800 dark:text-amber-200 mb-6">
-            🚀 Nouvelle Mission
-          </h2>
+          <h2 className="text-3xl font-bold text-amber-800 dark:text-amber-200 mb-6">Créer une Mission</h2>
 
-          {/* Team Selection */}
+          {/* Duration Selection */}
           <div className="mb-6">
-            <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
-              Équipe ({selectedTeam.length}/5 - {availableCreatures.length} disponibles)
-            </h3>
-
-            <div className="grid md:grid-cols-5 gap-4">
-              {Array(5).fill(0).map((_, i) => (
-                <div
-                  key={i}
-                  className={`border-4 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
-                    selectedTeam[i]
-                      ? "bg-amber-100 border-amber-500 dark:bg-amber-900 dark:border-amber-400"
-                      : "bg-gray-100 border-gray-400 dark:bg-gray-800 dark:border-gray-600 hover:border-amber-300"
+            <label className="block text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">Durée de la mission</label>
+            <div className="flex flex-wrap gap-3">
+              {(["15min", "30min", "1h", "2h", "4h", "8h"] as DurationOption[]).map(duration => (
+                <button
+                  key={duration}
+                  onClick={() => setSelectedDuration(duration)}
+                  className={`px-6 py-3 rounded-xl font-semibold transition-all ${
+                    selectedDuration === duration
+                      ? "bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
                   }`}
-                  onClick={() => {
-                    if (selectedTeam[i]) {
-                      // Remove from team
-                      const newTeam = selectedTeam.filter(id => id !== selectedTeam[i]);
-                      setSelectedTeam(newTeam);
-                    } else {
-                      // Open creature selector
-                      setSelectedSlotIndex(i);
-                      setShowCreatureSelector(true);
-                    }
-                  }}
                 >
-                  {selectedTeam[i] ? (
-                    <div>
-                      { (() => {
-                        const creature = collection.find(c => c.id === selectedTeam[i]);
-                        if (!creature) return null;
-                        return (
-                          <>
-                            <img
-                              src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
-                              alt={creature.name}
-                              className="w-16 h-16 mx-auto mb-2 object-cover rounded-lg"
-                            />
-                            <p className="font-bold text-sm">{creature.name}</p>
-                            <span className={`text-xs px-2 py-0.5 rounded ${RANK_BADGE_COLORS[creature.finalStats.rank]} text-white`}>
-                              R{creature.finalStats.rank} L{creature.level}
-                            </span>
-                            <p className="text-xs text-gray-500 mt-1">Clic pour retirer</p>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="text-4xl mb-2">+</p>
-                      <p className="text-gray-600 dark:text-gray-400">Ajouter</p>
-                    </div>
-                  )}
-                </div>
+                  {duration === "15min" ? "15 min" :
+                   duration === "30min" ? "30 min" :
+                   duration === "1h" ? "1 heure" :
+                   duration === "2h" ? "2 heures" :
+                   duration === "4h" ? "4 heures" : "8 heures"}
+                </button>
               ))}
             </div>
           </div>
 
-          {/* Duration Selection */}
+          {/* Team Selection */}
           <div className="mb-6">
-            <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
-              Durée de Mission
-            </h3>
-            <div className="grid md:grid-cols-3 gap-4">
-              {durationOptions.map(duration => (
-                <button
-                  key={duration}
-                  className={`p-4 rounded-xl border-4 transition-all ${
-                    selectedDuration === duration
-                      ? "bg-amber-600 text-white border-amber-700"
-                      : unlockedDurations.includes(duration)
-                      ? "bg-white dark:bg-gray-700 border-amber-600 hover:bg-amber-100 dark:hover:bg-gray-600"
-                      : "bg-gray-300 border-gray-500 text-gray-500 cursor-not-allowed dark:bg-gray-800 dark:border-gray-700"
-                  }`}
-                  onClick={() => unlockedDurations.includes(duration) && setSelectedDuration(duration)}
-                  disabled={!unlockedDurations.includes(duration)}
+            <label className="block text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">Équipe (1-5 créatures)</label>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              {[0, 1, 2, 3, 4].map(index => (
+                <div
+                  key={index}
+                  onClick={() => handleSelectCreatureSlot(index)}
+                  className="h-48 border-4 border-dashed border-amber-600 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-gray-700 transition-all"
                 >
-                  <p className="text-2xl font-bold">{duration}</p>
-                  <p className="text-sm">XP: {calculateExplorationXP(duration)}</p>
-                </button>
+                  {selectedTeam[index] ? (
+                    (() => {
+                      const creature = collection.find(c => c.id === selectedTeam[index]);
+                      return creature ? (
+                        <>
+                          <img
+                            src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
+                            alt={creature.name}
+                            className="w-20 h-20 object-cover rounded-lg mb-2"
+                          />
+                          <p className="font-bold text-center">{creature.name}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-sm">Lvl {creature.level}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded ${RANK_BADGE_COLORS[creature.finalStats.rank]} text-white`}>
+                              {creature.finalStats.rank}
+                            </span>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveFromTeam(creature.id);
+                            }}
+                            className="mt-2 text-red-600 hover:text-red-800 text-sm font-semibold"
+                          >
+                            Retirer
+                          </button>
+                        </>
+                      ) : null;
+                    })()
+                  ) : (
+                    <>
+                      <span className="text-4xl mb-2">👤</span>
+                      <p className="text-amber-700 dark:text-amber-300">Emplacement {index + 1}</p>
+                    </>
+                  )}
+                </div>
               ))}
             </div>
           </div>
 
           {/* Start Mission Button */}
           <button
-            className="w-full bg-amber-600 hover:bg-amber-700 text-white text-2xl font-bold py-4 rounded-xl transition-all disabled:bg-gray-500 disabled:cursor-not-allowed"
-            disabled={selectedTeam.length === 0}
             onClick={handleStartMission}
+            disabled={selectedTeam.length === 0}
+            className={`w-full py-4 text-xl font-bold rounded-xl transition-all ${
+              selectedTeam.length === 0
+                ? "bg-gray-400 text-white cursor-not-allowed"
+                : "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-lg"
+            }`}
           >
-            🚀 Envoyer en Mission
+            🚀 Démarrer la Mission
           </button>
         </div>
 
-        {/* Active Missions */}
+        {/* Active Missions Section */}
         {missions.filter(m => m.status === "active").length > 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-8">
-            <h2 className="text-3xl font-bold text-amber-800 dark:text-amber-200 mb-6">
-              🕐 Missions en Cours
-            </h2>
-
-            <div className="space-y-4">
-              {missions
-                .filter(m => m.status === "active")
-                .map(mission => {
-                  const missionCreatures = collection.filter(c => mission.team.includes(c.id));
-                  return (
-                    <div
-                      key={mission.id}
-                      className="border-2 border-amber-300 rounded-xl p-4 dark:border-amber-700"
-                    >
-                      <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-xl font-bold">
-                          Équipe de {mission.team.length}: {missionCreatures.map(c => c.name).join(", ")}
-                        </h3>
-                        <span className="text-lg bg-amber-200 px-3 py-1 rounded-full dark:bg-amber-900">
-                          {mission.duration}
-                        </span>
-                      </div>
-
-                      <p className="text-gray-600 dark:text-gray-400 mb-2">
-                        Reste: {Math.max(0, Math.ceil((mission.endTime - Date.now()) / (60 * 1000)))} min
+            <h2 className="text-3xl font-bold text-amber-800 dark:text-amber-200 mb-6">Missions en Cours</h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {missions.filter(m => m.status === "active").map(mission => (
+                <div key={mission.id} className="bg-gradient-to-br from-amber-100 to-orange-100 dark:from-gray-700 dark:to-gray-600 rounded-xl p-6 border-2 border-amber-400">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <p className="font-bold text-lg text-amber-800 dark:text-amber-200">
+                        {mission.duration === "15min" ? "15 min" :
+                         mission.duration === "30min" ? "30 min" :
+                         mission.duration === "1h" ? "1 heure" :
+                         mission.duration === "2h" ? "2 heures" :
+                         mission.duration === "4h" ? "4 heures" : "8 heures"}
                       </p>
-
-                      <div className="flex justify-end mb-2">
-                        <button
-                          className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg transition-all"
-                          onClick={() => handleEndMissionNow(mission)}
-                        >
-                          Terminer Maintenant (No Cost)
-                        </button>
-                      </div>
-
-                      <div className="w-full bg-amber-200 rounded-full h-3 dark:bg-amber-900">
-                        <div
-                          className="bg-amber-600 h-3 rounded-full transition-all"
-                          style={{
-                            width: `${Math.max(0, Math.min(100, ((mission.endTime - Date.now()) / (mission.endTime - mission.startTime)) * 100))}%`
-                          }}
-                        />
-                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{mission.team.length} créature(s)</p>
                     </div>
-                  );
-                })}
+                    <button
+                      onClick={() => handleEndMissionNow(mission)}
+                      className="text-sm px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    >
+                      Terminer
+                    </button>
+                  </div>
+
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Temps restant</p>
+                    <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">
+                      {formatTimeRemaining(mission.endTime)}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Équipe</p>
+                    <div className="flex -space-x-2">
+                      {mission.team.slice(0, 3).map((creatureId, idx) => {
+                        const creature = collection.find(c => c.id === creatureId);
+                        return creature ? (
+                          <div
+                            key={idx}
+                            className="relative"
+                            title={creature.name}
+                          >
+                            <img
+                              src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
+                              alt={creature.name}
+                              className="w-10 h-10 rounded-full border-2 border-white dark:border-gray-600 object-cover"
+                            />
+                            <span className={`absolute -bottom-1 -right-1 text-[8px] px-1 rounded-full text-white ${RANK_BADGE_COLORS[creature.finalStats.rank]}`}>
+                              {creature.finalStats.rank}
+                            </span>
+                          </div>
+                        ) : null;
+                      })}
+                      {mission.team.length > 3 && (
+                        <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-sm font-bold text-gray-700 dark:text-gray-300 border-2 border-white dark:border-gray-600">
+                          +{mission.team.length - 3}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Completed Missions */}
+        {/* Completed Missions Section */}
         {missions.filter(m => m.status === "completed" || m.status === "failed").length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-            <h2 className="text-3xl font-bold text-amber-800 dark:text-amber-200 mb-6">
-              🎉 Missions Terminées
-            </h2>
-
-            <div className="space-y-4">
-              {missions
-                .filter(m => m.status === "completed" || m.status === "failed")
-                .map(mission => {
-                  const isSuccessful = mission.status === "completed";
-                  return (
-                    <div
-                      key={mission.id}
-                      className={`border-2 rounded-xl p-4 ${isSuccessful ? "border-green-500 bg-green-50 dark:bg-green-900" : "border-red-500 bg-red-50 dark:bg-red-900"}`}
-                    >
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xl font-bold">
-                          Mission {mission.duration} {isSuccessful ? "Terminée!" : "Échouée!"}
-                        </h3>
-                        <button
-                          className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-xl"
-                          onClick={() => {
-                            setSelectedMission(mission);
-                            setShowResults(true);
-                          }}
-                        >
-                          Voir Loot
-                        </button>
-                      </div>
-
-                      <div className="grid md:grid-cols-3 gap-4">
-                        <div>
-                          <p className="font-bold mb-1">🎁 Loot ({mission.results?.loot.length || 0})</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {mission.results?.loot.map(p => p.name).join(", ") || "Aucun loot"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="font-bold mb-1">💀 Pertes ({mission.results?.casualties || 0})</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {mission.results?.casualties} créature(s) morte(s)
-                          </p>
-                        </div>
-                        <div>
-                          <p className="font-bold mb-1">⭐ XP Gagné</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {calculateExplorationXP(mission.duration)} XP par survivant
-                          </p>
-                        </div>
-                      </div>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-8">
+            <h2 className="text-3xl font-bold text-amber-800 dark:text-amber-200 mb-6">Missions Terminées</h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {missions.filter(m => m.status === "completed" || m.status === "failed").map(mission => (
+                <div
+                  key={mission.id}
+                  onClick={() => {
+                    setSelectedMission(mission);
+                    setShowResults(true);
+                  }}
+                  className={`bg-gradient-to-br rounded-xl p-6 border-2 cursor-pointer transition-all ${
+                    mission.status === "completed"
+                      ? "from-green-100 to-emerald-100 dark:from-green-900 dark:to-emerald-900 border-green-400 hover:from-green-100 hover:to-emerald-100"
+                      : "from-red-100 to-rose-100 dark:from-red-900 dark:to-rose-900 border-red-400 hover:from-red-100 hover:to-rose-100"
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <p className="font-bold text-lg">
+                        {mission.duration === "15min" ? "15 min" :
+                         mission.duration === "30min" ? "30 min" :
+                         mission.duration === "1h" ? "1 heure" :
+                         mission.duration === "2h" ? "2 heures" :
+                         mission.duration === "4h" ? "4 heures" : "8 heures"}
+                      </p>
+                      <p className={`text-sm ${mission.status === "completed" ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300"}`}>
+                        {mission.status === "completed" ? "✅ Réussie" : "❌ Échouée"}
+                      </p>
                     </div>
-                  );
-                })}
+                    {mission.status === "completed" && (
+                      <span className="text-3xl">🎉</span>
+                    )}
+                  </div>
+
+                  {mission.results && (
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {mission.results.casualties} mort(s) • {mission.results.totalLoot} loot
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         )}
 
         {/* Creature Selector Modal */}
         {showCreatureSelector && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-3xl font-bold">Sélectionner une Créature</h2>
-                  <button
-                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-3xl"
-                    onClick={() => {
-                      setShowCreatureSelector(false);
-                      setSelectedSlotIndex(null);
-                    }}
-                  >
-                    ✕
-                  </button>
-                </div>
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
+                  Sélectionner une créature
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowCreatureSelector(false);
+                    setSelectedSlotIndex(null);
+                  }}
+                  className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-2xl"
+                >
+                  ✕
+                </button>
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {availableCreatures.map(creature => (
-                    <div
-                      key={creature.id}
-                      className={`border-2 rounded-xl p-4 cursor-pointer transition-all hover:shadow-lg ${
-                        selectedTeam.includes(creature.id)
-                          ? "border-amber-500 bg-amber-50 dark:bg-amber-900"
-                          : "border-gray-300 hover:border-amber-400 dark:border-gray-600"
-                      }`}
-                      onClick={() => handleCreatureSelect(creature.id)}
-                    >
-                      <div className="flex items-center gap-3 mb-2">
-                        <img
-                          src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
-                          alt={creature.name}
-                          className="w-12 h-12 object-cover rounded-lg"
-                        />
-                        <div>
-                          <p className="font-bold">{creature.name}</p>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs px-2 py-0.5 rounded ${RANK_BADGE_COLORS[creature.finalStats.rank]} text-white`}>
-                              R{creature.finalStats.rank}
-                            </span>
-                            <span className="text-xs text-gray-500">L{creature.level}</span>
-                          </div>
-                        </div>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {getAvailableCreatures().map(creature => (
+                  <div
+                    key={creature.id}
+                    onClick={() => handleSelectCreature(creature)}
+                    className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 border-2 border-green-600 hover:border-green-500 cursor-pointer transition-all"
+                  >
+                    <img
+                      src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
+                      alt={creature.name}
+                      className="w-20 h-20 object-cover rounded-lg mx-auto mb-3"
+                    />
+                    <p className="font-bold text-center text-gray-800 dark:text-gray-200">{creature.name}</p>
+                    <div className="flex items-center justify-center gap-2 mt-1">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Lvl {creature.level}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded text-white ${RANK_BADGE_COLORS[creature.finalStats.rank]}`}>
+                        {creature.finalStats.rank}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mt-3 text-xs">
+                      <div className="text-amber-700 dark:text-amber-300">
+                        ⭐ XP: {creature.explorationXP || 0}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        <p>🌟 Exp Lvl: {creature.explorationLevel}</p>
-                        <p>⭐ Exp XP: {creature.explorationXP}/{creature.explorationXPToNext}</p>
+                      <div className="text-amber-700 dark:text-amber-300">
+                        Lvl {creature.explorationLevel || 0}
                       </div>
                     </div>
-                  ))}
-                  {availableCreatures.length === 0 && (
-                    <p className="col-span-3 text-center text-gray-500 py-4">
-                      Aucune créature disponible. Favoris et missions en cours ne peuvent pas être envoyées.
-                    </p>
-                  )}
-                </div>
+                  </div>
+                ))}
               </div>
+
+              {getAvailableCreatures().length === 0 && (
+                <p className="text-center text-gray-600 dark:text-gray-400 py-8">
+                  Aucune créature disponible. Elles sont peut-être toutes en mission!
+                </p>
+              )}
             </div>
           </div>
         )}
 
-        {/* Results Modal */}
+        {/* Mission Results Modal */}
         {showResults && selectedMission && selectedMission.results && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-3xl font-bold">
-                    🎉 Mission {selectedMission.duration} Terminée!
-                  </h2>
-                  <button
-                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-3xl"
-                    onClick={() => setShowResults(false)}
-                  >
-                    ✕
-                  </button>
-                </div>
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-3xl font-bold text-gray-800 dark:text-gray-200">
+                  {selectedMission.results.missionSuccess ? "🎉 Mission Réussie!" : "❌ Mission Échouée"}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowResults(false);
+                    setSelectedMission(null);
+                  }}
+                  className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-2xl"
+                >
+                  ✕
+                </button>
+              </div>
 
-                <div className="space-y-6">
-                  {/* Loot Results */}
-                  <div>
-                    <h3 className="text-2xl font-bold mb-4">🎁 Loot Obtenus</h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      {selectedMission.results.loot.length > 0 ? (
-                        selectedMission.results.loot.map((plant, i) => (
-                          <div
-                            key={i}
-                            className={`border-2 rounded-xl p-4 ${RANK_BORDER_COLORS[plant.rarity] || "border-gray-600 bg-gray-50"}`}
-                          >
-                            <div className="flex justify-between items-start mb-2">
-                              <p className="font-bold text-lg">{plant.name}</p>
-                              <span className={`text-xs px-2 py-1 rounded ${RARITY_COLORS[plant.rarity] || "text-gray-600 bg-gray-200"}`}>
-                                Rank {plant.rarity}
+              {/* Loot Section */}
+              {selectedMission.results.loot.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-2xl font-bold mb-4 text-green-700">🌿 Loot Obtenu</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {selectedMission.results.loot.map((plant, idx) => (
+                      <div
+                        key={idx}
+                        className={`border-2 rounded-xl p-4 ${RANK_BORDER_COLORS[plant.rarity] || "border-gray-600 bg-gray-50"}`}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="font-bold text-lg">{plant.name}</p>
+                          <span className={`text-xs px-2 py-1 rounded ${RARITY_COLORS[plant.rarity] || "text-gray-600 bg-gray-200"}`}>
+                            Rank {plant.rarity}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{plant.description}</p>
+                        <p className="text-2xl mt-2">{plant.icon}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Casualties */}
+              {selectedMission.results.casualties > 0 && (
+                <div>
+                  <h3 className="text-2xl font-bold mb-4 text-red-600">💀 Pertes</h3>
+                  <p className="text-lg mb-4">{selectedMission.results.casualties} créature(s) est/sont morte(s)</p>
+
+                  {/* Display deceased creatures */}
+                  {selectedMission.results.casualtiesData && selectedMission.results.casualtiesData.length > 0 && (
+                    <div className="bg-red-50 dark:bg-red-950 rounded-lg p-4 mb-4">
+                      {selectedMission.results.casualtiesData.map((creature: any, idx: number) => (
+                        <div key={idx} className="flex items-center gap-3 mb-3 last:mb-0">
+                          <img
+                            src={getCreatureImage(creature.creatureId || creature.creatureType, creature.finalStats.rank)}
+                            alt={creature.name}
+                            className="w-12 h-12 object-cover rounded border border-red-600 filter grayscale opacity-50"
+                          />
+                          <div className="flex-1">
+                            <p className="font-bold text-red-700 dark:text-red-300">{creature.name}</p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-gray-600 dark:text-gray-400">Lvl {creature.level}</span>
+                              <span className={`text-xs px-2 py-1 rounded ${RANK_BADGE_COLORS[creature.finalStats.rank as Rank]} text-white`}>
+                                {creature.finalStats.rank}
                               </span>
                             </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">{plant.description}</p>
-                            <p className="text-2xl mt-2">{plant.icon}</p>
                           </div>
-                        ))
-                      ) : (
-                        <p className="text-gray-600 dark:text-gray-400 col-span-2">
-                          Aucun loot obtenu (mission échouée)
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Casualties */}
-                  {selectedMission.results.casualties > 0 && (
-                    <div>
-                      <h3 className="text-2xl font-bold mb-4 text-red-600">💀 Pertes</h3>
-                      <p className="text-lg">{selectedMission.results.casualties} créature(s) est/sont morte(s)</p>
-                      <p className="text-gray-600 dark:text-gray-400">
-                        Les créatures mortes seront retirées de ta collection.
-                      </p>
+                          <span className="text-2xl opacity-50">💀</span>
+                        </div>
+                      ))}
                     </div>
                   )}
 
-                  {/* Survivors XP */}
-                  {selectedMission.results.survivors.length > 0 && (
-                    <div>
-                      <h3 className="text-2xl font-bold mb-4 text-amber-600">⭐ XP d'Exploration</h3>
-                      <p className="text-lg">
-                        {selectedMission.results.survivors.length} survivant(s) x {calculateExplorationXP(selectedMission.duration)} XP = {calculateExplorationXP(selectedMission.duration) * selectedMission.results.survivors.length} XP total
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Collect Button */}
-                  <button
-                    className="w-full bg-amber-600 hover:bg-amber-700 text-white text-2xl font-bold py-4 rounded-xl transition-all"
-                    onClick={() => handleCollectResults(selectedMission)}
-                  >
-                    Récupérer Équipe et Loot
-                  </button>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Les créatures mortes seront retirées de ta collection.
+                  </p>
                 </div>
-              </div>
+              )}
+
+              {/* Survivors XP */}
+              {selectedMission.results.survivors.length > 0 && (
+                <div>
+                  <h3 className="text-2xl font-bold mb-4 text-amber-600">⭐ XP d'Exploration</h3>
+                  <p className="text-lg">
+                    {selectedMission.results.survivors.length} survivant(s) x {calculateExplorationXP(selectedMission.duration)} XP = {calculateExplorationXP(selectedMission.duration) * selectedMission.results.survivors.length} XP total
+                  </p>
+                </div>
+              )}
+
+              {/* Collect Button */}
+              <button
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white text-2xl font-bold py-4 rounded-xl transition-all"
+                onClick={() => handleCollectResults(selectedMission)}
+              >
+                Récupérer Équipe et Loot
+              </button>
             </div>
           </div>
         )}

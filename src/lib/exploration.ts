@@ -15,6 +15,8 @@ export interface ExplorationMission {
     loot: PlantResource[];
     totalLoot: number;
     casualties: number; // Number of creatures that died
+    casualtyIds: string[]; // IDs of creatures that died
+    casualtiesData: any[]; // Full creature data for display purposes
     survivors: string[]; // IDs of surviving creatures
     missionSuccess: boolean; // true if at least 1 creature survived
     lootReduction: number; // 0-1 based on deaths
@@ -162,11 +164,14 @@ export function simulateExplorationMission(
   creatures: any[] // HuntedCreature objects
 ): {
   casualties: number;
+  casualtyIds: string[];
+  casualtiesData: any[]; // Full creature data for display purposes
   survivors: string[];
   loot: PlantResource[];
   lootReduction: number;
 } {
   const casualties: string[] = [];
+  const casualtiesData: any[] = [];
   const survivors: string[] = [];
 
   // Process each creature
@@ -176,6 +181,7 @@ export function simulateExplorationMission(
 
     if (roll < deathChance) {
       casualties.push(creature.id);
+      casualtiesData.push(creature); // Store full creature data
     } else {
       survivors.push(creature.id);
     }
@@ -192,6 +198,8 @@ export function simulateExplorationMission(
 
   return {
     casualties: casualtyCount,
+    casualtyIds: casualties,
+    casualtiesData,
     survivors,
     loot,
     lootReduction
