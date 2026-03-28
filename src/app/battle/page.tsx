@@ -18,7 +18,7 @@ import {
   BattleElement,
 } from "@/lib/battle";
 import { getTraitsByIds, applyTraitStatModifiers } from "@/lib/traits";
-import { TeamSize, BattleTeam, getAllBattleElements, executeCreatureTurn, isTeamBattleOver, getTeamBattleWinner, validateTeamSize, createBattleTeam, countAliveCreatures, switchPositions } from "@/lib/battle-multi";
+import { TeamSize, BattleTeam, getAllBattleElements, executeCreatureTurn, isTeamBattleOver, getTeamBattleWinner, validateTeamSize, createBattleTeam, countAliveCreatures, switchPositions, selectTargetByPosition } from "@/lib/battle-multi";
 import { MultiCreatureTestSelector, MultiCreatureCollectionSelector, SlotConfig } from "./multi-battle-components";
 import { MultiCreatureBattleDisplay, MultiCreatureBattleCompleteDisplay, BattleLogDisplay as MultiBattleLogDisplay } from "./multi-battle-display";
 import Link from "next/link";
@@ -129,6 +129,7 @@ export default function BattlePage() {
   const [currentActingCreature, setCurrentActingCreature] = useState<BattleCreature | null>(null);
   const [round, setRound] = useState(1);
   const [turnOrder, setTurnOrder] = useState<BattleElement[]>([]);
+  const [isActionProcessing, setIsActionProcessing] = useState(false);
 
   // Load collection from localStorage
   useEffect(() => {
@@ -474,6 +475,7 @@ export default function BattlePage() {
       });
       setLog(logCopy);
       setPhase("complete");
+      setIsActionProcessing(false);
       return;
     }
 
@@ -502,6 +504,7 @@ export default function BattlePage() {
       });
       setLog(logCopy);
       setPhase("complete");
+      setIsActionProcessing(false);
       return;
     }
 
@@ -527,6 +530,7 @@ export default function BattlePage() {
       });
       setLog(logCopy);
       setPhase("complete");
+      setIsActionProcessing(false);
       return;
     }
 
@@ -571,15 +575,20 @@ export default function BattlePage() {
   };
 
   const handleAttack = () => {
+    if (isActionProcessing) return; // Prevent multiple actions in same turn
+
     // Multi-creature mode: auto-execute current creature's turn
     if (teamSize > 1) {
+      setIsActionProcessing(true);
       executeMultiCreatureTurn(false);
+      setTimeout(() => setIsActionProcessing(false), 1000);
       return;
     }
 
     // 1v1 mode: use original logic
     if (!player || !enemy || phase !== "battle" || turn !== "player") return;
 
+    setIsActionProcessing(true);
     const logCopy = [...log];
     logCopy.push({ text: `--- Round ${round}: Player Turn ---`, type: "info" });
     // Apply status effects at start of turn (check for stun)
@@ -588,7 +597,10 @@ export default function BattlePage() {
     if (turnSkipped) {
       // Player is stunned - skip turn and pass to enemy
       setPlayer({ ...player });
-      setTimeout(() => enemyTurn(logCopy), 1500);
+      setTimeout(() => {
+        setIsActionProcessing(false);
+        enemyTurn(logCopy);
+      }, 1500);
       return;
     }
 
@@ -625,13 +637,20 @@ export default function BattlePage() {
     setEnemy({ ...enemy });
 
     if (damage === 0) {
-      setTimeout(() => enemyTurn(logCopy), 1500);
+      setTimeout(() => {
+        setIsActionProcessing(false);
+        enemyTurn(logCopy);
+      }, 1500);
     } else if (enemy.currentHP <= 0) {
       logCopy.push({ text: `🏆 VICTORY!`, type: "victory" });
       setLog(logCopy);
       setPhase("complete");
+      setIsActionProcessing(false);
     } else {
-      setTimeout(() => enemyTurn(logCopy), 1500);
+      setTimeout(() => {
+        setIsActionProcessing(false);
+        enemyTurn(logCopy);
+      }, 1500);
     }
   };
 
@@ -651,6 +670,8 @@ export default function BattlePage() {
   };
 
   const handleSkill = () => {
+    if (isActionProcessing) return; // Prevent multiple actions in same turn
+
     // Multi-creature mode: use skill for current creature
     if (teamSize > 1 && currentActingCreature && currentActingCreature.creature.skill) {
       const skill = currentActingCreature.creature.skill;
@@ -659,15 +680,37 @@ export default function BattlePage() {
 
       if (currentCooldown > 0 || !playerTeam || !enemyTeam) return;
 
+      setIsActionProcessing(true);
       const logCopy = [...log];
-      const success = useSkill(currentActingCreature, logCopy);
+
+      // Determine skill target based on skill type
+      const isPlayerCreature = playerTeam.creatures.includes(currentActingCreature);
+      const allyTeam = isPlayerCreature ? playerTeam : enemyTeam;
+      const enemyTeamForTarget = isPlayerCreature ? enemyTeam : playerTeam;
+
+      let target: BattleCreature | null = null;
+      const targetType = skill.target || "self";
+
+      if (targetType === "self") {
+        target = currentActingCreature;
+      } else if (targetType === "front" || targetType === "back" || targetType === "random") {
+        // Support buff - target allies using position-aware selection
+        target = selectTargetByPosition(currentActingCreature, allyTeam, teamSize, targetType);
+        if (!target || !allyTeam.creatures.includes(target)) {
+          // Fallback to self if no valid ally target found
+          target = currentActingCreature;
+        }
+      } else if (targetType === "all") {
+        // AOE skills - for now, fallback to self as a single target
+        target = currentActingCreature;
+      } else {
+        // Target enemies for damage skills (future)
+        target = selectTargetByPosition(currentActingCreature, enemyTeamForTarget, teamSize, "front");
+      }
+
+      const success = useSkill(currentActingCreature, logCopy, target);
 
       if (success) {
-        logCopy.push({
-          text: `✨ ${currentActingCreature.name} utilise ${skill.name}!`,
-          type: "skill",
-        });
-
         // Update the team with new state
         if (playerTeam.creatures.includes(currentActingCreature)) {
           setPlayerTeam({ ...playerTeam });
@@ -677,8 +720,13 @@ export default function BattlePage() {
 
         setLog(logCopy);
 
-        // Move to next turn
-        // (This will be handled by the auto-trigger effect)
+        // Skill use consumes the entire turn - move to next creature
+        setTimeout(() => {
+          setIsActionProcessing(false);
+          executeMultiCreatureTurn(false);
+        }, 1000);
+      } else {
+        setIsActionProcessing(false);
       }
       return;
     }
@@ -686,6 +734,7 @@ export default function BattlePage() {
     // 1v1 mode: use original logic
     if (!player || !player.creature.skill || phase !== "battle" || turn !== "player") return;
 
+    setIsActionProcessing(true);
     const skill = player.creature.skill;
     const logCopy = [...log];
     logCopy.push({ text: `--- Round ${round}: Player Turn (Skill) ---`, type: "info" });
@@ -728,7 +777,12 @@ export default function BattlePage() {
 
     setLog(logCopy);
     setPlayer({ ...player });
-    setTimeout(() => enemyTurn(logCopy), 1500);
+
+    // Skill use consumes the entire turn - pass to enemy
+    setTimeout(() => {
+      setIsActionProcessing(false);
+      enemyTurn(logCopy);
+    }, 1500);
   };
 
   const enemyTurn = (currentLog: BattleLogEntry[] = log) => {
@@ -1113,6 +1167,7 @@ export default function BattlePage() {
             onAttack={executeMultiCreatureTurn}
             onSkill={handleSkill}
             onSwitchPosition={handleSwitchPosition}
+            isActionProcessing={isActionProcessing}
           />
         )}
 

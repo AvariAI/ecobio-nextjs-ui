@@ -100,7 +100,7 @@ export function selectTargetByPosition(
   attacker: BattleCreature,
   targetTeam: BattleTeam,
   teamSize: TeamSize,
-  targetType: "front" | "back" | "random" | "self" = "front"
+  targetType: "front" | "back" | "all" | "random" | "self" = "front"
 ): BattleCreature | null {
   const allAlive = targetTeam.creatures.filter(c => c.currentHP > 0);
   if (allAlive.length === 0) return null;
@@ -117,6 +117,12 @@ export function selectTargetByPosition(
     // Fallback to front row if back row empty
     const frontRowAlive = getFrontRowAlive(targetTeam, teamSize);
     return frontRowAlive.length > 0 ? frontRowAlive[0] : null;
+  }
+
+  // AOE targeting: return a representative target (first alive)
+  // The actual AOE effect should handle applying to all targets
+  if (targetType === "all") {
+    return allAlive[0]; // Return first alive as representative
   }
 
   // Default front-row priority targeting
@@ -251,6 +257,7 @@ export function executeCreatureTurn(
   // For auto-play (AI), choose an action with position-aware targeting
   if (isAuto) {
     const targetTeam = isPlayerCreature ? enemyTeam : playerTeam;
+    const allyTeam = isPlayerCreature ? playerTeam : enemyTeam;
 
     // AI uses skill 30% of the time when available
     let usedSkill = false;
@@ -265,12 +272,26 @@ export function executeCreatureTurn(
           usedSkill = true;
           // Apply skill effect to all enemies if it's a damage skill
           // (This is a placeholder - actual damage-all logic would need skill effect types)
+        } else if (targetType === "self") {
+          // Self-buff skill
+          useSkill(activeCreature, log, activeCreature);
+          usedSkill = true;
+        } else if (targetType === "front" || targetType === "back" || targetType === "random") {
+          // Support buff skill - target allies
+          const targetAlly = selectTargetByPosition(activeCreature, allyTeam, teamSize, targetType);
+          if (targetAlly) {
+            useSkill(activeCreature, log, targetAlly);
+            usedSkill = true;
+          } else {
+            // Fallback to self if no allies available
+            useSkill(activeCreature, log, activeCreature);
+            usedSkill = true;
+          }
         } else {
           // Use skill on single target based on targeting rules
           const target = selectTargetByPosition(activeCreature, targetTeam, teamSize, targetType);
           if (target) {
-            // For now, just use the self-buff effect
-            useSkill(activeCreature, log);
+            useSkill(activeCreature, log, target);
             usedSkill = true;
           }
         }

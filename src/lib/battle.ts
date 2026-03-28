@@ -466,11 +466,12 @@ export function canUseSkill(battleCreature: BattleCreature): boolean {
 }
 
 /**
- * Apply skill effect
+ * Apply skill effect with target information
  */
 export function useSkill(
   battleCreature: BattleCreature,
-  log: BattleLogEntry[]
+  log: BattleLogEntry[],
+  target?: BattleCreature | null
 ): boolean {
   if (!battleCreature.creature.skill) {
     return false;
@@ -484,22 +485,62 @@ export function useSkill(
     return false;
   }
 
+  // Determine target for logging
+  const isSelfBuff = skill.target === "self" || !target || target === battleCreature;
+  const targetName = isSelfBuff ? "(soi-même)" : target.name;
+
+  // Apply skill effect based on skill type
   if (skill.effect === "defense") {
-    battleCreature.buffs.defenseBuff = skill.value;
-    battleCreature.buffs.defenseBuffTurns = skill.duration;
+    const targetCreature = isSelfBuff ? battleCreature : (target || battleCreature);
+    targetCreature.buffs.defenseBuff = skill.value;
+    targetCreature.buffs.defenseBuffTurns = skill.duration;
+
+    if (isSelfBuff) {
+      log.push({
+        text: `${battleCreature.name} utilise ${skill.name} (soi-même)!`,
+        type: "skill",
+      });
+    } else {
+      log.push({
+        text: `${battleCreature.name} utilise ${skill.name} sur ${targetName}!`,
+        type: "skill",
+      });
+    }
   } else if (skill.effect === "dodge") {
-    battleCreature.buffs.dodgeBuff = skill.value;
-    battleCreature.buffs.dodgeBuffTurns = skill.duration;
+    const targetCreature = isSelfBuff ? battleCreature : (target || battleCreature);
+    targetCreature.buffs.dodgeBuff = skill.value;
+    targetCreature.buffs.dodgeBuffTurns = skill.duration;
+
+    if (isSelfBuff) {
+      log.push({
+        text: `${battleCreature.name} utilise ${skill.name} (soi-même)!`,
+        type: "skill",
+      });
+    } else {
+      log.push({
+        text: `${battleCreature.name} utilise ${skill.name} sur ${targetName}!`,
+        type: "skill",
+      });
+    }
   } else if (skill.effect === "attack") {
-    battleCreature.buffs.attackBuff = skill.value;
-    battleCreature.buffs.attackBuffTurns = skill.duration;
+    const targetCreature = isSelfBuff ? battleCreature : (target || battleCreature);
+    targetCreature.buffs.attackBuff = skill.value;
+    targetCreature.buffs.attackBuffTurns = skill.duration;
+
+    if (isSelfBuff) {
+      log.push({
+        text: `${battleCreature.name} utilise ${skill.name} (soi-même)!`,
+        type: "skill",
+      });
+    } else {
+      log.push({
+        text: `${battleCreature.name} utilise ${skill.name} sur ${targetName}!`,
+        type: "skill",
+      });
+    }
   }
 
   battleCreature.skillCooldowns[cooldownKey] = skill.cooldown;
-  log.push({
-    text: `${battleCreature.name} utilise ${skill.name}!`,
-    type: "skill",
-  });
   return true;
 }
 

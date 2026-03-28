@@ -54,6 +54,7 @@ interface MultiCreatureBattleDisplayProps {
   onAttack: () => void;
   onSkill: () => void;
   onSwitchPosition?: (creatureA: BattleCreature, creatureB: BattleCreature) => void;
+  isActionProcessing?: boolean;
 }
 
 export function MultiCreatureBattleDisplay({
@@ -67,6 +68,7 @@ export function MultiCreatureBattleDisplay({
   onAttack,
   onSkill,
   onSwitchPosition,
+  isActionProcessing = false,
 }: MultiCreatureBattleDisplayProps) {
   const isPlayerTurn = turn === "player";
   const currentCreature = currentActingCreature;
@@ -195,7 +197,12 @@ export function MultiCreatureBattleDisplay({
         <div className="flex justify-center gap-4">
           <button
             onClick={onAttack}
-            className="px-12 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white text-xl font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+            disabled={isActionProcessing}
+            className={`px-12 py-4 text-white text-xl font-bold rounded-xl shadow-lg transition-all ${
+              isActionProcessing
+                ? "from-gray-400 to-gray-500 cursor-not-allowed opacity-50"
+                : "bg-gradient-to-r from-green-500 to-green-600 hover:shadow-xl transform hover:scale-105"
+            }`}
           >
             🗡️ ATTAQUER
           </button>
@@ -203,13 +210,15 @@ export function MultiCreatureBattleDisplay({
             <button
               onClick={onSkill}
               disabled={
+                isActionProcessing ||
                 !currentCreature.creature.skill ||
                 (currentCreature.skillCooldowns[currentCreature.creature.skill.name] || 0) > 0
               }
               className={`px-12 py-4 text-white text-xl font-bold rounded-xl shadow-lg transition-all ${
+                isActionProcessing ||
                 (currentCreature.skillCooldowns[currentCreature.creature.skill.name] || 0) > 0
                   ? "from-gray-400 to-gray-500 cursor-not-allowed opacity-50"
-                  : "from-purple-500 to-purple-600 hover:shadow-xl transform hover:scale-105 bg-gradient-to-r"
+                  : "bg-gradient-to-r from-purple-500 to-purple-600 hover:shadow-xl transform hover:scale-105"
               }`}
             >
               ✨ SKILL: {currentCreature.creature.skill.name}
