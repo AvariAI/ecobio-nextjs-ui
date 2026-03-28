@@ -43,17 +43,19 @@ export default function InventoryPage() {
     }
   };
 
-  // Sort items (no filtering anymore - accept all item types)
-  const sortedItems = [...inventory.items].sort((a, b) => {
-    if (sortBy === "rarity") {
-      const rarityOrder = ["E", "D", "C", "B", "A", "S", "S+"];
-      return rarityOrder.indexOf(a.rank) - rarityOrder.indexOf(b.rank);
-    } else if (sortBy === "count") {
-      return b.count - a.count;
-    } else {
-      return (a.plantName || a.name).localeCompare(b.plantName || b.name);
-    }
-  });
+  // Filter out items with count 0, then sort (accept all item types)
+  const sortedItems = inventory.items
+    .filter(item => item.count > 0)
+    .sort((a, b) => {
+      if (sortBy === "rarity") {
+        const rarityOrder = ["E", "D", "C", "B", "A", "S", "S+"];
+        return rarityOrder.indexOf(a.rank) - rarityOrder.indexOf(b.rank);
+      } else if (sortBy === "count") {
+        return b.count - a.count;
+      } else {
+        return (a.plantName || a.name).localeCompare(b.plantName || b.name);
+      }
+    });
 
   // Group by rarity
   const groupedByRarity: Record<string, typeof inventory.items> = {
