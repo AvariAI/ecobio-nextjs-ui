@@ -5,6 +5,7 @@
 
 import { Creature, BaseStats, Rank, RANK_MULTIPLIERS } from "./database";
 import { applyTraits as applyTraitEffects, getTraitsByIds } from "./traits";
+import { calculateCombatXP } from "./combat-xp";
 
 export interface BattleElement {
   creature: BattleCreature;
@@ -75,6 +76,11 @@ export interface BattleCreature {
   attackCounter: number;  // Track attack count for "every X attacks" traits
   position?: number;  // Slot position (0-4) for multi-row battles
   logBuffExpiration?: string[];  // Buff types that expired this turn (for logging)
+
+  // NEW: Track battle stats for XP calculation
+  damageDealt: number; // Track damage dealt this battle
+  kills: number; // Track kills this battle
+  id: string; // Creature ID for XP mapping
 }
 
 /**
@@ -711,6 +717,14 @@ export function executeAttack(
     type: "damage",
   });
 
+  // Track damage dealt
+  attacker.damageDealt = (attacker.damageDealt || 0) + damage;
+
+  // Track kills
+  if (defender.currentHP <= 0) {
+    attacker.kills = (attacker.kills || 0) + 1;
+  }
+
   // Apply damage taken hooks (e.g., Épines reflection)
   if (damage > 0) {
     const reflectedDamage = onDamageTakenHooks(defender, damage, attacker, log);
@@ -773,7 +787,48 @@ export function createBattleCreature(
     statusEffects: [],
     attackCounter: 0,
     position,
+    damageDealt: 0,
+    kills: 0,
+    id: creature.id,
   };
+}
+
+/**
+ * Calculate XP rewards after battle
+ */
+export function calculateXPRewards(
+  playerCreatures: BattleCreature[],
+  enemyCreatures: BattleCreature[],
+  playerWon: boolean
+): Array<{ creatureId: string; xpEarned: number }> {
+  const rewards: Array<{ creatureId: string; xpEarned: number }> = [];
+
+  for (const playerCreature of playerCreatures) {
+    if (playerCreature.currentHP <= 0) continue; // Dead creatures get less/no XP
+
+    // Find this creature's damage contributed
+    const damageDealt = playerCreature.damageDealt || 0;
+
+    // Sum enemy HP total for calculations
+    const totalEnemyHP = enemyCreatures.reduce((sum, c) => sum + c.stats.hp, 0);
+
+    // Check if this creature got final kills
+    const kills = playerCreature.kills || 0;
+
+    const xp = calculateCombatXP(
+      damageDealt,
+      totalEnemyHP,
+      kills > 0,
+      playerWon
+    );
+
+    rewards.push({
+      creatureId: playerCreature.id,
+      xpEarned: xp
+    });
+  }
+
+  return rewards;
 }
 
 /**

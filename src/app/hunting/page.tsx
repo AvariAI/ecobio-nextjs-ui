@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { CREATURES, Rank, Creature } from "@/lib/database";
 import { getVarianceRange, BattleStats } from "@/lib/battle";
 import { rollRandomTraits, getTraitsByIds } from "@/lib/traits";
+import { applyStarBonusToSkill } from "@/lib/star-unlocks";
 import Link from "next/link";
 
 type HuntingPhase = "ready" | "spawned" | "viewing";
@@ -33,6 +34,13 @@ interface HuntedCreature extends Creature {
   creatureId: string;
   traits: string[];  // Trait IDs
   isFavorite: boolean;  // Protection contre la nutrition et le relâchement
+
+  // Star progression (NEW)
+  stars: number; // 0-5 (visual progression only, no unlocks)
+  combatXP: number; // Current combat XP
+  combatXPToNextStar: number; // XP needed for next star
+  battlesWon: number; // Track battle wins for stats
+  battlesTotal: number; // Total battles fought
 }
 
 function rollRarity(): RarityRank {
@@ -122,6 +130,13 @@ function spawnCreature(): HuntedCreature {
     creatureId,
     traits,  // Random traits based on rank
     isFavorite: false,  // Pas favori par défaut
+
+    // Star progression initialization
+    stars: 0, // 0 stars on spawn (stars are visual only)
+    combatXP: 0,
+    combatXPToNextStar: 100,
+    battlesWon: 0,
+    battlesTotal: 0,
   };
 }
 
@@ -228,6 +243,15 @@ function imageExists(imagePath: string): boolean {
     return false;
   }
 }
+
+// Render star rating
+const renderStars = (stars: number) => {
+  return Array(5).fill(0).map((_, i) => (
+    <span key={i} className={i < stars ? "text-yellow-400" : "text-gray-600"}>
+      ★
+    </span>
+  ));
+};
 
 export default function HuntingPage() {
   const [phase, setPhase] = useState<HuntingPhase>("ready");
@@ -608,6 +632,24 @@ export default function HuntingPage() {
                     />
                   </div>
                 </div>
+
+                <div className="bg-yellow-600 bg-opacity-50 rounded-lg p-3 mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    {renderStars(selectedCreature.stars || 0)}
+                  </div>
+                  <p className="text-yellow-100 font-bold">⭐ Star {selectedCreature.stars || 0} | Combat XP: {selectedCreature.combatXP || 0}/{selectedCreature.combatXPToNextStar || "MAX"}</p>
+                  {selectedCreature.stars && selectedCreature.stars < 5 && (
+                    <div className="w-full bg-yellow-950 rounded-full h-2 mt-2">
+                      <div
+                        className="bg-yellow-400 h-2 rounded-full"
+                        style={{ width: `${Math.min(100, ((selectedCreature.combatXP || 0) / (selectedCreature.combatXPToNextStar + (selectedCreature.combatXP || 0))) * 100)}%` }}
+                      />
+                    </div>
+                  )}
+                  <div className="text-xs text-yellow-200 mt-2">
+                    Victoires: {selectedCreature.battlesWon || 0} | Batailles: {selectedCreature.battlesTotal || 0}
+                  </div>
+                </div>
                 {selectedCreature.traits && selectedCreature.traits.length > 0 && (
                   <div className="bg-purple-700 bg-opacity-50 rounded-lg p-3 mb-4">
                     <h3 className="font-bold text-purple-100">✨ Traits ({selectedCreature.traits.length})</h3>
@@ -849,6 +891,20 @@ export default function HuntingPage() {
                         <span className={`font-bold ${getRankBadgeColor(c.finalStats.rank)} text-white px-2 py-1 rounded-full text-sm`}>{c.finalStats.rank}</span>
                       </div>
                       <p className="text-yellow-300 text-sm mt-1">Level {c.level}</p>
+                      <div className="flex items-center gap-1 mt-1">
+                        {renderStars(c.stars || 0)}
+                      </div>
+                      <div className="text-xs text-gray-300 mt-1">
+                        Combat XP: {c.combatXP || 0}/{c.combatXPToNextStar || "MAX"}
+                      </div>
+                      {c.stars && c.stars < 5 && (
+                        <div className="w-full bg-gray-700 rounded-full h-1.5 mt-2">
+                          <div
+                            className="bg-yellow-500 h-1.5 rounded-full transition-all"
+                            style={{ width: `${Math.min(100, ((c.combatXP || 0) / (c.combatXPToNextStar + (c.combatXP || 0))) * 100)}%` }}
+                          />
+                        </div>
+                      )}
                       {c.traits && c.traits.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {getTraitsByIds(c.traits).slice(0, 2).map(trait => (

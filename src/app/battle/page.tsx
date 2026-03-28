@@ -17,8 +17,10 @@ import {
   createBattleCreature,
   BattleElement,
   getBuffExpirationMessages,
+  calculateXPRewards,
 } from "@/lib/battle";
 import { getTraitsByIds, applyTraitStatModifiers } from "@/lib/traits";
+import { applyCombatXP } from "@/lib/combat-xp";
 import { TeamSize, BattleTeam, getAllBattleElements, executeCreatureTurn, isTeamBattleOver, getTeamBattleWinner, validateTeamSize, createBattleTeam, countAliveCreatures, switchPositions, selectTargetByPosition } from "@/lib/battle-multi";
 import { MultiCreatureTestSelector, MultiCreatureCollectionSelector, SlotConfig } from "./multi-battle-components";
 import { MultiCreatureBattleDisplay, MultiCreatureBattleCompleteDisplay, BattleLogDisplay as MultiBattleLogDisplay } from "./multi-battle-display";
@@ -49,6 +51,13 @@ interface HuntedCreature extends Creature {
   creatureId: string;
   traits: string[];
   isFavorite: boolean;
+
+  // Star progression
+  stars: number; // 0-5 (visual progression only, no unlocks)
+  combatXP: number;
+  combatXPToNextStar: number;
+  battlesWon: number;
+  battlesTotal: number;
 }
 
 function getCreatureImage(creatureId: string, rank: Rank): string {
@@ -148,6 +157,59 @@ export default function BattlePage() {
       }
     }
   }, []);
+
+  // Apply XP rewards when battle ends (in collection mode only)
+  useEffect(() => {
+    if (phase === "complete" && battleMode === "collection") {
+      // Determine winner
+      let winner: "player" | "enemy" | "draw" = "draw";
+      if (teamSize === 1) {
+        if (player && enemy) {
+          if (player.currentHP === 0 && enemy.currentHP === 0) {
+            winner = "draw";
+          } else if (player.currentHP === 0) {
+            winner = "enemy";
+          } else {
+            winner = "player";
+          }
+        }
+      } else if (playerTeam && enemyTeam) {
+        winner = getTeamBattleWinner(playerTeam, enemyTeam);
+      }
+
+      // Calculate XP rewards if player won
+      if (winner === "player") {
+        const playerCreatures = teamSize === 1 && player ? [player] : (playerTeam?.creatures || []);
+        const enemyCreatures = teamSize === 1 && enemy ? [enemy] : (enemyTeam?.creatures || []);
+
+        const xpRewards = calculateXPRewards(
+          playerCreatures as BattleCreature[],
+          enemyCreatures as BattleCreature[],
+          true
+        );
+
+        // Apply XP to collection creatures
+        const updatedCollection = collection.map(creature => {
+          const reward = xpRewards.find(r => r.creatureId === creature.id);
+          if (reward) {
+            const xpResult = applyCombatXP({ ...creature }, reward.xpEarned);
+            const updated = xpResult.updated;
+            updated.battlesWon = (updated.battlesWon || 0) + 1;
+            updated.battlesTotal = (updated.battlesTotal || 0) + 1;
+
+            if (xpResult.starLeveled) {
+              console.log(`⭐ ${creature.name} leveled up to Star ${xpResult.newStars}!`);
+            }
+            return updated;
+          }
+          return creature;
+        });
+
+        setCollection(updatedCollection);
+        localStorage.setItem("ecobio-collection", JSON.stringify(updatedCollection));
+      }
+    }
+  }, [phase, battleMode, teamSize, player, enemy, playerTeam, enemyTeam]);
 
   const playerCreature = CREATURES[playerCreatureId];
   const enemyCreature = CREATURES[enemyCreatureId];

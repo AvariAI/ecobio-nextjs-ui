@@ -30,6 +30,14 @@ export interface Creature {
     cooldown: number;
     target?: SkillTargetType;
   };
+  // Star unlock tiers (optional reference)
+  starUnlocks?: {
+    1: { skillTier?: 1 };
+    2: { skillTier?: 2 };
+    3: { skillTier?: 3 };
+    4: { passive?: string }; // Passive trait ID
+    5: { ultimate?: string }; // Ultimate skill ID
+  };
 }
 
 export interface CreatureType {
