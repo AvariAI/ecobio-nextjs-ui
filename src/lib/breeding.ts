@@ -43,6 +43,7 @@ export interface BreededCreature {
   name: string; // Required for HuntedCreature compatibility
   creatureId: string; // Creature database ID
   creatureType: string; // 'ant' | 'fly' | 'bee' | etc.
+  creature: any; // Creature data from database (for baseStats compatibility)
   nickname?: string;
   level: number; // Always 1
   rank: Rank; // E-S+
@@ -55,19 +56,11 @@ export interface BreededCreature {
   traits: string[]; // Trait IDs
   isFavorite: boolean;
   breeded?: true; // Optional flag to indicate breeded creature
-  parentIds?: string[] // IDs of parents (for records)
-}
-  parentIds: string[]; // IDs of parents (for records)
-  breedDate: number; // Timestamp
-  creatureId: string; // Base creature type ID
+  parentIds?: string[]; // IDs of parents (for records)
+  breedDate?: number; // Timestamp
   finalStats: Stats & { rank: Rank }; // Compatible with hunting page
-  skill: any; // Skill from base creature
-  desc: string;
-  createdAt: number;
-  currentXP: number;
-  xpToNextLevel: number;
-  feedCount: number;
-  feedStat: "hp" | "atk" | "def" | "spd" | "crit" | null;
+  skill?: any; // Skill from base creature
+  desc?: string;
 }
 
 // Rank conversion helpers
@@ -225,7 +218,8 @@ export function inheritParentTraits(
   const p2Traits = parent2.traits || [];
 
   // Create trait pool = parent1.traits ∪ parent2.traits (deduplicate)
-  const traitPool = [...new Set([...p1Traits, ...p2Traits])];
+  const traitsArray = [...p1Traits, ...p2Traits];
+  const traitPool = Array.from(new Set(traitsArray));
 
   // Get trait slot count
   const numSlots = getTraitSlots(babyRank);
@@ -313,14 +307,16 @@ export function generateBabyCreature(
     baseCreature = creatureKey ? CREATURES[creatureKey] : CREATURES.ant;
   }
 
-  // 6. Create baby creature object (compatible with HuntedCreature)
+// 6. Create baby creature object (compatible with HuntedCreature)
   const baby: BreededCreature = {
     id: `baby-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     name: `${baseCreature.name} ${rank}`,
     creatureId: baseCreature.id,
+    creature: baseCreature, // Include base creature for baseStats compatibility
     creatureType: babyCreatureType.toLowerCase(),
     level: 1,
     rank,
+    stats,
     currentXP: 0,
     xpToNextLevel: 100,
     feedCount: 0,
@@ -330,13 +326,11 @@ export function generateBabyCreature(
     isFavorite: false,
     breeded: true,
     parentIds: [parent1.id, parent2.id],
-  };
-
-  // Add properties compatible with finalStats structure
-  (baby as any).stats = stats;
-  (baby as any).finalStats = {
-    ...stats,
-    rank,
+    breedDate: Date.now(),
+    finalStats: {
+      ...stats,
+      rank,
+    },
   };
 
   return baby;
@@ -459,7 +453,8 @@ export function previewBabyTraits(
 ): string[] {
   const p1Traits = parent1.traits || [];
   const p2Traits = parent2.traits || [];
-  const traitPool = [...new Set([...p1Traits, ...p2Traits])];
+  const traitsArray = [...p1Traits, ...p2Traits];
+  const traitPool = Array.from(new Set(traitsArray));
 
   // Use minimum trait slots for preview
   const minSlots: Record<Rank, number> = {

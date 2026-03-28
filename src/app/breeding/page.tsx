@@ -17,8 +17,12 @@ import Link from "next/link";
 
 type BreedingMode = "basic" | "enhanced" | "advanced";
 
+// Union type for collection items (can be hunted or breeded)
+type CollectionItem = HuntedCreature | BreededCreature;
+
 interface HuntedCreature extends Creature {
   id: string;
+  baseStats: any; // Base stats from creature data
   finalStats: {
     hp: number;
     attack: number;
@@ -80,10 +84,15 @@ const MODE_LABELS: Record<BreedingMode, { fr: string; desc: string }> = {
   advanced: { fr: "Avancé", desc: "Meilleure héritabilité" },
 };
 
+// Helper function to check if an item is a HuntedCreature
+function isHuntedCreature(item: CollectionItem): item is HuntedCreature {
+  return 'baseStats' in item;
+}
+
 export default function BreedingPage() {
   const [parent1, setParent1] = useState<HuntedCreature | null>(null);
   const [parent2, setParent2] = useState<HuntedCreature | null>(null);
-  const [collection, setCollection] = useState<HuntedCreature[]>([]);
+  const [collection, setCollection] = useState<CollectionItem[]>([]);
   const [showDropdown1, setShowDropdown1] = useState(false);
   const [showDropdown2, setShowDropdown2] = useState(false);
   const [search1, setSearch1] = useState("");
@@ -135,7 +144,7 @@ export default function BreedingPage() {
   const validCreatureType = getValidCreatureType(parent1, parent2);
 
   // Filter creatures for dropdown based on search and creature type
-  const getDropdownCreatures = (search: string, otherParent: HuntedCreature | null) => {
+  const getDropdownCreatures = (search: string, otherParent: CollectionItem | null) => {
     return filteredCollection.filter(creature => {
       const matchesSearch = creature.name.toLowerCase().includes(search.toLowerCase());
       const notSelectedAsOther = otherParent ? creature.id !== otherParent.id : true;
@@ -146,34 +155,42 @@ export default function BreedingPage() {
     });
   };
 
-  const handleSelectParent1 = (creature: HuntedCreature) => {
-    if (parent2?.id === creature.id) {
-      setError("Vous ne pouvez pas sélectionner la même créature deux fois");
-      return;
+  const handleSelectParent1 = (creature: CollectionItem) => {
+    if (isHuntedCreature(creature)) {
+      if (parent2?.id === creature.id) {
+        setError("Vous ne pouvez pas sélectionner la même créature deux fois");
+        return;
+      }
+      if (parent2 && parent2.creatureId !== creature.creatureId) {
+        setError(`La reproduction n'est possible qu'entre créatures du même type (${parent2.name} ≠ ${creature.name})`);
+        return;
+      }
+      setParent1(creature);
+      setShowDropdown1(false);
+      setSearch1("");
+      setError(null);
+    } else {
+      setError("Les bébés ne peuvent pas être utilisés comme parents");
     }
-    if (parent2 && parent2.creatureId !== creature.creatureId) {
-      setError(`La reproduction n'est possible qu'entre créatures du même type (${parent2.name} ≠ ${creature.name})`);
-      return;
-    }
-    setParent1(creature);
-    setShowDropdown1(false);
-    setSearch1("");
-    setError(null);
   };
 
-  const handleSelectParent2 = (creature: HuntedCreature) => {
-    if (parent1?.id === creature.id) {
-      setError("Vous ne pouvez pas sélectionner la même créature deux fois");
-      return;
+  const handleSelectParent2 = (creature: CollectionItem) => {
+    if (isHuntedCreature(creature)) {
+      if (parent1?.id === creature.id) {
+        setError("Vous ne pouvez pas sélectionner la même créature deux fois");
+        return;
+      }
+      if (parent1 && parent1.creatureId !== creature.creatureId) {
+        setError(`La reproduction n'est possible qu'entre créatures du même type (${parent1.name} ≠ ${creature.name})`);
+        return;
+      }
+      setParent2(creature);
+      setShowDropdown2(false);
+      setSearch2("");
+      setError(null);
+    } else {
+      setError("Les bébés ne peuvent pas être utilisés comme parents");
     }
-    if (parent1 && parent1.creatureId !== creature.creatureId) {
-      setError(`La reproduction n'est possible qu'entre créatures du même type (${parent1.name} ≠ ${creature.name})`);
-      return;
-    }
-    setParent2(creature);
-    setShowDropdown2(false);
-    setSearch2("");
-    setError(null);
   };
 
   const handleClearParent1 = () => {
@@ -244,7 +261,7 @@ export default function BreedingPage() {
     traits: previewBabyTraits(parent1, parent2, previewBabyRank(parent1, parent2)),
   } : null;
 
-  const renderCreatureCard = (creature: HuntedCreature, index: number) => {
+  const renderCreatureCard = (creature: CollectionItem, index: number) => {
     const traits = getTraitsByIds(creature.traits);
     return (
       <div
