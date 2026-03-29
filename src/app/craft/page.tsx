@@ -210,7 +210,13 @@ export default function CraftPage() {
         console.log("Searching for plant with name:", searchName);
 
         const plants = freshInventory.items.filter(
-          i => i.type === "plant" && i.plantName && i.plantName.toLowerCase() === searchName.toLowerCase() && i.rank === selectedItem.rank
+          i => {
+            console.log(`Checking plant: ${i.plantName} (${i.rank}) vs search: ${searchName} (${selectedItem.rank})`);
+            return i.type === "plant" && 
+                   i.plantName && 
+                   i.plantName.toLowerCase() === searchName.toLowerCase() && 
+                   i.rank === selectedItem.rank;
+          }
         ).slice(0, 2);
 
         console.log(`Filtered plants for "${selectedItem.plantName || selectedItem.name}" (rank ${selectedItem.rank}):`, plants);
