@@ -9,6 +9,7 @@ import { loadBreedingEggs, getEggRemainingTime } from "@/lib/breeding";
 import { getExplorationBonus } from "@/lib/exploration";
 import { DURATION_LEVEL_REQUIREMENTS } from "@/lib/exploration";
 import { applyHealthRegenerationToCollection } from "@/lib/health-regen";
+import { loadInventory, removeFromInventory } from "@/lib/inventory";
 import Link from "next/link";
 
 type HuntingPhase = "ready" | "spawned" | "viewing";
@@ -550,6 +551,67 @@ export default function HuntingPage() {
     }
   };
 
+  // NEW: Heal creature with remedy
+  const handleHealCreature = (creatureId: string) => {
+    const creature = collection.find(c => c.id === creatureId);
+    if (!creature) {
+      alert("Créature introuvable!");
+      return;
+    }
+
+    const maxHP = creature.maxHP || creature.finalStats.hp;
+    const currentHP = creature.currentHP || maxHP;
+
+    if (currentHP >= maxHP) {
+      alert(`${creature.name} est déjà pleine vie!`);
+      return;
+    }
+
+    // Load inventory to find available remedies
+    const inventory = loadInventory();
+    const remedyItems = inventory.items.filter(i => i.type === "remedy");
+
+    if (remedyItems.length === 0) {
+      alert("Aucun remède disponible! Craft des remèdes dans l'atelier de craft.");
+      return;
+    }
+
+    // Sort remedies by heal percent (best first)
+    remedyItems.sort((a, b) => (b.healPercent || 0) - (a.healPercent || 0));
+
+    // Use the best remedy available
+    const bestRemedy = remedyItems[0];
+    const healPercent = bestRemedy.healPercent || 50;
+
+    // Calculate healing
+    const healAmount = Math.floor(maxHP * (healPercent / 100));
+    const newHP = Math.min(maxHP, currentHP + healAmount);
+
+    // Update creature HP
+    const updatedCollection = collection.map(c => {
+      if (c.id === creatureId) {
+        return {
+          ...c,
+          currentHP: newHP,
+          lastHealTime: Date.now()
+        };
+      }
+      return c;
+    });
+
+    // Remove remedy from inventory
+    removeFromInventory(bestRemedy.id, 1);
+
+    // Save updates
+    setCollection(updatedCollection);
+    localStorage.setItem("ecobio-collection", JSON.stringify(updatedCollection));
+
+    // Dispatch inventory update event
+    window.dispatchEvent(new Event("inventory-updated"));
+
+    alert(`💊 ${creature.name} soignée!\n${healPercent}% HP restauré: +${healAmount} HP (de ${currentHP} à ${newHP})`);
+  };
+
   const handleReleaseAll = () => {
     if (confirmReleaseAll) {
       // Ne relâche que les créatures qui ne sont pas favorites (garde les favorites)
@@ -1008,6 +1070,7 @@ export default function HuntingPage() {
               )}
               <button onClick={handleReleaseCreature} className="w-full bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white rounded-lg p-3 mt-4 font-bold shadow-lg">❌ Relâcher</button>
               <button onClick={handleTransformToEssence} className="w-full bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-600 hover:to-amber-500 text-white rounded-lg p-3 mt-3 font-bold shadow-lg">✨ Transformer en Essence</button>
+              <button onClick={() => handleHealCreature(selectedCreature.id)} className="w-full bg-gradient-to-r from-pink-700 to-pink-600 hover:from-pink-600 hover:to-pink-500 text-white rounded-lg p-3 mt-3 font-bold shadow-lg">💊 Soigner</button>
             </div>
           </div>
         )}
