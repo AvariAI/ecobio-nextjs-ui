@@ -31,7 +31,7 @@ export function calculateHealthRegeneration(creature: CreatureWithHealth): {
 
   // Nothing to regenerate if already at full health
   if (currentHP >= maxHP) {
-    return { currentHP, lastHealTime: Date.now() };
+    return { currentHP: Math.floor(currentHP), lastHealTime: Date.now() };
   }
 
   const now = Date.now();
@@ -41,9 +41,9 @@ export function calculateHealthRegeneration(creature: CreatureWithHealth): {
   const hpRegenPerHour = maxHP * 0.10;
   const hpRegained = Math.min(maxHP - currentHP, hpRegenPerHour * hoursElapsed);
 
-  // Apply regeneration
-  currentHP += hpRegained;
-  currentHP = Math.min(maxHP, Math.max(1, currentHP)); // Cap at maxHP, minimum 1
+  // Apply regeneration and floor to integers
+  currentHP = currentHP + hpRegained;
+  currentHP = Math.floor(Math.min(maxHP, Math.max(1, currentHP))); // Cap at maxHP, minimum 1, and floor to integer
   lastHealTime = now;
 
   return { currentHP, lastHealTime };

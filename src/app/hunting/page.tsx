@@ -1443,8 +1443,8 @@ export default function HuntingPage() {
         {showRemedySelector && (() => {
           const inventory = loadInventory();
           const remedyItems = inventory.items.filter(i => i.type === "remedy");
-          const maxHP = showRemedySelector.maxHP || showRemedySelector.finalStats.hp;
-          const currentHP = showRemedySelector.currentHP || maxHP;
+          const maxHP = Math.floor(showRemedySelector.maxHP || showRemedySelector.finalStats.hp);
+          const currentHP = Math.floor(showRemedySelector.currentHP || maxHP);
           const hpNeeded = maxHP - currentHP;
 
           if (remedyItems.length === 0) {
