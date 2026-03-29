@@ -123,11 +123,11 @@ export const CREATURES: Record<string, Creature> = {
     name: "Araignée Mutante",
     rank: "E",
     baseStats: {
-      hp: 100,      // Standard base HP
-      attack: 50,   // Standard base ATK
-      defense: 50,  // Standard base DEF
-      speed: 50,    // Standard base SPD
-      crit: 10,     // Standard base CRIT
+      hp: 500,
+      attack: 100,
+      defense: 100,
+      speed: 100,
+      crit: 100,
     },
     desc: "Créature mutante bizarre avec multiples yeux et des filaments lumineux",
     image: "/images/creatures/spider_mutant_e.png",
@@ -360,6 +360,10 @@ export function applyPersonalityStats(
     attack: Math.floor(baseStats.attack * personalityDef.statModifiers.attack),
     defense: Math.floor(baseStats.defense * personalityDef.statModifiers.defense),
     speed: Math.floor(baseStats.speed * personalityDef.statModifiers.speed),
+    crit: Math.floor(baseStats.crit * personalityDef.statModifiers.crit)
+  };
+}
+* personalityDef.statModifiers.speed),
     crit: Math.floor(baseStats.crit * personalityDef.statModifiers.crit)
   };
 }
