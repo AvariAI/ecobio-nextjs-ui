@@ -57,13 +57,13 @@ export const MISSION_LOCKED_COUNTS: Record<number, number> = {
   2000: 5  // Unlock 5 missions at 2000 XP
 };
 
-// Exploration level benefits (cumulative bonuses)
-// Time reduction is per-creature, max -10% per creature, -50% cumulative for 5 creatures
+// Exploration level benefits (linear progression, all 4 bonuses progress together at each level)
+// Time reduction is per-creature, max -7.5% per creature, -37.5% cumulative for 5 creatures
 export const EXPLORATION_BONUS_MAX = {
-  deathReduction: -50, // Maximum -50% death chance at level 20
-  doubleLoot: 25,      // Maximum 25% chance at level 25
-  timeReduction: -10,  // Maximum -10% duration per creature at level 25, -50% cumulative for 5 creatures
-  rarityBonus: 20      // Maximum +20% chance at level 30
+  deathReduction: -30, // Maximum -30% death chance at level 30
+  doubleLoot: 30,     // Maximum 30% chance at level 30
+  timeReduction: -7.5, // Maximum -7.5% duration per creature at level 30, -37.5% cumulative for 5 creatures
+  rarityBonus: 15      // Maximum +15% chance at level 30
 };
 
 /**
@@ -76,29 +76,29 @@ export function getExplorationBonus(explorationLevel: number): {
   timeReduction: number;       // Negative % reduction to mission duration
   rarityBonus: number;         // % bonus chance for higher rank loot
 } {
-  // Death reduction: -10% per 2 levels (mailed at -50% at level 20)
+  // Death reduction: -1% per level (max -30% at level 30)
   const deathReduction = Math.min(
     EXPLORATION_BONUS_MAX.deathReduction,
-    -Math.floor(explorationLevel / 2) * 10
+    -explorationLevel
   );
 
-  // Double loot: +5% per level until 25 (max 25%)
+  // Double loot: +1% per level (max 30% at level 30)
   const doubleLoot = Math.min(
     EXPLORATION_BONUS_MAX.doubleLoot,
-    explorationLevel * 1
+    explorationLevel
   );
 
-  // Time reduction: -0.4% per level until 25 (max -10% per creature)
-  // Cumulative: 5 creatures with -10% each = -50% team reduction
+  // Time reduction: -0.25% per level (max -7.5% per creature at level 30)
+  // Cumulative with team: 5 max-level creatures = -37.5% total
   const timeReduction = Math.min(
     EXPLORATION_BONUS_MAX.timeReduction,
-    -explorationLevel * 0.4
+    -explorationLevel * 0.25
   );
 
-  // Rarity bonus: +2% per level until 30 (max +20%)
+  // Rarity bonus: +0.5% per level (max +15% at level 30)
   const rarityBonus = Math.min(
     EXPLORATION_BONUS_MAX.rarityBonus,
-    explorationLevel * 0.8
+    explorationLevel * 0.5
   );
 
   return { deathReduction, doubleLoot, timeReduction, rarityBonus };
@@ -252,7 +252,7 @@ export function calculateAdjustedDuration(
   const baseDurationMs = durationMsMap[missionDuration] ?? 15 * 60 * 1000;
 
   // Calculate cumulative time reduction from all creatures
-  // Each creature contributes up to -10%, total capped at -50%
+  // Each creature contributes up to -7.5%, total capped at -37.5%
   let totalTimeReduction = 0;
   creatures.forEach(creature => {
     const level = creature.explorationLevel || 0;
@@ -261,8 +261,8 @@ export function calculateAdjustedDuration(
     totalTimeReduction += reduction;
   });
 
-  // Cap total reduction at -50%
-  const cappedTimeReduction = Math.min(0.5, totalTimeReduction);
+  // Cap total reduction at -37.5% (5 creatures × -7.5%)
+  const cappedTimeReduction = Math.min(0.375, totalTimeReduction);
 
   return baseDurationMs * (1 - cappedTimeReduction);
 }
