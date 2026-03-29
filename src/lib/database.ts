@@ -152,7 +152,7 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     id: "agressive",
     name: "Agressive",
     emoji: "🦁",
-    description: "Attacking first, brutal. No spawn bonuses. +15% ATK/level scaling",
+    description: "Attacking first, brutal. +12% ATK, +8% others, CRIT +10%/level",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -161,19 +161,19 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
       crit: 1.00
     },
     scalingMultipliers: {
-      hp: 0.10,
-      attack: 0.15,    // +15% per level (fast scaling!)
-      defense: 0.10,
-      speed: 0.10,
-      crit: 0.05
+      hp: 0.08,
+      attack: 0.12,  // +12% (focus!)
+      defense: 0.08,
+      speed: 0.08,
+      crit: 0.10
     },
-    rarity: 25     // 25% spawn chance
+    rarity: 25
   },
   protective: {
     id: "protective",
     name: "Protective",
     emoji: "🛡️",
-    description: "Protects allies first. No spawn bonuses. +15% DEF/level scaling",
+    description: "Protects allies first. +12% DEF, +8% others, CRIT +10%/level",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -182,19 +182,19 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
       crit: 1.00
     },
     scalingMultipliers: {
-      hp: 0.10,
-      attack: 0.05,    // +5% per level (slow)
-      defense: 0.15,    // +15% per level (fast scaling!)
-      speed: 0.10,
-      crit: 0.05
+      hp: 0.08,
+      attack: 0.08,
+      defense: 0.12,  // +12% (focus!)
+      speed: 0.08,
+      crit: 0.10
     },
-    rarity: 20     // 20% spawn chance
+    rarity: 20
   },
   rapide: {
     id: "rapide",
     name: "Rapide",
     emoji: "💨",
-    description: "Attacks first and runs. No spawn bonuses. +15% SPD/level scaling",
+    description: "Attacks first and runs. +12% SPD, +8% others, CRIT +10%/level",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -203,19 +203,19 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
       crit: 1.00
     },
     scalingMultipliers: {
-      hp: 0.10,
-      attack: 0.10,
-      defense: 0.05,    // +5% per level (slow)
-      speed: 0.15,    // +15% per level (fast scaling!)
-      crit: 0.05
+      hp: 0.08,
+      attack: 0.08,
+      defense: 0.08,
+      speed: 0.12,  // +12% (focus!)
+      crit: 0.10
     },
-    rarity: 15     // 15% spawn chance
+    rarity: 15
   },
   soin_leurre: {
     id: "soin_leurre",
     name: "Soin-Leurre",
     emoji: "❤️",
-    description: "Gentle, caring. No spawn bonuses. +15% HP/level scaling",
+    description: "Gentle, caring. +12% HP, +8% others, CRIT +10%/level",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -224,19 +224,19 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
       crit: 1.00
     },
     scalingMultipliers: {
-      hp: 0.15,      // +15% per level (fast scaling for HP!)
-      attack: 0.05,    // +5% per level (slow)
-      defense: 0.10,
-      speed: 0.05,    // +5% per level (slow)
-      crit: 0.05
+      hp: 0.12,    // +12% (focus!)
+      attack: 0.08,
+      defense: 0.08,
+      speed: 0.08,
+      crit: 0.10
     },
-    rarity: 12     // 12% spawn chance
+    rarity: 12
   },
   precise: {
     id: "precise",
     name: "Précise",
     emoji: "🎯",
-    description: "Precision hunter. No spawn bonuses. +15% CRIT/level scaling",
+    description: "Precision hunter. +12% CRIT, +8% others",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -245,19 +245,19 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
       crit: 1.00,
     },
     scalingMultipliers: {
-      hp: 0.10,
-      attack: 0.10,
-      defense: 0.10,
-      speed: 0.10,
-      crit: 0.15     // +15% per level (fast scaling for CRIT!)
+      hp: 0.08,
+      attack: 0.08,
+      defense: 0.08,
+      speed: 0.08,
+      crit: 0.12    // +12% (focus!)
     },
-    rarity: 12     // 12% spawn chance
+    rarity: 12
   },
   balancee: {
     id: "balancee",
     name: "Balancee",
     emoji: "✨",
-    description: "Balanced, adaptable. No spawn bonuses. +10% ALL stats/level scaling",
+    description: "Balanced, adaptable. +10% ALL stats/level scaling, no maluses",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -272,13 +272,13 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
       speed: 0.10,
       crit: 0.10
     },
-    rarity: 10     // 10% spawn chance
+    rarity: 10
   },
-   mysterieuse: {
+  mysterieuse: {
     id: "mysterieuse",
     name: "Mysterieuse",
     emoji: "🌙",
-    description: "Mysterious, unpredictable. No spawn bonuses. +15% to random stat EACH level",
+    description: "Mysterious, unpredictable. +15% to random stat EACH level",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -293,9 +293,9 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
       speed: 0.10,
       crit: 0.10
     },
-    rarity: 6,      // 6% spawn chance (rare!)
-    gambleTriggerLevels: [],  // Gambling happens EVERY level
-    gambleBonusRange: [15, 15]  // Fixed +15% always
+    rarity: 6,
+    gambleTriggerLevels: [],
+    gambleBonusRange: [15, 15]
   }
 };
 
