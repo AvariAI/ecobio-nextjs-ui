@@ -1112,7 +1112,19 @@ export default function HuntingPage() {
                   {c.feedCount > 0 && <p className="text-yellow-300 text-sm mt-1">Nourri {c.feedCount}x</p>}
                   {onBreedingCooldown && <p className="text-purple-300 text-sm mt-1">🥚 Incubation</p>}
                   <div className="grid grid-cols-5 gap-1 mt-3 text-center text-xs pointer-events-none">
-                    <div className="bg-green-950 rounded p-1"><p className="text-green-200">HP</p><p className="text-green-100 font-bold">{c.finalStats.hp}</p></div>
+                    {/* HP with current/max display and color indicator */}
+                    {(() => {
+                      const currentHP = c.currentHP || c.maxHP || c.finalStats.hp;
+                      const maxHP = c.maxHP || c.finalStats.hp;
+                      const hpPercent = Math.min(100, Math.max(0, (currentHP / maxHP) * 100));
+                      const hpColor = hpPercent > 50 ? "text-green-100" : hpPercent > 25 ? "text-yellow-100" : "text-red-100";
+                      return (
+                        <div className="bg-green-950 rounded p-1">
+                          <p className="text-green-200">HP</p>
+                          <p className={`${hpColor} font-bold`}>{currentHP}/{maxHP}</p>
+                        </div>
+                      );
+                    })()}
                     <div className="bg-green-950 rounded p-1"><p className="text-green-200">ATK</p><p className="text-green-100 font-bold">{c.finalStats.attack}</p></div>
                     <div className="bg-green-950 rounded p-1"><p className="text-green-200">DEF</p><p className="text-green-100 font-bold">{c.finalStats.defense}</p></div>
                     <div className="bg-green-950 rounded p-1"><p className="text-green-200">SPD</p><p className="text-green-100 font-bold">{c.finalStats.speed}</p></div>
@@ -1155,7 +1167,18 @@ export default function HuntingPage() {
                   </div>
 
                   <div className="space-y-2 mb-4">
-                    <div><strong>HP:</strong> {peekingCreature.finalStats.hp}</div>
+                    {/* HP with current/max and color indicator */}
+                    {(() => {
+                      const currentHP = peekingCreature.currentHP || peekingCreature.maxHP || peekingCreature.finalStats.hp;
+                      const maxHP = peekingCreature.maxHP || peekingCreature.finalStats.hp;
+                      const hpPercent = Math.min(100, Math.max(0, (currentHP / maxHP) * 100));
+                      return (
+                        <div>
+                          <strong>HP:</strong> <span className={`${hpPercent > 50 ? "text-green-100" : hpPercent > 25 ? "text-yellow-100" : "text-red-100"}`}>{currentHP}/{maxHP}</span>
+                          {hpPercent < 100 && ` (${hpPercent.toFixed(0)}%)`}
+                        </div>
+                      );
+                    })()}
                     <div><strong>ATK:</strong> {peekingCreature.finalStats.attack}</div>
                     <div><strong>DEF:</strong> {peekingCreature.finalStats.defense}</div>
                     <div><strong>SPD:</strong> {peekingCreature.finalStats.speed}</div>
