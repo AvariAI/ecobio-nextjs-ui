@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react";
-import { CREATURES, Rank, Creature, generateRandomPersonality, PERSONALITIES, PersonalityType, applyLevelScaling, BaseStats } from "@/lib/database";
+import { CREATURES, Rank, Creature, generateRandomPersonality, PERSONALITIES, PersonalityType, applyLevelScaling, BaseStats, GambleBonus, applyGambleBonuses, shouldTriggerGamble, generateGambleBonus } from "@/lib/database";
 import { getVarianceRange, BattleStats } from "@/lib/battle";
 import { rollRandomTraits, getTraitsByIds } from "@/lib/traits";
 import { transformCreatureToEssence } from "@/lib/craft";
@@ -60,6 +60,9 @@ interface HuntedCreature extends Creature {
 
   // Personality system (NEW)
   personality: "agressive" | "protective" | "rapide" | "soin_leurre" | "precise" | "balancee" | "mysterieuse";
+
+  // Gamble bonuses for mysterieuse personality
+  gambleBonuses?: GambleBonus[];
 }
 
 function rollRarity(): RarityRank {
@@ -166,7 +169,10 @@ function spawnCreature(): HuntedCreature {
     maxHP: finalStats.hp,
 
     // Personality system (NEW)
-    personality: personality
+    personality: personality,
+
+    // Gamble bonuses initialization (mysterieuse only, starts empty)
+    gambleBonuses: [],
   };
 }
 
@@ -223,6 +229,14 @@ function feedCreature(creature: HuntedCreature, foodXP: number): { creature: Hun
     const oldLevel = currentCreature.level;
     const newLevel = oldLevel + 1;
 
+    // Check for gamble bonus trigger (mysterieuse only)
+    let gambleBonuses = currentCreature.gambleBonuses || [];
+    if (shouldTriggerGamble(newLevel, currentCreature.personality)) {
+      const newBonus = generateGambleBonus(currentCreature.personality);
+      newBonus.level = newLevel;
+      gambleBonuses = [...gambleBonuses, newBonus];
+    }
+
     // Recalculate stats with personality-based level scaling
     // customStats stores the variance stats (level 1 base)
     // finalStats applies personality scaling for the new level
@@ -236,8 +250,11 @@ function feedCreature(creature: HuntedCreature, foodXP: number): { creature: Hun
 
     const scaledStats = applyLevelScaling(varianceStats, newLevel, currentCreature.personality);
 
+    // Apply gamble bonuses (mysterieuse only)
+    const statsWithGamble = applyGambleBonuses(scaledStats, gambleBonuses);
+
     const finalStats: BattleStats = {
-      ...scaledStats,
+      ...statsWithGamble,
       rank: currentCreature.finalStats.rank,
     };
 
@@ -247,6 +264,7 @@ function feedCreature(creature: HuntedCreature, foodXP: number): { creature: Hun
       currentXP: 0,
       xpToNextLevel: calculateXPToNextLevel(newLevel),
       finalStats,
+      gambleBonuses,
     };
 
     levelUps++;
@@ -776,6 +794,16 @@ export default function HuntingPage() {
                     </div>
                   );
                 })()}
+                {huntedCreature.gambleBonuses && huntedCreature.gambleBonuses.length > 0 && (
+                  <div className="bg-yellow-700 bg-opacity-50 rounded-lg p-3 mb-4">
+                    <h3 className="font-bold text-yellow-100">🎰 Gamble Bonuses</h3>
+                    <div className="text-sm text-yellow-200 space-y-1">
+                      {huntedCreature.gambleBonuses.map((bonus, idx) => (
+                        <p key={idx}>Lvl {bonus.level}: +{bonus.bonusPercent.toFixed(1)}% {bonus.stat}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {huntedCreature.skill && (
                   <div className="bg-green-700 bg-opacity-50 rounded-lg p-3 mb-4">
                     <h3 className="font-bold text-green-100">🎯 Compétence</h3>
@@ -1195,6 +1223,11 @@ export default function HuntingPage() {
                             </span>
                           );
                         })()}
+                        {c.gambleBonuses && c.gambleBonuses.length > 0 && (
+                          <div className="inline-block mt-1 px-2 py-0.5 rounded bg-yellow-800 text-yellow-200 text-xs">
+                            🎰 {c.gambleBonuses.length}
+                          </div>
+                        )}
                         <div className="flex items-center gap-1 mt-1">
                           {renderStars(c.stars || 0)}
                         </div>
