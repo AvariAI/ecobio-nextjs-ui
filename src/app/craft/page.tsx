@@ -70,7 +70,7 @@ export default function CraftPage() {
       return Array.from(plantGroups.values()).map(g => ({
         id: `plant-${g.name}-${g.rank}`,
         icon: "🌿",
-        name: g.name,
+        plantName: g.name,
         displayName: `Essence de ${g.name}`,
         rank: g.rank,
         count: g.count,
@@ -207,10 +207,10 @@ export default function CraftPage() {
         // Find 2 plants of this type and rank, consume them
         // Use case-insensitive compare for plant matching
         const plants = freshInventory.items.filter(
-          i => i.type === "plant" && i.plantName && i.plantName.toLowerCase() === selectedItem.name.toLowerCase() && i.rank === selectedItem.rank
+          i => i.type === "plant" && i.plantName && i.plantName.toLowerCase() === (selectedItem.plantName || selectedItem.name).toLowerCase() && i.rank === selectedItem.rank
         ).slice(0, 2);
 
-        console.log(`Filtered plants for "${selectedItem.name}" (rank ${selectedItem.rank}):`, plants);
+        console.log(`Filtered plants for "${selectedItem.plantName || selectedItem.name}" (rank ${selectedItem.rank}):`, plants);
         console.log("Plants count:", plants.length, "(needs 2)");
 
         if (plants.length >= 2) {
