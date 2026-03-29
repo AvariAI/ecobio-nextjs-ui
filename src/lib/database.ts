@@ -131,13 +131,14 @@ export const CREATURES: Record<string, Creature> = {
     },
     desc: "Créature mutante bizarre avec multiples yeux et des filaments lumineux",
     image: "/images/creatures/spider_mutant_e.png",
+    // Placeholder skill - will be assigned via RNG at spawn
     skill: {
-      name: "Toxin Mutagène",
-      description: "ATK +40% pendant 3 tours (forme mutante agressive)",
-      effect: "attack",
-      value: 0.40,
-      duration: 3,
-      cooldown: 3,
+      name: "To be assigned (RNG at spawn)",
+      description: "Assigne via RNG first skill - build archétype",
+      effect: "attack", // Placeholder
+      value: 0,
+      duration: 0,
+      cooldown: 0,
       target: "self",
     },
   },
