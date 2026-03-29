@@ -709,7 +709,10 @@ export default function ExplorationPage() {
                 <div>
                   <h3 className="text-2xl font-bold mb-4 text-amber-600">⭐ XP d'Exploration</h3>
                   <p className="text-lg">
-                    {selectedMission.results.survivors.length} survivant(s) x {calculateExplorationXP(selectedMission.duration)} XP = {calculateExplorationXP(selectedMission.duration) * selectedMission.results.survivors.length} XP total
+                    Chaque créature a gagné <span className="font-bold text-amber-700">{calculateExplorationXP(selectedMission.duration)} XP</span>
+                  </p>
+                  <p className="text-md text-gray-600 dark:text-gray-400">
+                    {selectedMission.results.survivors.length} survivant(s)
                   </p>
                 </div>
               )}
