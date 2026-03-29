@@ -417,11 +417,12 @@ export default function CraftPage() {
             Sélectionner Recette
           </h2>
 
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-4 gap-4">
             {[
-              { id: "plantEssence", label: "Essence de Plante", icon: "🌿", desc: "2 plantes même rang → Essence" },
-              { id: "breedingBuffer", label: "Buffer Breeding", icon: "🧬", desc: "Essence Insecte + Essence Plante → Buffer" },
-              { id: "upgrade", label: "Amélioration", icon: "⬆️", desc: "2 items identiques → Rang supérieur" }
+              { id: "plantEssence", label: "Essence de Plante", icon: "🌿", desc: "2 plantes même rang -> Essence" },
+              { id: "breedingBuffer", label: "Buffer Breeding", icon: "🧬", desc: "Essence Insecte + Essence Plante -> Buffer" },
+              { id: "upgrade", label: "Amélioration", icon: "⬆️", desc: "2 items identiques -> Rang supérieur" },
+              { id: "remedy", label: "Remèdes", icon: "💊", desc: "2 plantes médical -> Remède de soin" }
             ].map(recipe => (
               <button
                 key={recipe.id}
