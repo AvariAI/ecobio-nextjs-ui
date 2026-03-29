@@ -233,13 +233,16 @@ export default function ExplorationPage() {
     // Check duration is unlocked by exploration LEVEL (not XP anymore)
     const durationLevelRequirement = DURATION_LEVEL_REQUIREMENTS[selectedDuration] || 1;
 
-    // All team members must meet or exceed the duration level requirement
-    const insufficientLevelCreatures = teamCreatures.filter(c => (c.explorationLevel || 0) < durationLevelRequirement);
+    // 15min (level 0) allows ALL creatures regardless of exploration level
+    if (durationLevelRequirement > 0) {
+      // Only check for durations that require level > 0
+      const insufficientLevelCreatures = teamCreatures.filter(c => (c.explorationLevel || 0) < durationLevelRequirement);
 
-    if (insufficientLevelCreatures.length > 0) {
-      const creatureNames = insufficientLevelCreatures.map(c => c.name).join(", ");
-      alert(`Exploration Level ${durationLevelRequirement} requis pour ${selectedDuration === "8h" ? "8 heures" : selectedDuration}. ${insufficientLevelCreatures.length > 1 ? 'Les spécimens suivants' : 'Le spécimen suivant'} (${creatureNames}) n'${insufficientLevelCreatures.length > 1 ? 'ont' : 'a'} pas le niveau requis.`);
-      return;
+      if (insufficientLevelCreatures.length > 0) {
+        const creatureNames = insufficientLevelCreatures.map(c => c.name).join(", ");
+        alert(`Exploration Level ${durationLevelRequirement} requis pour ${selectedDuration === "8h" ? "8 heures" : selectedDuration}. ${insufficientLevelCreatures.length > 1 ? 'Les spécimens suivants' : 'Le spécimen suivant'} (${creatureNames}) n'${insufficientLevelCreatures.length > 1 ? 'ont' : 'a'} pas le niveau requis.`);
+        return;
+      }
     }
 
     const mission = createExplorationMission(selectedTeam, selectedDuration, teamCreatures, Math.floor(avgExplorationLevel));
