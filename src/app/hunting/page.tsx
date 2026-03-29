@@ -50,6 +50,11 @@ interface HuntedCreature extends Creature {
   explorationLevel: number; // Current exploration level
   explorationXPToNext: number; // XP needed for next exploration level
   isOnMission: boolean; // True if creature is currently on exploration mission
+
+  // Health system (NEW)
+  currentHP: number; // Current HP (0 to maxHP)
+  lastHealTime: number; // Last time auto-regeneration ran
+  maxHP: number; // Maximum HP based on stats and level
 }
 
 function rollRarity(): RarityRank {
@@ -152,6 +157,11 @@ function spawnCreature(): HuntedCreature {
     explorationLevel: 0, // Start at level 0 (all creatures can do 15min missions regardless of level)
     explorationXPToNext: 100,
     isOnMission: false,
+
+    // Health system initialization (NEW)
+    currentHP: Math.max(1, Math.floor(creature.baseStats.hp * hpVariance)), // Start at full HP
+    lastHealTime: Date.now(), // Last heal time = now
+    maxHP: Math.max(1, Math.floor(creature.baseStats.hp * hpVariance)), // Max HP = final HP at spawn
   };
 }
 
@@ -329,15 +339,39 @@ export default function HuntingPage() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Migrate existing creatures to have star progression fields
-        const migrated = parsed.map((c: any) => ({
-          ...c,
-          stars: c.stars ?? 0,
-          combatXP: c.combatXP ?? 0,
-          combatXPToNextStar: c.combatXPToNextStar ?? 100,
-          battlesWon: c.battlesWon ?? 0,
-          battlesTotal: c.battlesTotal ?? 0,
-        }));
+        // Migrate existing creatures to have star progression + exploration + health system fields
+        const migrated = parsed.map((c: any) => {
+          const migrated: any = {
+            ...c,
+            stars: c.stars ?? 0,
+            combatXP: c.combatXP ?? 0,
+            combatXPToNextStar: c.combatXPToNextStar ?? 100,
+            battlesWon: c.battlesWon ?? 0,
+            battlesTotal: c.battlesTotal ?? 0,
+
+            // Exploration system migration
+            explorationXP: c.explorationXP ?? 0,
+            explorationLevel: c.explorationLevel ?? 0,
+            explorationXPToNext: c.explorationXPToNext ?? 100,
+            isOnMission: c.isOnMission ?? false,
+          };
+
+          // Health system migration (NEW) - migrate existing creatures
+          if (!migrated.currentHP || !migrated.lastHealTime || !migrated.maxHP) {
+            // Use finalStats.hp as base, calculate maxHP with level scaling
+            const baseHP = c.finalStats?.hp || c.customStats?.hp || c.maxHP || 100;
+            const level = c.level || 1;
+
+            // Level scaling formula (same as battle.ts)
+            const levelScale = 1 + (level - 1) * 0.2;
+
+            migrated.maxHP = Math.floor(baseHP * levelScale);
+            migrated.currentHP = migrated.currentHP ?? migrated.maxHP; // Default to full HP
+            migrated.lastHealTime = migrated.lastHealTime ?? Date.now(); // Default to now
+          }
+
+          return migrated;
+        });
         setCollection(migrated);
       } catch (e) {
         console.error("Failed load collection", e);
