@@ -205,9 +205,12 @@ export default function CraftPage() {
         });
 
         // Find 2 plants of this type and rank, consume them
-        // Use case-insensitive compare for plant matching
+        // Use plantName (not displayName) for matching
+        const searchName = selectedItem.plantName || selectedItem.name;
+        console.log("Searching for plant with name:", searchName);
+
         const plants = freshInventory.items.filter(
-          i => i.type === "plant" && i.plantName && i.plantName.toLowerCase() === (selectedItem.plantName || selectedItem.name).toLowerCase() && i.rank === selectedItem.rank
+          i => i.type === "plant" && i.plantName && i.plantName.toLowerCase() === searchName.toLowerCase() && i.rank === selectedItem.rank
         ).slice(0, 2);
 
         console.log(`Filtered plants for "${selectedItem.plantName || selectedItem.name}" (rank ${selectedItem.rank}):`, plants);
