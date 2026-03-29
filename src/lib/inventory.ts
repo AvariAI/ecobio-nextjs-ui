@@ -397,6 +397,22 @@ export function loadInventory(): Inventory {
             needsSave = true;
           }
         }
+
+        // Migration: Fix missing healPercent for remedies (bug fix)
+        if (item.type === "remedy" && item.healPercent === undefined) {
+          // Hardcoded heal percentages by rank (matches REMEDY_DEFINITIONS)
+          const HEAL_PERCENT_BY_RANK: Record<string, number> = {
+            "E": 10,
+            "D": 15,
+            "C": 20,
+            "B": 25,
+            "A": 30,
+            "S": 40,
+            "S+": 50
+          };
+          item.healPercent = HEAL_PERCENT_BY_RANK[item.rank] || 10; // Default to 10%
+          needsSave = true;
+        }
       });
       
       // Save migrated data if any items were updated
@@ -458,17 +474,18 @@ export function createItemInInventory(
     // plant type - not supported here, use addToInventory instead
     return inventory;
   }
-  
+
   // Check if item already exists
   const existing = inventory.items.find(item =>
     item.type === type && item.rank === rank
   );
-  
+
   if (existing) {
     existing.count += count;
     existing.lastUpdated = Date.now();
   } else {
-    inventory.items.push({
+    // Create new item with all fields including healPercent for remedies
+    const newItem: any = {
       id: `inventory-${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type,
       name: itemName,
@@ -477,7 +494,17 @@ export function createItemInInventory(
       icon: itemIcon,
       count,
       lastUpdated: Date.now()
-    });
+    };
+
+    // Add healPercent for remedies
+    if (type === "remedy") {
+      const def = REMEDY_DEFINITIONS[`remedy_${rank}`];
+      if (def && def.healPercent !== undefined) {
+        newItem.healPercent = def.healPercent;
+      }
+    }
+
+    inventory.items.push(newItem);
   }
   
   localStorage.setItem("ecobio-inventory", JSON.stringify(inventory));
