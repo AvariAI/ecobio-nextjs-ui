@@ -109,7 +109,8 @@ export function getExplorationBonus(explorationLevel: number): {
 function calculateDeathChance(
   creatureLevel: number,
   missionDuration: string,
-  explorationLevel: number = 0
+  explorationLevel: number = 0,
+  currentHPPercent: number = 100 // NEW: HP% (0-100), defaults to 100 (full health)
 ): number {
   const baseChances: Record<string, number> = {
     "15min": 0.05,
@@ -128,7 +129,15 @@ function calculateDeathChance(
   const explorationBonus = getExplorationBonus(explorationLevel);
   const explorationReduction = Math.abs(explorationBonus.deathReduction) / 100;
 
-  return baseChance * (1 - levelReduction - explorationReduction);
+  // NEW: HP penalty multiplier based on current health
+  // 100% HP → 1.0 (no penalty)
+  // 90% HP → 1.1 (10% penalty)
+  // 50% HP → 1.5 (50% penalty)
+  // 25% HP → 1.75 (75% penalty)
+  // 10% HP → 1.9 (90% penalty)
+  const hpPenalty = 1 + ((100 - currentHPPercent) / 100);
+
+  return baseChance * (1 - levelReduction - explorationReduction) * hpPenalty;
 }
 
 /**
@@ -266,10 +275,18 @@ export function simulateExplorationMission(
 
   // Process each creature
   for (const creature of creatures) {
+    // Calculate current HP percent for death chance calculation
+    const baseHP = creature.customStats?.hp || creature.finalStats?.hp || 100;
+    const level = creature.level || 1;
+    const levelScale = 1 + (level - 1) * 0.2;
+    const maxHP = Math.floor(baseHP * levelScale);
+    const currentHPPercent = ((creature.currentHP || maxHP) / maxHP) * 100;
+
     const deathChance = calculateDeathChance(
       creature.level || 1,
       mission.duration,
-      creature.explorationLevel || 0
+      creature.explorationLevel || 0,
+      currentHPPercent // NEW: Pass current HP percent
     );
     const roll = Math.random();
 
