@@ -58,10 +58,11 @@ export const MISSION_LOCKED_COUNTS: Record<number, number> = {
 };
 
 // Exploration level benefits (cumulative bonuses)
+// Time reduction is per-creature, max -10% per creature, -50% cumulative for 5 creatures
 export const EXPLORATION_BONUS_MAX = {
   deathReduction: -50, // Maximum -50% death chance at level 20
   doubleLoot: 25,      // Maximum 25% chance at level 25
-  timeReduction: -25,  // Maximum -25% duration at level 25
+  timeReduction: -10,  // Maximum -10% duration per creature at level 25, -50% cumulative for 5 creatures
   rarityBonus: 20      // Maximum +20% chance at level 30
 };
 
@@ -87,10 +88,11 @@ export function getExplorationBonus(explorationLevel: number): {
     explorationLevel * 1
   );
 
-  // Time reduction: -5% per level until 25 (max -25%)
+  // Time reduction: -0.4% per level until 25 (max -10% per creature)
+  // Cumulative: 5 creatures with -10% each = -50% team reduction
   const timeReduction = Math.min(
     EXPLORATION_BONUS_MAX.timeReduction,
-    -explorationLevel * 1
+    -explorationLevel * 0.4
   );
 
   // Rarity bonus: +2% per level until 30 (max +20%)
@@ -233,10 +235,11 @@ export function generateLoot(
 
 /**
  * Calculate adjusted mission duration with exploration level time reduction
+ * Now uses cumulative time reduction from all creatures, capped at -50%
  */
 export function calculateAdjustedDuration(
   missionDuration: string,
-  explorationLevel: number
+  creatures: any[] // Array of creatures with explorationLevel
 ): number {
   const durationMsMap: Record<string, number> = {
     "15min": 15 * 60 * 1000,
@@ -248,10 +251,20 @@ export function calculateAdjustedDuration(
   };
   const baseDurationMs = durationMsMap[missionDuration] ?? 15 * 60 * 1000;
 
-  const explorationBonus = getExplorationBonus(explorationLevel);
-  const timeReduction = Math.abs(explorationBonus.timeReduction) / 100;
+  // Calculate cumulative time reduction from all creatures
+  // Each creature contributes up to -10%, total capped at -50%
+  let totalTimeReduction = 0;
+  creatures.forEach(creature => {
+    const level = creature.explorationLevel || 0;
+    const bonus = getExplorationBonus(level);
+    const reduction = Math.abs(bonus.timeReduction) / 100;
+    totalTimeReduction += reduction;
+  });
 
-  return baseDurationMs * (1 - timeReduction);
+  // Cap total reduction at -50%
+  const cappedTimeReduction = Math.min(0.5, totalTimeReduction);
+
+  return baseDurationMs * (1 - cappedTimeReduction);
 }
 
 /**
@@ -322,11 +335,11 @@ export function simulateExplorationMission(
 export function createExplorationMission(
   team: string[],
   duration: "15min" | "30min" | "1h" | "2h" | "4h" | "8h",
-  creatureLevels: number[],
-  avgExplorationLevel: number = 0 // Average exploration level for time reduction bonus
+  creatures: any[], // Creatures with explorationLevel for cumulative time reduction
+  avgExplorationLevel: number = 0 // Still passed for display/reference
 ): ExplorationMission {
   const startTime = Date.now();
-  const adjustedDurationMs = calculateAdjustedDuration(duration, avgExplorationLevel);
+  const adjustedDurationMs = calculateAdjustedDuration(duration, creatures);
 
   return {
     id: `mission-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -335,7 +348,7 @@ export function createExplorationMission(
     startTime,
     endTime: startTime + adjustedDurationMs,
     status: "active",
-    explorationLevel: avgExplorationLevel // Store for debugging/reference
+    explorationLevel: avgExplorationLevel // Store for debugging/reference (loot/rarity still use avg)
   };
 }
 
