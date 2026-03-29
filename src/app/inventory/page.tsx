@@ -47,7 +47,7 @@ export default function InventoryPage() {
 
   // Helper function to determine if an item is an "object" (not essence or buffer)
   const isObject = (item: any): boolean => {
-    return !["insectEssence", "plantEssence", "breedingBuffer"].includes(item.type);
+    return !["plant", "insectEssence", "plantEssence", "breedingBuffer"].includes(item.type);
   };
 
   // Filter and sort items
