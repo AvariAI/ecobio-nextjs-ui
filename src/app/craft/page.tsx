@@ -221,9 +221,13 @@ export default function CraftPage() {
           .slice(0, 2);
 
         console.log(`Filtered plants for "${selectedItem.plantName || selectedItem.name}" (rank ${selectedItem.rank}):`, plants);
-        console.log("Plants count:", plants.length, "(needs 2)");
+        console.log("Plants found:", plants.length);
+        if (plants.length >= 1) {
+          console.log("Plant count check:", plants[0].count, "(needs 2)");
+        }
 
-        if (plants.length >= 2) {
+        // For plant essence, we only need 1 plant item with count >= 2
+        if (plants.length >= 1 && plants[0] && plants[0].count >= 2) {
           const { resultRank } = craftPlantEssence(plants[0].id, plants[1].id, plants[0].rank, plants[1].rank);
           console.log("Craft result rank:", resultRank);
 
