@@ -269,16 +269,21 @@ const renderStars = (stars: number) => {
 };
 
 // Render exploration progress
-const renderExplorationProgress = (creature: HuntedCreature, onViewBonuses: () => void) => {
+const renderExplorationProgress = (creature: HuntedCreature, onViewBonuses: (e?: React.MouseEvent) => void) => {
   const totalXP = creature.explorationXP || 0;
   const currentLevel = creature.explorationLevel || 0;
   const xpRequiredPerLevel = 100;
   const xpInCurrentLevel = totalXP - (currentLevel * xpRequiredPerLevel);
   const progressPercent = Math.min(100, (xpInCurrentLevel / xpRequiredPerLevel) * 100);
 
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onViewBonuses(e);
+  };
+
   return (
     <div
-      onClick={onViewBonuses}
+      onClick={handleClick}
       className="cursor-pointer hover:opacity-80 transition-opacity"
       title="Cliquez pour voir les bonus d'exploration"
     >
@@ -766,7 +771,10 @@ export default function HuntingPage() {
                   <h3 className="text-lg font-bold text-amber-700 dark:text-amber-400 mb-3">
                     Progression d'Exploration
                   </h3>
-                  {renderExplorationProgress(selectedCreature, () => setShowExplorationBonuses(selectedCreature))}
+                  {renderExplorationProgress(selectedCreature, (e) => {
+                    if (e) e.stopPropagation();
+                    setShowExplorationBonuses(selectedCreature);
+                  })}
                   <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
                     Envoyez cette créature en mission pour gagner de l'XP et débloquer des durées de mission plus longues.
                   </p>
@@ -1190,7 +1198,7 @@ export default function HuntingPage() {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-lg font-bold text-green-400">💚 Réduction Mort</span>
                     <span className="text-2xl font-bold text-green-200">
-                      {Math.min(-30, -(showExplorationBonuses.explorationLevel || 0)).toFixed(0)}%
+                      {Math.max(-30, -(showExplorationBonuses.explorationLevel || 0)).toFixed(0)}%
                     </span>
                   </div>
                   <p className="text-sm text-amber-300">
@@ -1214,7 +1222,7 @@ export default function HuntingPage() {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-lg font-bold text-blue-400">⏱️ Réduction Temps</span>
                     <span className="text-2xl font-bold text-blue-200">
-                      {Math.min(-7.5, -(showExplorationBonuses.explorationLevel || 0) * 0.25).toFixed(2)}%
+                      {Math.max(-7.5, -(showExplorationBonuses.explorationLevel || 0) * 0.25).toFixed(2)}%
                     </span>
                   </div>
                   <p className="text-sm text-amber-300">
