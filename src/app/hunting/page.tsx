@@ -335,6 +335,7 @@ export default function HuntingPage() {
   const [feedRankFilter, setFeedRankFilter] = useState<Rank | null>(null);
   const [breedingEggs, setBreedingEggs] = useState<any[]>([]);
   const [showExplorationBonuses, setShowExplorationBonuses] = useState<HuntedCreature | null>(null);
+  const [showRemedySelector, setShowRemedySelector] = useState<HuntedCreature | null>(null); // NEW: Remedy selector modal
 
   useEffect(() => {
     const saved = localStorage.getItem("ecobio-collection");
@@ -567,21 +568,15 @@ export default function HuntingPage() {
       return;
     }
 
-    // Load inventory to find available remedies
-    const inventory = loadInventory();
-    const remedyItems = inventory.items.filter(i => i.type === "remedy");
+    // Display remedy selector modal
+    setShowRemedySelector(creature);
+  };
 
-    if (remedyItems.length === 0) {
-      alert("Aucun remède disponible! Craft des remèdes dans l'atelier de craft.");
-      return;
-    }
-
-    // Sort remedies by heal percent (best first)
-    remedyItems.sort((a, b) => (b.healPercent || 0) - (a.healPercent || 0));
-
-    // Use the best remedy available
-    const bestRemedy = remedyItems[0];
-    const healPercent = bestRemedy.healPercent || 50;
+  // NEW: Apply healing with specific remedy
+  const handleApplyRemedy = (creature: HuntedCreature, remedy: any) => {
+    const maxHP = creature.maxHP || creature.finalStats.hp;
+    const currentHP = creature.currentHP || maxHP;
+    const healPercent = remedy.healPercent || 50;
 
     // Calculate healing
     const healAmount = Math.floor(maxHP * (healPercent / 100));
@@ -589,7 +584,7 @@ export default function HuntingPage() {
 
     // Update creature HP
     const updatedCollection = collection.map(c => {
-      if (c.id === creatureId) {
+      if (c.id === creature.id) {
         return {
           ...c,
           currentHP: newHP,
@@ -600,7 +595,7 @@ export default function HuntingPage() {
     });
 
     // Remove remedy from inventory
-    removeFromInventory(bestRemedy.id, 1);
+    removeFromInventory(remedy.id, 1);
 
     // Save updates
     setCollection(updatedCollection);
@@ -609,7 +604,10 @@ export default function HuntingPage() {
     // Dispatch inventory update event
     window.dispatchEvent(new Event("inventory-updated"));
 
-    alert(`💊 ${creature.name} soignée!\n${healPercent}% HP restauré: +${healAmount} HP (de ${currentHP} à ${newHP})`);
+    // Close selector
+    setShowRemedySelector(null);
+
+    alert(`💊 ${creature.name} soignée!\n+${healPercent}% HP: +${healAmount} HP (${currentHP} → ${newHP})`);
   };
 
   const handleReleaseAll = () => {
@@ -1440,6 +1438,119 @@ export default function HuntingPage() {
             </div>
           </div>
         )}
+
+        {/* Remedy Selector Modal */}
+        {showRemedySelector && (() => {
+          const inventory = loadInventory();
+          const remedyItems = inventory.items.filter(i => i.type === "remedy");
+          const maxHP = showRemedySelector.maxHP || showRemedySelector.finalStats.hp;
+          const currentHP = showRemedySelector.currentHP || maxHP;
+          const hpNeeded = maxHP - currentHP;
+
+          if (remedyItems.length === 0) {
+            return (
+              <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4" onClick={() => setShowRemedySelector(null)}>
+                <div className="bg-gradient-to-br from-red-900 to-pink-800 rounded-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-2xl font-bold text-white">💊 Aucun Remède</h3>
+                    <button onClick={() => setShowRemedySelector(null)} className="text-gray-300 hover:text-white text-2xl">✕</button>
+                  </div>
+                  <p className="text-xl text-pink-200 mb-4">
+                    Aucun remède disponible dans l'inventaire!
+                  </p>
+                  <p className="text-sm text-pink-300 mb-6">
+                    Va dans l'atelier de craft pour fabriquer des remèdes avec 2 plantes médicales.
+                  </p>
+                  <Link href="/craft">
+                    <button className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white rounded-lg p-3 font-bold">
+                      🧪 Atelier de Craft
+                    </button>
+                  </Link>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4" onClick={() => setShowRemedySelector(null)}>
+              <div className="bg-gradient-to-br from-pink-900 to-rose-800 rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-2xl font-bold text-white">
+                    💊 Sélectionner Remède - {showRemedySelector.name}
+                  </h3>
+                  <button onClick={() => setShowRemedySelector(null)} className="text-gray-300 hover:text-white text-2xl">✕</button>
+                </div>
+
+                <div className="bg-black bg-opacity-30 rounded-xl p-4 mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-lg font-bold text-green-400">État Actuel</span>
+                    <span className="text-2xl font-bold text-white">{currentHP}/{maxHP}</span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-4 overflow-hidden">
+                    <div 
+                      className="bg-gradient-to-r from-red-500 to-yellow-500 h-full transition-all duration-300"
+                      style={{ width: `${(currentHP / maxHP) * 100}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-sm text-pink-300 mt-2">
+                    Besoin: +{hpNeeded} HP ({((hpNeeded / maxHP) * 100).toFixed(0)}%)
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <h4 className="text-lg font-bold text-white mb-3">Remèdes Disponibles:</h4>
+                  {remedyItems.map(remedy => {
+                    const healPercent = remedy.healPercent || 50;
+                    const healAmount = Math.floor(maxHP * (healPercent / 100));
+                    const actualHeal = Math.min(hpNeeded, healAmount);
+                    const isEffective = actualHeal > 0;
+
+                    if (remedy.count <= 0) return null;
+
+                    return (
+                      <button
+                        key={remedy.id}
+                        onClick={() => handleApplyRemedy(showRemedySelector, remedy)}
+                        disabled={!isEffective}
+                        className={`w-full rounded-xl p-4 text-left transition-all ${
+                          isEffective
+                            ? "bg-gradient-to-r from-pink-700 to-rose-600 hover:from-pink-600 hover:to-rose-500 text-white cursor-pointer transform hover:scale-105"
+                            : "bg-gray-700 text-gray-400 cursor-not-allowed opacity-60"
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-3">
+                            <span className="text-3xl">💊</span>
+                            <div>
+                              <p className="font-bold text-lg">Remède {remedy.rank}</p>
+                              <p className="text-sm text-pink-200">+{healPercent}% HP (+{healAmount} HP max)</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold">{remedy.count}×</p>
+                            <p className="text-xs text-pink-300">disponible</p>
+                          </div>
+                        </div>
+                        {isEffective && (
+                          <div className="mt-2 text-sm">
+                            <span className="text-green-300">
+                              → Après: {Math.min(maxHP, currentHP + healAmount)}/{maxHP}
+                            </span>
+                          </div>
+                        )}
+                        {!isEffective && (
+                          <div className="mt-2 text-sm text-red-300">
+                            → Trop puissant (gâcherais {healAmount - hpNeeded} HP)
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
