@@ -7,12 +7,14 @@ import {
   craftPlantEssence,
   craftBreedingBuffer,
   craftUpgrade,
+  craftRemedy,
   addCraftedItemToInventory,
   RANK_COLORS,
   getNextRank,
   type RecipeType
 } from "@/lib/craft";
 import { loadInventory, removeFromInventory, type Inventory, type InventoryItem } from "@/lib/inventory";
+import { PLANTS, getMedicalPlantsByRank } from "@/lib/resources";
 import { Rank } from "@/lib/database";
 
 // Rank order for sorting: E on left, S+ on right

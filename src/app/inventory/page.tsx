@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { loadInventory, removeFromInventory, PLANT_DEFINITIONS, ESSENCE_DEFINITIONS, BUFFER_DEFINITIONS, RARITY_COLORS, Inventory } from "@/lib/inventory";
+import { loadInventory, removeFromInventory, PLANT_DEFINITIONS, ESSENCE_DEFINITIONS, BUFFER_DEFINITIONS, RARITY_COLORS, REMEDY_DEFINITIONS, Inventory } from "@/lib/inventory";
+import { PLANTS, getMedicalPlantsByRank } from "@/lib/resources";
 
 export default function InventoryPage() {
   const [inventory, setInventory] = useState<Inventory>({ items: [], totalLootObtained: 0 });
@@ -46,7 +47,14 @@ export default function InventoryPage() {
 
   // Helper function to determine if an item is an "object" (not essence or buffer)
   const isObject = (item: any): boolean => {
-    return !["plant", "insectEssence", "plantEssence", "breedingBuffer"].includes(item.type);
+    return !["plant", "insectEssence", "plantEssence", "breedingBuffer", "remedy"].includes(item.type);
+  };
+
+  // Helper function to check if a plant is medicinal
+  const isMedicalPlant = (item: any): boolean => {
+    if (item.type !== "plant") return false;
+    const plant = PLANTS.find(p => p.name === (item.plantName || item.name) && p.rarity === item.rank);
+    return plant?.isMedical || false;
   };
 
   const filteredItems = inventory.items
@@ -233,7 +241,8 @@ export default function InventoryPage() {
                     const displayName = itemDef.name;
                     const displayDesc = itemDef.description;
                     const displayIcon = itemDef.icon;
-                    
+                    const isMedical = item.type === "plant" && isMedicalPlant(item);
+
                     return (
                       <div
                         key={item.id}
@@ -245,6 +254,11 @@ export default function InventoryPage() {
                             <div>
                               <h4 className="font-bold text-lg">{displayName}</h4>
                               <p className="text-xs text-gray-600 dark:text-gray-400">{displayDesc}</p>
+                              {isMedical && (
+                                <span className="inline-block mt-1 px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs font-bold rounded-full">
+                                  🌿 Médical
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
