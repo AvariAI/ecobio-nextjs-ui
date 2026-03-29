@@ -7,6 +7,8 @@ import { loadInventory, removeFromInventory, PLANT_DEFINITIONS, ESSENCE_DEFINITI
 export default function InventoryPage() {
   const [inventory, setInventory] = useState<Inventory>({ items: [], totalLootObtained: 0 });
   const [sortBy, setSortBy] = useState<"rarity" | "count" | "name">("rarity");
+  const [filterType, setFilterType] = useState<"all" | "plant" | "insectEssence" | "plantEssence" | "breedingBuffer" | "object">("all");
+  const [filterRank, setFilterRank] = useState<"all" | "S+" | "S" | "A" | "B" | "C" | "D" | "E">("all");
 
   // Load inventory
   useEffect(() => {
@@ -43,12 +45,28 @@ export default function InventoryPage() {
     }
   };
 
-  // Filter out items with count 0, then sort (accept all item types)
-  const sortedItems = inventory.items
+  // Helper function to determine if an item is an "object" (not essence or buffer)
+  const isObject = (item: any): boolean => {
+    return !["insectEssence", "plantEssence", "breedingBuffer"].includes(item.type);
+  };
+
+  // Filter and sort items
+  const filteredAndSortedItems = inventory.items
     .filter(item => item.count > 0)
+    .filter(item => {
+      // Apply type filter
+      if (filterType === "all") return true;
+      if (filterType === "object") return isObject(item);
+      return item.type === filterType;
+    })
+    .filter(item => {
+      // Apply rank filter
+      if (filterRank === "all") return true;
+      return item.rank === filterRank;
+    })
     .sort((a, b) => {
       if (sortBy === "rarity") {
-        const rarityOrder = ["E", "D", "C", "B", "A", "S", "S+"];
+        const rarityOrder = ["S+", "S", "A", "B", "C", "D", "E"];
         return rarityOrder.indexOf(a.rank) - rarityOrder.indexOf(b.rank);
       } else if (sortBy === "count") {
         return b.count - a.count;
@@ -57,18 +75,18 @@ export default function InventoryPage() {
       }
     });
 
-  // Group by rarity
+  // Group by rarity (S+ first, E last for display order)
   const groupedByRarity: Record<string, typeof inventory.items> = {
-    "E": [],
-    "D": [],
-    "C": [],
-    "B": [],
-    "A": [],
+    "S+": [],
     "S": [],
-    "S+": []
+    "A": [],
+    "B": [],
+    "C": [],
+    "D": [],
+    "E": []
   };
-  
-  sortedItems.forEach(item => {
+
+  filteredAndSortedItems.forEach(item => {
     if (!groupedByRarity[item.rank]) {
       groupedByRarity[item.rank] = [];
     }
@@ -108,41 +126,129 @@ export default function InventoryPage() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Total Loot Obtenu</p>
             </div>
             <div>
-              <p className="text-4xl font-bold text-cyan-600">{inventory.items.length}</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Types de Plantes</p>
+              <p className="text-4xl font-bold text-cyan-600">{filteredAndSortedItems.length}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Types Affichés</p>
             </div>
             <div>
-              <p className="text-4xl font-bold text-purple-600">{sortedItems.reduce((sum, item) => sum + item.count, 0)}</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Plantes Possédées</p>
+              <p className="text-4xl font-bold text-purple-600">{filteredAndSortedItems.reduce((sum, item) => sum + item.count, 0)}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Items Affichés</p>
             </div>
           </div>
         </div>
 
+        {/* Filter controls - Type */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 mb-4">
+          <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Filtrer par Type:</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className={`px-3 py-1 rounded-lg text-sm ${filterType === "all" ? "bg-blue-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
+              onClick={() => setFilterType("all")}
+            >
+              Tous
+            </button>
+            <button
+              className={`px-3 py-1 rounded-lg text-sm ${filterType === "plant" ? "bg-green-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
+              onClick={() => setFilterType("plant")}
+            >
+              🌿 Plantes
+            </button>
+            <button
+              className={`px-3 py-1 rounded-lg text-sm ${filterType === "insectEssence" ? "bg-amber-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
+              onClick={() => setFilterType("insectEssence")}
+            >
+              🐛 Essences Insecte
+            </button>
+            <button
+              className={`px-3 py-1 rounded-lg text-sm ${filterType === "plantEssence" ? "bg-teal-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
+              onClick={() => setFilterType("plantEssence")}
+            >
+              🌸 Essences Plante
+            </button>
+            <button
+              className={`px-3 py-1 rounded-lg text-sm ${filterType === "breedingBuffer" ? "bg-purple-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
+              onClick={() => setFilterType("breedingBuffer")}
+            >
+              ⚗️ Buffer Breeding
+            </button>
+            <button
+              className={`px-3 py-1 rounded-lg text-sm ${filterType === "object" ? "bg-orange-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
+              onClick={() => setFilterType("object")}
+            >
+              📦 Objets
+            </button>
+          </div>
+        </div>
+
+        {/* Filter controls - Rank */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 mb-4">
+          <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Filtrer par Rang:</p>
+          <div className="flex flex-wrap gap-2">
+            {["all", "S+", "S", "A", "B", "C", "D", "E"].map(rank => (
+              <button
+                key={rank}
+                className={`px-3 py-1 rounded-lg text-sm font-bold ${
+                  filterRank === rank
+                    ? rank === "all"
+                      ? "bg-gray-600 text-white"
+                      : rank === "S+"
+                      ? "bg-purple-500 text-white"
+                      : rank === "S"
+                      ? "bg-red-500 text-white"
+                      : rank === "A"
+                      ? "bg-orange-500 text-white"
+                      : rank === "B"
+                      ? "bg-yellow-500 text-white"
+                      : rank === "C"
+                      ? "bg-blue-500 text-white"
+                      : rank === "D"
+                      ? "bg-green-500 text-white"
+                      : "bg-gray-500 text-white"
+                    : "bg-gray-200 dark:bg-gray-700"
+                }`}
+                onClick={() => setFilterRank(rank as any)}
+              >
+                {rank === "all" ? "Tous" : rank}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Sort controls */}
-        <div className="mb-4 flex gap-4 flex-wrap">
-          <button
-            className={`px-4 py-2 rounded-lg ${sortBy === "rarity" ? "bg-emerald-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
-            onClick={() => setSortBy("rarity")}
-          >
-            Trier par Rareté
-          </button>
-          <button
-            className={`px-4 py-2 rounded-lg ${sortBy === "count" ? "bg-emerald-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
-            onClick={() => setSortBy("count")}
-          >
-            Trier par Quantité
-          </button>
-          <button
-            className={`px-4 py-2 rounded-lg ${sortBy === "name" ? "bg-emerald-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
-            onClick={() => setSortBy("name")}
-          >
-            Trier par Nom
-          </button>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 mb-6">
+          <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Trier par:</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className={`px-3 py-1 rounded-lg text-sm ${sortBy === "rarity" ? "bg-emerald-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
+              onClick={() => setSortBy("rarity")}
+            >
+              Rang
+            </button>
+            <button
+              className={`px-3 py-1 rounded-lg text-sm ${sortBy === "count" ? "bg-emerald-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
+              onClick={() => setSortBy("count")}
+            >
+              Quantité
+            </button>
+            <button
+              className={`px-3 py-1 rounded-lg text-sm ${sortBy === "name" ? "bg-emerald-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
+              onClick={() => setSortBy("name")}
+            >
+              Nom
+            </button>
+          </div>
         </div>
 
         {/* Items grouped by rarity */}
         <div className="space-y-8">
-          {["E", "D", "C", "B", "A", "S", "S+"].map(rarity => {
+          {filteredAndSortedItems.length === 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
+              <p className="text-4xl mb-4">🔍</p>
+              <p className="text-xl text-gray-600 dark:text-gray-400">
+                Aucun item ne correspond à tes filtres
+              </p>
+            </div>
+          )}
+          {["S+", "S", "A", "B", "C", "D", "E"].map(rarity => {
             const itemsInRarity = groupedByRarity[rarity];
             if (itemsInRarity.length === 0) return null;
 
