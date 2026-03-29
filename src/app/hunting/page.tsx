@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react";
-import { CREATURES, Rank, Creature, generateRandomPersonality, PERSONALITIES, PersonalityType, applyPersonalityStats, BaseStats } from "@/lib/database";
+import { CREATURES, Rank, Creature, generateRandomPersonality, PERSONALITIES, PersonalityType } from "@/lib/database";
 import { getVarianceRange, BattleStats } from "@/lib/battle";
 import { rollRandomTraits, getTraitsByIds } from "@/lib/traits";
 import { transformCreatureToEssence } from "@/lib/craft";
@@ -93,45 +93,29 @@ function spawnCreature(): HuntedCreature {
   // Roll random traits based on rank
   const traits = rollRandomTraits(rank);
 
+  // Variance RNG: Stats variation based on rank
   const hpVariance = minVar + Math.random() * (maxVar - minVar);
   const atkVariance = minVar + Math.random() * (maxVar - minVar);
   const defVariance = minVar + Math.random() * (maxVar - minVar);
   const spdVariance = minVar + Math.random() * (maxVar - minVar);
   const critVariance = minVar + Math.random() * (maxVar - minVar);
 
-  // Stats POST-variance
-  var varianceStats: BattleStats = {
+  // Stats POST-variance ONLY (variance RNG only, no personality modifiers at spawn)
+  const finalStats: BattleStats = {
     hp: Math.max(1, Math.floor(creature.baseStats.hp * hpVariance)),
     attack: Math.max(1, Math.floor(creature.baseStats.attack * atkVariance)),
     defense: Math.max(1, Math.floor(creature.baseStats.defense * defVariance)),
     speed: Math.max(1, Math.floor(creature.baseStats.speed * spdVariance)),
     crit: Math.max(1, Math.floor(creature.baseStats.crit * critVariance)),
-    rank, // Add rank field
+    rank,
   };
 
   // Generate random personality (RNG!)
   const personality = generateRandomPersonality();
 
-  // Apply personality stat modifiers to BaseStats (not BattleStats)
-  const personalityDef = PERSONALITIES[personality];
-  
-  const baseStatsWithPersonality: BaseStats = {
-    hp: Math.floor(varianceStats.hp * personalityDef.statModifiers.hp),
-    attack: Math.floor(varianceStats.attack * personalityDef.statModifiers.attack),
-    defense: Math.floor(varianceStats.defense * personalityDef.statModifiers.defense),
-    speed: Math.floor(varianceStats.speed * personalityDef.statModifiers.speed),
-    crit: Math.floor(varianceStats.crit * personalityDef.statModifiers.crit)
-  };
-
-  // Create final Stats as BattleStats
-  const finalStats: BattleStats = {
-    hp: baseStatsWithPersonality.hp,
-    attack: baseStatsWithPersonality.attack,
-    defense: baseStatsWithPersonality.defense,
-    speed: baseStatsWithPersonality.speed,
-    crit: baseStatsWithPersonality.crit,
-    rank,  // Preserve rank
-  };
+  // Personality NOTE: Personality does NOT modify stats at spawn
+  // Personality only influences level scaling progression (future feature)
+  // Stats are based on variance RNG ONLY at spawn
 
   // Générer un ID unique pour chaque créature spawnée
   const uniqueId = `cre_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -388,6 +372,11 @@ export default function HuntingPage() {
             migrated.maxHP = Math.floor(baseHP * levelScale);
             migrated.currentHP = migrated.currentHP ?? migrated.maxHP; // Default to full HP
             migrated.lastHealTime = migrated.lastHealTime ?? Date.now(); // Default to now
+          }
+
+          // Personality system migration (NEW) - assign personality to existing creatures
+          if (!migrated.personality) {
+            migrated.personality = generateRandomPersonality(); // Assign random personality
           }
 
           return migrated;
@@ -1233,7 +1222,17 @@ export default function HuntingPage() {
           <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" onClick={() => setPeekingCreature(null)}>
             <div className="bg-gradient-to-br from-green-800 to-green-900 rounded-xl p-6 max-w-2xl w-full mx-4 border-2 border-green-600 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-3xl font-bold text-green-100">{peekingCreature.name}</h2>
+                <h2 className="text-3xl font-bold text-green-100 flex items-center gap-2">
+                  {peekingCreature.name}
+                  {peekingCreature.personality && (() => {
+                    const p = PERSONALITIES[peekingCreature.personality];
+                    return (
+                      <span className="ml-3 px-3 py-1 rounded-full text-sm font-bold bg-gray-600 text-gray-200">
+                        {p.emoji} {p.name}
+                      </span>
+                    );
+                  })()}
+                </h2>
                 <button onClick={() => setPeekingCreature(null)} className="text-2xl hover:scale-110 transition-transform">❌</button>
               </div>
 
