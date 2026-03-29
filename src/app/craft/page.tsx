@@ -23,6 +23,7 @@ export default function CraftPage() {
   const [mainInventory, setMainInventory] = useState<Inventory>({ items: [], totalLootObtained: 0 });
   const [isCrafting, setIsCrafting] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error", text: string } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
 
   // Load data
   useEffect(() => {
@@ -161,17 +162,31 @@ export default function CraftPage() {
     return rankA - rankB;
   });
 
-  // Handle craft click
-  const handleCraftItem = async (item: any) => {
-    console.log("=== CRAFT ITEM CLICKED ===");
+  // Handle item selection (only selects, doesn't craft)
+  const handleSelectItem = (item: any) => {
+    console.log("=== ITEM SELECTED ===");
     console.log("Item:", item);
     console.log("Item canCraft:", item.canCraft);
     console.log("Item craftType:", item.craftType);
 
-    if (!item.canCraft || isCrafting) {
-      console.log("Craft blocked: canCraft =", item.canCraft, ", isCrafting =", isCrafting);
+    if (!item.canCraft) {
+      console.log("Selection blocked: item cannot be crafted");
       return;
     }
+
+    setSelectedItem(item);
+    console.log("Item selected for crafting:", item.name);
+  };
+
+  // Handle actual crafting (triggered by CRAFTER button)
+  const handleCraftActual = async () => {
+    if (!selectedItem || !selectedItem.canCraft || isCrafting) {
+      console.log("Craft blocked: selectedItem =", selectedItem, ", isCrafting =", isCrafting);
+      return;
+    }
+
+    console.log("=== CRAFTING ITEM NOW ===");
+    console.log("SelectedItem:", selectedItem);
 
     setIsCrafting(true);
     setMessage(null);
@@ -181,14 +196,21 @@ export default function CraftPage() {
       const freshInventory = loadInventory();
       console.log("Fresh inventory loaded:", freshInventory);
 
-      if (item.craftType === "plantEssence") {
+      if (selectedItem.craftType === "plantEssence") {
         console.log("--- Processing Plant Essence Recipe ---");
+        console.log("Searching for plants...");
+        console.log("All plants in inventory:");
+        freshInventory.items.filter(i => i.type === "plant").forEach(p => {
+          console.log(`  - ${p.plantName} (${p.rank}), count: ${p.count}, id: ${p.id}`);
+        });
+
         // Find 2 plants of this type and rank, consume them
+        // Use case-insensitive compare for plant matching
         const plants = freshInventory.items.filter(
-          i => i.type === "plant" && i.plantName === item.name && i.rank === item.rank
+          i => i.type === "plant" && i.plantName && i.plantName.toLowerCase() === selectedItem.name.toLowerCase() && i.rank === selectedItem.rank
         ).slice(0, 2);
 
-        console.log("Found plants:", plants);
+        console.log(`Filtered plants for "${selectedItem.name}" (rank ${selectedItem.rank}):`, plants);
         console.log("Plants count:", plants.length, "(needs 2)");
 
         if (plants.length >= 2) {
@@ -205,19 +227,19 @@ export default function CraftPage() {
 
           setMessage({
             type: "success",
-            text: `Essence de ${item.name} (${resultRank}) créée!`
+            text: `Essence de ${selectedItem.name} (${resultRank}) créée!`
           });
         } else {
           console.log("ERROR: Not enough plants found for plant essence recipe");
         }
-      } else if (item.craftType === "breedingBuffer") {
+      } else if (selectedItem.craftType === "breedingBuffer") {
         console.log("--- Processing Breeding Buffer Recipe ---");
         // Find 1 insect essence and 1 plant essence of this rank
         const insectEssence = freshInventory.items.find(
-          i => i.type === "insectEssence" && i.rank === item.rank
+          i => i.type === "insectEssence" && i.rank === selectedItem.rank
         );
         const plantEssence = freshInventory.items.find(
-          i => i.type === "plantEssence" && i.rank === item.rank
+          i => i.type === "plantEssence" && i.rank === selectedItem.rank
         );
 
         console.log("Found insect essence:", insectEssence);
@@ -244,20 +266,20 @@ export default function CraftPage() {
           console.log("  insectEssence:", insectEssence ? "found" : "NOT found");
           console.log("  plantEssence:", plantEssence ? "found" : "NOT found");
         }
-      } else if (item.craftType === "upgrade") {
+      } else if (selectedItem.craftType === "upgrade") {
         console.log("--- Processing Upgrade Recipe ---");
         // Find 2 items of this type and rank
         const items = freshInventory.items.filter(
-          i => i.type === item.itemType && i.rank === item.rank
+          i => i.type === selectedItem.itemType && i.rank === selectedItem.rank
         ).slice(0, 2);
 
         console.log("Found upgrade items:", items);
         console.log("Items count:", items.length, "(needs 2)");
-        console.log("Next rank:", item.nextRank);
+        console.log("Next rank:", selectedItem.nextRank);
 
-        if (items.length >= 2 && item.nextRank) {
-          const itemType = item.itemType as "insectEssence" | "plantEssence" | "breedingBuffer";
-          const { resultRank } = craftUpgrade(itemType, item.rank);
+        if (items.length >= 2 && selectedItem.nextRank) {
+          const itemType = selectedItem.itemType as "insectEssence" | "plantEssence" | "breedingBuffer";
+          const { resultRank } = craftUpgrade(itemType, selectedItem.rank);
           console.log("Craft result rank:", resultRank);
 
           if (resultRank) {
@@ -271,19 +293,22 @@ export default function CraftPage() {
 
             setMessage({
               type: "success",
-              text: `${item.name} amélioré en rang ${resultRank}!`
+              text: `${selectedItem.name} amélioré en rang ${resultRank}!`
             });
           }
         } else {
           console.log("ERROR: Not enough items or no next rank for upgrade recipe");
           console.log("  item count:", items.length, "(need 2)");
-          console.log("  nextRank:", item.nextRank);
+          console.log("  nextRank:", selectedItem.nextRank);
         }
       }
 
       // Reload inventory state immediately after successful craft
       loadInventoryData();
       console.log("Inventory reloaded after craft");
+
+      // Clear selection after successful craft
+      setSelectedItem(null);
 
       // Clear message after 3 seconds
       setTimeout(() => setMessage(null), 3000);
@@ -308,7 +333,7 @@ export default function CraftPage() {
             🧪 Atelier de Craft
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300">
-            Cliquez sur un item pour craft instantanément
+            Sélectionnez un item, puis cliquez sur 🧪 CRAFTER
           </p>
         </header>
 
@@ -365,19 +390,24 @@ export default function CraftPage() {
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {craftableItems.map((item) => (
-                <button
-                  key={item.id}
-                  disabled={!item.canCraft || isCrafting}
-                  onClick={() => handleCraftItem(item)}
-                  className={`
-                    p-4 rounded-xl border-2 transition-all text-left
-                    ${item.canCraft
-                      ? "border-amber-300 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer"
-                      : "border-gray-300 dark:border-gray-600 opacity-50 cursor-not-allowed"
-                    }
-                  `}
-                >
+              {craftableItems.map((item) => {
+                const isSelected = selectedItem && selectedItem.id === item.id;
+
+                return (
+                  <button
+                    key={item.id}
+                    disabled={!item.canCraft || isCrafting}
+                    onClick={() => handleSelectItem(item)}
+                    className={`
+                      p-4 rounded-xl border-2 transition-all text-left
+                      ${isSelected
+                        ? "border-amber-500 bg-amber-100 dark:bg-amber-900/30 ring-2 ring-amber-500 ring-offset-2"
+                        : item.canCraft
+                          ? "border-amber-300 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer"
+                          : "border-gray-300 dark:border-gray-600 opacity-50 cursor-not-allowed"
+                      }
+                    `}
+                  >
                   {/* Icon */}
                   <div className="text-4xl mb-2">{item.icon}</div>
                   
@@ -417,10 +447,48 @@ export default function CraftPage() {
                     </div>
                   )}
                 </button>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
+
+        {/* CRAFTER Button */}
+        {selectedItem !== null && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
+            <div className="flex flex-col items-center gap-4">
+              <div className="text-center">
+                <p className="text-gray-600 dark:text-gray-400 mb-2">
+                  Item sélectionné: <span className="font-bold text-amber-800 dark:text-amber-200">{selectedItem.displayName}</span>
+                </p>
+                {selectedItem.craftType === "upgrade" && selectedItem.nextRank && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Amélioration: {selectedItem.rank} → {selectedItem.nextRank}
+                  </p>
+                )}
+                {selectedItem.craftType === "breedingBuffer" && selectedItem.details && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    🐛 ×{selectedItem.details.insectEssence} + 🌿 ×{selectedItem.details.plantEssence}
+                  </p>
+                )}
+              </div>
+
+              <button
+                disabled={!selectedItem.canCraft || isCrafting}
+                onClick={handleCraftActual}
+                className={`
+                  text-4xl font-bold py-6 px-12 rounded-2xl transition-all shadow-lg
+                  ${selectedItem.canCraft && !isCrafting
+                    ? "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white cursor-pointer transform hover:scale-105"
+                    : "bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
+                  }
+                `}
+              >
+                🧪 CRAFTER
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Back button */}
         <div className="mt-8 text-center">
