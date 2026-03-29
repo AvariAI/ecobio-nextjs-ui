@@ -2,14 +2,15 @@ import { Rank } from "./database";
 import { createItemInInventory } from "./inventory";
 
 // Recipe types
-export type RecipeType = "plantEssence" | "breedingBuffer" | "upgrade";
+export type RecipeType = "plantEssence" | "breedingBuffer" | "upgrade" | "remedy";
 
 // Craft items (produced by crafting)
 export interface CraftItem {
   id: string;
-  type: "insectEssence" | "plantEssence" | "breedingBuffer";
+  type: "insectEssence" | "plantEssence" | "breedingBuffer" | "remedy";
   rank: Rank; // E-S+
   count: number;
+  healPercent?: number; // For remedies only
 }
 
 // Craft inventory separate from plants
@@ -280,10 +281,50 @@ export function transformCreatureToEssence(creatureRank: Rank): {
 /**
  * Add crafted essence/buffer to main inventory (replaces old craft inventory)
  */
+/**
+ * Add crafted essence/buffer to main inventory (replaces old craft inventory)
+ */
 export function addCraftedItemToInventory(
   type: "insectEssence" | "plantEssence" | "breedingBuffer",
   rank: Rank,
   count: number = 1
 ): void {
   createItemInInventory(type, rank, count);
+}
+
+/**
+ * Craft remedy from 2 medical plants of same rank
+ * Recipe: 2 × [Medical Plant X] → 1 × [Remedy X]
+ */
+export function craftRemedy(plantRank: Rank): {
+  resultItem: CraftItem;
+  error?: string;
+} {
+  // The healing percentage is hardcoded by rank as per design:
+  const HEAL_PERCENT_BY_RANK: Record<Rank, number> = {
+    "E": 10,
+    "D": 15,
+    "C": 20,
+    "B": 25,
+    "A": 30,
+    "S": 40,
+    "S+": 50
+  };
+
+  const healingPercent = HEAL_PERCENT_BY_RANK[plantRank];
+
+  const remedy: CraftItem = {
+    id: `remedy-${plantRank}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    type: "remedy",
+    rank: plantRank,
+    count: 1,
+    healPercent: healingPercent
+  };
+
+  // Add to inventory
+  createItemInInventory("remedy", plantRank, 1);
+
+  return {
+    resultItem: remedy
+  };
 }

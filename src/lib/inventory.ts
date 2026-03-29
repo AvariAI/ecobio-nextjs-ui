@@ -1,6 +1,6 @@
 import { Rank } from "./database";
 
-export type ItemType = "plant" | "insectEssence" | "plantEssence" | "breedingBuffer";
+export type ItemType = "plant" | "insectEssence" | "plantEssence" | "breedingBuffer" | "remedy";
 
 export interface InventoryItem {
   id: string;
@@ -11,6 +11,7 @@ export interface InventoryItem {
   icon: string;
   count: number;
   lastUpdated: number;
+  healPercent?: number; // For remedies only (healing percentage)
   // Legacy fields pour compatibilité avec plant items existants
   plantId?: string;
   plantName?: string;
@@ -141,6 +142,25 @@ export const BUFFER_DEFINITIONS: Record<string, {
   "buffer_A": { id: "buffer_A", name: "Buffer Breeding", type: "breedingBuffer", rank: "A", description: "Buffer de rang A", icon: "⚗️" },
   "buffer_S": { id: "buffer_S", name: "Buffer Breeding", type: "breedingBuffer", rank: "S", description: "Buffer de rang S", icon: "⚗️" },
   "buffer_S+": { id: "buffer_S+", name: "Buffer Breeding", type: "breedingBuffer", rank: "S+", description: "Buffer de rang S+", icon: "⚗️" }
+};
+
+// Remedy definitions (healing items)
+export const REMEDY_DEFINITIONS: Record<string, {
+  id: string;
+  name: string;
+  type: "remedy";
+  rank: Rank;
+  description: string;
+  icon: string;
+  healPercent: number;
+}> = {
+  "remedy_E": { id: "remedy_E", name: "Remède", type: "remedy", rank: "E", description: "Remède restaure 10% HP", icon: "💊", healPercent: 10 },
+  "remedy_D": { id: "remedy_D", name: "Remède", type: "remedy", rank: "D", description: "Remède restaure 15% HP", icon: "💊", healPercent: 15 },
+  "remedy_C": { id: "remedy_C", name: "Remède", type: "remedy", rank: "C", description: "Remède restaure 20% HP", icon: "💊", healPercent: 20 },
+  "remedy_B": { id: "remedy_B", name: "Remède", type: "remedy", rank: "B", description: "Remède restaure 25% HP", icon: "💊", healPercent: 25 },
+  "remedy_A": { id: "remedy_A", name: "Remède", type: "remedy", rank: "A", description: "Remède restaure 30% HP", icon: "💊", healPercent: 30 },
+  "remedy_S": { id: "remedy_S", name: "Remède", type: "remedy", rank: "S", description: "Remède restaure 40% HP", icon: "💊", healPercent: 40 },
+  "remedy_S+": { id: "remedy_S+", name: "Remède", type: "remedy", rank: "S+", description: "Remède restaure 50% HP", icon: "💊", healPercent: 50 }
 };
 
 // Rank colors (same as creature ranks)
@@ -367,6 +387,12 @@ export function createItemInInventory(
     itemIcon = def.icon;
   } else if (type === "breedingBuffer") {
     const def = BUFFER_DEFINITIONS[`buffer_${rank}`];
+    itemId = def.id;
+    itemName = def.name;
+    itemDesc = def.description;
+    itemIcon = def.icon;
+  } else if (type === "remedy") {
+    const def = REMEDY_DEFINITIONS[`remedy_${rank}`];
     itemId = def.id;
     itemName = def.name;
     itemDesc = def.description;
