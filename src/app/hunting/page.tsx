@@ -80,7 +80,7 @@ function rollRarity(): RarityRank {
 }
 
 function spawnCreature(): HuntedCreature {
-  const creaturePool = ["ant", "housefly", "honeybee"];
+  const creaturePool = ["ant", "housefly", "honeybee", "spider_mutant"];
   const creatureId = creaturePool[Math.floor(Math.random() * creaturePool.length)];
   const creature: Creature = CREATURES[creatureId];
 
@@ -256,6 +256,9 @@ function getCreatureImage(creatureId: string, rank: Rank): string {
   if (creatureId === "honeybee") {
     const rankSuffix = rank === "S+" ? "S+" : rank;
     return `/ecobio-nextjs-ui/creatures/bee-rank-${rankSuffix}.png`;
+  }
+  if (creatureId === "spider_mutant") {
+    return "/ecobio-nextjs-ui/images/creatures/spider_mutant_e.png";
   }
   return "/ecobio-nextjs-ui/images/giant_fly.png";
 }
