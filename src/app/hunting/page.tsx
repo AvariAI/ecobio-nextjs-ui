@@ -149,7 +149,7 @@ function spawnCreature(): HuntedCreature {
 
     // Exploration system initialization
     explorationXP: 0,
-    explorationLevel: 1, // Start at level 1 so creatures can do 15min missions immediately
+    explorationLevel: 0, // Start at level 0 (all creatures can do 15min missions regardless of level)
     explorationXPToNext: 100,
     isOnMission: false,
   };

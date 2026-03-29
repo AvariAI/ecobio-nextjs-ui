@@ -340,10 +340,13 @@ export default function ExplorationPage() {
   const getAvailableCreatures = () => {
     const durationLevelRequirement = DURATION_LEVEL_REQUIREMENTS[selectedDuration];
 
+    // 15min (level 0) allows ALL creatures regardless of exploration level
+    const hasLevel0Requirement = durationLevelRequirement === 0;
+
     return collection.filter(c =>
       !c.isOnMission &&
       !selectedTeam.includes(c.id) &&
-      (c.explorationLevel || 0) >= durationLevelRequirement
+      (hasLevel0Requirement || (c.explorationLevel || 0) >= durationLevelRequirement)
     );
   };
 
