@@ -363,7 +363,3 @@ export function applyPersonalityStats(
     crit: Math.floor(baseStats.crit * personalityDef.statModifiers.crit)
   };
 }
-* personalityDef.statModifiers.speed),
-    crit: Math.floor(baseStats.crit * personalityDef.statModifiers.crit)
-  };
-}
