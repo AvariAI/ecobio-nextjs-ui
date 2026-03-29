@@ -21,15 +21,6 @@ export interface Creature {
   };
   desc: string;
   image?: string;
-  skill: {
-    name: string;
-    description: string;
-    effect: "defense" | "dodge" | "attack";
-    value: number;
-    duration: number;
-    cooldown: number;
-    target?: SkillTargetType;
-  };
   // Star unlock tiers (optional reference)
   starUnlocks?: {
     1: { skillTier?: 1 };
@@ -37,6 +28,16 @@ export interface Creature {
     3: { skillTier?: 3 };
     4: { passive?: string }; // Passive trait ID
     5: { ultimate?: string }; // Ultimate skill ID
+  };
+  // Skills assigned via personality/build system (not species-based)
+  skill?: {
+    name: string;
+    description: string;
+    effect: "defense" | "dodge" | "attack";
+    value: number;
+    duration: number;
+    cooldown: number;
+    target?: "front" | "back" | "all" | "random" | "self" | "ally";
   };
 }
 
@@ -61,16 +62,7 @@ export const CREATURES: Record<string, Creature> = {
       crit: 100,
     },
     desc: "Fourmi robuste avec defenses élevées",
-    image: "/images/caterpillar.png", // Placeholder
-    skill: {
-      name: "Carapace Renforcée",
-      description: "DEF +50% pendant 2 tours",
-      effect: "defense",
-      value: 0.50,
-      duration: 2,
-      cooldown: 3,
-      target: "self",
-    },
+    image: "/images/caterpillar.png",
   },
   housefly: {
     id: "housefly",
@@ -85,15 +77,6 @@ export const CREATURES: Record<string, Creature> = {
     },
     desc: "Insecte volant agile avec yeux composés et vol rapide",
     image: "/images/giant_fly.png", // Placeholder
-    skill: {
-      name: "Esquive Aérienne",
-      description: "Esquive +40% pendant 2 tours",
-      effect: "dodge",
-      value: 0.40,
-      duration: 2,
-      cooldown: 3,
-      target: "self",
-    },
   },
   honeybee: {
     id: "honeybee",
@@ -107,16 +90,7 @@ export const CREATURES: Record<string, Creature> = {
       crit: 100,
     },
     desc: "Abeille ouvrière avec rôle de support, boostée l'attaque ou la défense des alliés",
-    image: "/images/bee.png",
-    skill: {
-      name: "Nectar Energisant",
-      description: "Buff ATK ou DEF (+20%) sur un allié pendant 2 tours",
-      effect: "defense", // Placeholder - actual implementation would toggle based on position
-      value: 0.20,
-      duration: 2,
-      cooldown: 3,
-      target: "ally",
-    },
+    image: "/images/bee.png"
   },
   spider_mutant: {
     id: "spider_mutant",
@@ -131,16 +105,6 @@ export const CREATURES: Record<string, Creature> = {
     },
     desc: "Créature mutante bizarre avec multiples yeux et des filaments lumineux",
     image: "/images/creatures/spider_mutant_e.png",
-    // Placeholder skill - will be assigned via RNG at spawn
-    skill: {
-      name: "To be assigned (RNG at spawn)",
-      description: "Assigne via RNG first skill - build archétype",
-      effect: "attack", // Placeholder
-      value: 0,
-      duration: 0,
-      cooldown: 0,
-      target: "self",
-    },
   },
 };
 

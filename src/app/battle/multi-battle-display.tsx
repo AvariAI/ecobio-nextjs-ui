@@ -147,7 +147,7 @@ export function MultiCreatureBattleDisplay({
 }: MultiCreatureBattleDisplayProps) {
   const isPlayerTurn = turn === "player";
   const currentCreature = currentActingCreature;
-  const canUseSkill = currentCreature && currentCreature.creature.skill;
+  const canUseSkill = currentCreature && currentCreature.creature.skill !== undefined && currentCreature.creature.skill !== null;
 
   // Sort creatures into front/back rows
   const sortCreaturesByPosition = (creatures: BattleCreature[]) => {
@@ -286,12 +286,11 @@ export function MultiCreatureBattleDisplay({
           >
             🗡️ ATTAQUER
           </button>
-          {canUseSkill && (
+          {canUseSkill && currentCreature.creature.skill && (
             <button
               onClick={onSkill}
               disabled={
                 isActionProcessing ||
-                !currentCreature.creature.skill ||
                 (currentCreature.skillCooldowns[currentCreature.creature.skill.name] || 0) > 0
               }
               className={`px-12 py-4 text-white text-xl font-bold rounded-xl shadow-lg transition-all ${
