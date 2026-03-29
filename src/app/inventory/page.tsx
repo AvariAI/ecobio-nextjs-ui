@@ -6,7 +6,6 @@ import { loadInventory, removeFromInventory, PLANT_DEFINITIONS, ESSENCE_DEFINITI
 
 export default function InventoryPage() {
   const [inventory, setInventory] = useState<Inventory>({ items: [], totalLootObtained: 0 });
-  const [sortBy, setSortBy] = useState<"rarity" | "count" | "name">("rarity");
   const [filterType, setFilterType] = useState<"all" | "plant" | "insectEssence" | "plantEssence" | "breedingBuffer" | "object">("all");
   const [filterRank, setFilterRank] = useState<"all" | "S+" | "S" | "A" | "B" | "C" | "D" | "E">("all");
 
@@ -50,29 +49,16 @@ export default function InventoryPage() {
     return !["plant", "insectEssence", "plantEssence", "breedingBuffer"].includes(item.type);
   };
 
-  // Filter and sort items
-  const filteredAndSortedItems = inventory.items
+  const filteredItems = inventory.items
     .filter(item => item.count > 0)
     .filter(item => {
-      // Apply type filter
       if (filterType === "all") return true;
       if (filterType === "object") return isObject(item);
       return item.type === filterType;
     })
     .filter(item => {
-      // Apply rank filter
       if (filterRank === "all") return true;
       return item.rank === filterRank;
-    })
-    .sort((a, b) => {
-      if (sortBy === "rarity") {
-        const rarityOrder = ["S+", "S", "A", "B", "C", "D", "E"];
-        return rarityOrder.indexOf(a.rank) - rarityOrder.indexOf(b.rank);
-      } else if (sortBy === "count") {
-        return b.count - a.count;
-      } else {
-        return (a.plantName || a.name).localeCompare(b.plantName || b.name);
-      }
     });
 
   // Group by rarity (S+ first, E last for display order)
@@ -86,7 +72,7 @@ export default function InventoryPage() {
     "E": []
   };
 
-  filteredAndSortedItems.forEach(item => {
+  filteredItems.forEach(item => {
     if (!groupedByRarity[item.rank]) {
       groupedByRarity[item.rank] = [];
     }
@@ -117,24 +103,6 @@ export default function InventoryPage() {
             Gère tes ressources de looting d'exploration
           </p>
         </header>
-
-        {/* Stats */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-8">
-          <div className="grid md:grid-cols-3 gap-4">
-            <div>
-              <p className="text-4xl font-bold text-emerald-600">{inventory.totalLootObtained}</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Loot Obtenu</p>
-            </div>
-            <div>
-              <p className="text-4xl font-bold text-cyan-600">{filteredAndSortedItems.length}</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Types Affichés</p>
-            </div>
-            <div>
-              <p className="text-4xl font-bold text-purple-600">{filteredAndSortedItems.reduce((sum, item) => sum + item.count, 0)}</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Items Affichés</p>
-            </div>
-          </div>
-        </div>
 
         {/* Filter controls - Type */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 mb-4">
@@ -213,34 +181,9 @@ export default function InventoryPage() {
           </div>
         </div>
 
-        {/* Sort controls */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 mb-6">
-          <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Trier par:</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              className={`px-3 py-1 rounded-lg text-sm ${sortBy === "rarity" ? "bg-emerald-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
-              onClick={() => setSortBy("rarity")}
-            >
-              Rang
-            </button>
-            <button
-              className={`px-3 py-1 rounded-lg text-sm ${sortBy === "count" ? "bg-emerald-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
-              onClick={() => setSortBy("count")}
-            >
-              Quantité
-            </button>
-            <button
-              className={`px-3 py-1 rounded-lg text-sm ${sortBy === "name" ? "bg-emerald-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
-              onClick={() => setSortBy("name")}
-            >
-              Nom
-            </button>
-          </div>
-        </div>
-
         {/* Items grouped by rarity */}
         <div className="space-y-8">
-          {filteredAndSortedItems.length === 0 && (
+          {filteredItems.length === 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
               <p className="text-4xl mb-4">🔍</p>
               <p className="text-xl text-gray-600 dark:text-gray-400">
