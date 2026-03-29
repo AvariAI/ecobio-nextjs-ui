@@ -1004,14 +1004,16 @@ export default function HuntingPage() {
                       </div>
                     )}
 
-                    <div className="flex items-start gap-3 mb-2 pl-4">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); toggleFavorite(c.id); }}
-                        className="text-xl hover:scale-125 transition-transform"
-                        title={c.isFavorite ? "Retirer des favoris" : "Mettre en favori"}
-                      >
-                        {c.isFavorite ? "❤️" : "🤍"}
-                      </button>
+                    {/* Favorite button - top right */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleFavorite(c.id); }}
+                      className="absolute top-2 right-2 text-xl hover:scale-125 transition-transform"
+                      title={c.isFavorite ? "Retirer des favoris" : "Mettre en favori"}
+                    >
+                      {c.isFavorite ? "❤️" : "🤍"}
+                    </button>
+
+                    <div className="flex items-start gap-3 mb-2">
                       <div className="w-16 h-16 flex-shrink-0">
                         <img
                           src={getCreatureImage(c.creatureId, c.finalStats.rank)}
