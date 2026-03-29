@@ -137,6 +137,13 @@ export default function CraftPage() {
 
       return Array.from(upgradeGroups.values()).map(g => {
         const nextRank = getNextRank(g.rank);
+        // Check if we can craft upgrade (either count >= 2 overall OR any item has count >= 2)
+        const itemsWithThisTypeAndRank = mainInventory.items.filter(
+          i => i.type === g.type && i.rank === g.rank
+        );
+        const anyItemHasCount2 = itemsWithThisTypeAndRank.some(i => i.count >= 2);
+        const canCraft = (g.count >= 2 || anyItemHasCount2) && nextRank !== null;
+
         return {
           id: `upgrade-${g.type}-${g.rank}`,
           icon: g.type === "insectEssence" ? "🐛" :
@@ -146,7 +153,7 @@ export default function CraftPage() {
           rank: g.rank,
           nextRank: nextRank,
           count: g.count,
-          canCraft: g.count >= 2 && nextRank !== null,
+          canCraft: canCraft,
           craftType: "upgrade" as const,
           itemType: g.type
         };
@@ -283,38 +290,76 @@ export default function CraftPage() {
         }
       } else if (selectedItem.craftType === "upgrade") {
         console.log("--- Processing Upgrade Recipe ---");
-        // Find 2 items of this type and rank
+        // Find all items of this type and rank
         const items = freshInventory.items.filter(
           i => i.type === selectedItem.itemType && i.rank === selectedItem.rank
-        ).slice(0, 2);
+        );
 
         console.log("Found upgrade items:", items);
-        console.log("Items count:", items.length, "(needs 2)");
-        console.log("Next rank:", selectedItem.nextRank);
+        console.log("Items count:", items.length);
 
-        if (items.length >= 2 && selectedItem.nextRank) {
-          const itemType = selectedItem.itemType as "insectEssence" | "plantEssence" | "breedingBuffer";
-          const { resultRank } = craftUpgrade(itemType, selectedItem.rank);
-          console.log("Craft result rank:", resultRank);
+        if (selectedItem.nextRank) {
+          // Check if we have enough (either 1 item with count >= 2, or 2 items with count >= 1)
+          let enoughItems = false;
+          let item1Id: string | null = null;
+          let item2Id: string | null = null;
+          let count1 = 1;
+          let count2 = 1;
 
-          if (resultRank) {
-            addCraftedItemToInventory(itemType, resultRank, 1);
-            console.log("Added upgraded item to inventory");
+          // Case 1: Single item with count >= 2 (grouped items)
+          const singleItem = items.find(i => i.count >= 2);
+          if (singleItem) {
+            enoughItems = true;
+            item1Id = singleItem.id;
+            item2Id = singleItem.id;  // Same item, use count 2 from it
+            count1 = 2;
+            count2 = 0;
+            console.log("Using single item with count >= 2:", singleItem.id, "count:", singleItem.count);
+          }
 
-            removeFromInventory(items[0].id, 1);
-            console.log("Removed item 1:", items[0].id);
-            removeFromInventory(items[1].id, 1);
-            console.log("Removed item 2:", items[1].id);
+          // Case 2: Two different items (each with count >= 1)
+          const twoItems = items.filter(i => i.count >= 1).slice(0, 2);
+          if (!enoughItems && twoItems.length >= 2) {
+            enoughItems = true;
+            item1Id = twoItems[0].id;
+            item2Id = twoItems[1].id;
+            console.log("Using two different items:", twoItems[0].id, "and", twoItems[1].id);
+          }
 
-            setMessage({
-              type: "success",
-              text: `${selectedItem.name} amélioré en rang ${resultRank}!`
-            });
+          console.log("Enough items for upgrade:", enoughItems);
+          console.log("Next rank:", selectedItem.nextRank);
+
+          if (enoughItems && item1Id) {
+            const itemType = selectedItem.itemType as "insectEssence" | "plantEssence" | "breedingBuffer";
+            const { resultRank } = craftUpgrade(itemType, selectedItem.rank);
+            console.log("Craft result rank:", resultRank);
+
+            if (resultRank) {
+              addCraftedItemToInventory(itemType, resultRank, 1);
+              console.log("Added upgraded item to inventory");
+
+              // Remove items based on case
+              removeFromInventory(item1Id, count1);
+              console.log(`Removed ${count1} from item:`, item1Id);
+              if (item2Id && count2 > 0) {
+                removeFromInventory(item2Id, count2);
+                console.log(`Removed ${count2} from item:`, item2Id);
+              }
+
+              setMessage({
+                type: "success",
+                text: `${selectedItem.name} amélioré en rang ${resultRank}!`
+              });
+            }
+          } else {
+            console.log("ERROR: Not enough items for upgrade recipe");
+            console.log("  items length:", items.length);
+            console.log("  single item with count >= 2:", !!singleItem);
+            console.log("  two items available:", twoItems.length >= 2);
           }
         } else {
-          console.log("ERROR: Not enough items or no next rank for upgrade recipe");
-          console.log("  item count:", items.length, "(need 2)");
-          console.log("  nextRank:", selectedItem.nextRank);
+          console.log("ERROR: No next rank for upgrade recipe");
+          console.log("  current rank:", selectedItem.rank);
         }
       }
 
