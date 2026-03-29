@@ -354,7 +354,7 @@ export function applyPersonalityStats(
   personality: PersonalityType
 ): BaseStats {
   const personalityDef = PERSONALITIES[personality];
-  
+
   return {
     hp: Math.floor(baseStats.hp * personalityDef.statModifiers.hp),
     attack: Math.floor(baseStats.attack * personalityDef.statModifiers.attack),
@@ -362,5 +362,4 @@ export function applyPersonalityStats(
     speed: Math.floor(baseStats.speed * personalityDef.statModifiers.speed),
     crit: Math.floor(baseStats.crit * personalityDef.statModifiers.crit)
   };
-}
 }
