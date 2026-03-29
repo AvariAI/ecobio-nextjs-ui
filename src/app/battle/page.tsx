@@ -191,14 +191,29 @@ export default function BattlePage() {
           true
         );
 
-        // Apply XP to collection creatures
+        // Apply XP and HP persistence to collection creatures
         const updatedCollection = collection.map(creature => {
           const reward = xpRewards.find(r => r.creatureId === creature.id);
           if (reward) {
+            // Find the corresponding BattleCreature to get ending HP
+            const battleCreature = playerCreatures.find(bc => bc.id === creature.id);
+
             const xpResult = applyCombatXP({ ...creature }, reward.xpEarned);
             const updated = xpResult.updated;
             updated.battlesWon = (updated.battlesWon || 0) + 1;
             updated.battlesTotal = (updated.battlesTotal || 0) + 1;
+
+            // NEW: Persist HP from battle to collection
+            if (battleCreature) {
+              // Calculate maxHP from customStats.hp with level scaling
+              const baseHP = updated.customStats?.hp || updated.finalStats?.hp || 100;
+              const level = updated.level || 1;
+              const levelScale = 1 + (level - 1) * 0.2;
+              updated.maxHP = Math.floor(baseHP * levelScale);
+              // Keep currentHP from battle (0 if died, else remaining HP)
+              updated.currentHP = battleCreature.currentHP;
+              updated.lastHealTime = Date.now();
+            }
 
             if (xpResult.starLeveled) {
               console.log(`⭐ ${creature.name} leveled up to Star ${xpResult.newStars}!`);

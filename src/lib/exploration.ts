@@ -18,6 +18,7 @@ export interface ExplorationMission {
     casualtyIds: string[]; // IDs of creatures that died
     casualtiesData: any[]; // Full creature data for display purposes
     survivors: string[]; // IDs of surviving creatures
+    survivorsHP: Record<string, number>; // Survivor creature IDs with remaining HP
     missionSuccess: boolean; // Did mission succeed (any survivors)
     lootReduction: number; // 0-1 based on casualties
     explorationXP: number; // XP gained from exploration
@@ -254,12 +255,14 @@ export function simulateExplorationMission(
   casualtyIds: string[];
   casualtiesData: any[]; // Full creature data for display purposes
   survivors: string[];
+  survivorsHP: Record<string, number>; // NEW: Survivor creature IDs with remaining HP
   loot: PlantResource[];
   lootReduction: number;
 } {
   const casualties: string[] = [];
   const casualtiesData: any[] = [];
   const survivors: string[] = [];
+  const survivorsHP: Record<string, number> = {}; // NEW: Survivor IDs with remaining HP
 
   // Process each creature
   for (const creature of creatures) {
@@ -275,6 +278,30 @@ export function simulateExplorationMission(
       casualtiesData.push(creature); // Store full creature data
     } else {
       survivors.push(creature.id);
+
+      // NEW: Calculate HP damage for survivors
+      // Survivors take 10-40% damage based on mission difficulty
+      const baseDamagePercent = 0.10; // Minimum 10% damage
+      const durationDifficulty: Record<string, number> = {
+        "15min": 0,
+        "30min": 0.05,
+        "1h": 0.10,
+        "2h": 0.15,
+        "4h": 0.20,
+        "8h": 0.30
+      };
+      const extraDamage = durationDifficulty[mission.duration] || 0;
+
+      // Calculate creature maxHP from customStats.hp with level scaling
+      const baseHP = creature.customStats?.hp || creature.finalStats?.hp || 100;
+      const level = creature.level || 1;
+      const levelScale = 1 + (level - 1) * 0.2;
+      const maxHP = Math.floor(baseHP * levelScale);
+
+      // Apply damage (10% + duration bonus) to currentHP (considers existing HP)
+      const damagePercent = baseDamagePercent + extraDamage;
+      const damage = Math.floor(maxHP * damagePercent);
+      survivorsHP[creature.id] = Math.max(1, (creature.currentHP || maxHP) - damage);
     }
   }
 
@@ -299,6 +326,7 @@ export function simulateExplorationMission(
     casualtyIds: casualties,
     casualtiesData,
     survivors,
+    survivorsHP, // NEW: Include survivors HP in results
     loot,
     lootReduction
   };

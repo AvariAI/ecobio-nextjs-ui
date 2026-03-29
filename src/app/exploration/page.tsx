@@ -33,11 +33,22 @@ interface HuntedCreature {
     speed: number;
     crit: number;
   };
+  customStats?: {
+    hp: number;
+    attack: number;
+    defense: number;
+    speed: number;
+    crit: number;
+  };
   explorationXP: number;
   explorationLevel: number;
   explorationXPToNext: number;
   isOnMission: boolean;
   isFavorite: boolean;
+  // Health system
+  currentHP?: number;
+  lastHealTime?: number;
+  maxHP?: number;
 }
 
 function getCreatureImage(creatureId: string, rank: Rank): string {
@@ -129,6 +140,7 @@ export default function ExplorationPage() {
                 casualtyIds: results.casualtyIds,
                 casualtiesData: results.casualtiesData,
                 survivors: results.survivors,
+                survivorsHP: results.survivorsHP, // NEW: Include survivors HP in mission results
                 missionSuccess: results.survivors.length > 0,
                 lootReduction: results.lootReduction,
                 explorationXP: calculateExplorationXP(mission.duration)
@@ -202,6 +214,7 @@ export default function ExplorationPage() {
             casualtyIds: results.casualtyIds,
             casualtiesData: results.casualtiesData,
             survivors: results.survivors,
+            survivorsHP: results.survivorsHP, // NEW: Include survivors HP
             missionSuccess: results.survivors.length > 0,
             lootReduction: results.lootReduction,
             explorationXP: calculateExplorationXP(mission.duration),
@@ -279,20 +292,36 @@ export default function ExplorationPage() {
       alert(`${addedCount} plante(s) ajoutée(s) à ton inventaire!`);
     }
 
-    // Apply exploration XP to survivors and clear mission status
+    // Apply exploration XP and HP persistence to survivors, clear mission status
     const xpGained = calculateExplorationXP(mission.duration);
+    const survivorsHP = mission.results.survivorsHP || {}; // NEW: Get survivors HP
     const updatedCollection = collection.map(creature => {
       if (mission.results!.survivors.includes(creature.id)) {
         const currentXP = creature.explorationXP || 0;
         const newXPTotal = currentXP + xpGained;
         const newExplorationLevel = Math.floor(newXPTotal / 100);
 
+        // Calculate maxHP from customStats.hp with level scaling
+        const baseHP = creature.customStats?.hp || creature.finalStats?.hp || 100;
+        const level = creature.level || 1;
+        const levelScale = 1 + (level - 1) * 0.2;
+        const maxHP = Math.floor(baseHP * levelScale);
+
+        // Apply survivors HP (minimum 1 HP, maximum maxHP)
+        const newCurrentHP = survivorsHP[creature.id] !== undefined
+          ? Math.max(1, Math.min(maxHP, survivorsHP[creature.id]))
+          : maxHP;
+
         return {
           ...creature,
           explorationXP: newXPTotal,
           explorationLevel: newExplorationLevel,
           explorationXPToNext: ((newExplorationLevel + 1) * 100) - newXPTotal,
-          isOnMission: false
+          isOnMission: false,
+          // NEW: Persist HP from mission
+          maxHP: maxHP,
+          currentHP: newCurrentHP,
+          lastHealTime: Date.now()
         };
       }
 
