@@ -1244,7 +1244,7 @@ export default function HuntingPage() {
                       : "bg-gray-600 text-gray-400"
                   }`}>
                     <div className="font-bold">15 min</div>
-                    <div className="text-xs">Lvl 1</div>
+                    <div className="text-xs">Lvl 0</div>
                   </div>
                   <div className={`rounded-lg p-3 text-center ${
                     (showExplorationBonuses.explorationLevel || 0) >= DURATION_LEVEL_REQUIREMENTS["30min"]
