@@ -20,6 +20,17 @@ import { Rank } from "@/lib/database";
 // Rank order for sorting: E on left, S+ on right
 const RANK_ORDER: Rank[] = ["E", "D", "C", "B", "A", "S", "S+"];
 
+// Medical plant names (exclude from essence recipe)
+const MEDICAL_PLANT_NAMES = [
+  "Aloe Vera",
+  "Menthe",
+  "Camomille",
+  "Ginseng",
+  "Ginseng Royale",
+  "Néphenta",
+  "Néphenta Ichor"
+];
+
 export default function CraftPage() {
   const [selectedRecipe, setSelectedRecipe] = useState<RecipeType>("plantEssence");
   const [mainInventory, setMainInventory] = useState<Inventory>({ items: [], totalLootObtained: 0 });
@@ -53,21 +64,29 @@ export default function CraftPage() {
   const getCraftableItems = useCallback(() => {
     if (selectedRecipe === "plantEssence") {
       // Group plants by (name, rank) and count them
+      // EXCLUDE medical plants from essence recipe
       const plantGroups = new Map<string, { name: string; rank: Rank; count: number }>();
-      
-      mainInventory.items.filter(i => i.type === "plant").forEach(plant => {
-        const key = `${plant.plantName}-${plant.rank}`;
-        const existing = plantGroups.get(key);
-        if (existing) {
-          existing.count += plant.count;
-        } else {
-          plantGroups.set(key, {
-            name: plant.plantName!,
-            rank: plant.rank,
-            count: plant.count
-          });
-        }
-      });
+
+      mainInventory.items
+        .filter(i => i.type === "plant")
+        .filter(plant => {
+          // Exclude medical plants
+          const plantName = plant.plantName || plant.name;
+          return !MEDICAL_PLANT_NAMES.includes(plantName);
+        })
+        .forEach(plant => {
+          const key = `${plant.plantName}-${plant.rank}`;
+          const existing = plantGroups.get(key);
+          if (existing) {
+            existing.count += plant.count;
+          } else {
+            plantGroups.set(key, {
+              name: plant.plantName!,
+              rank: plant.rank,
+              count: plant.count
+            });
+          }
+        });
 
       return Array.from(plantGroups.values()).map(g => ({
         id: `plant-${g.name}-${g.rank}`,
@@ -160,6 +179,42 @@ export default function CraftPage() {
           itemType: g.type
         };
       });
+    } else if (selectedRecipe === "remedy") {
+      // Group medical plants by (name, rank) for remedy crafting
+      const medicalPlantGroups = new Map<string, { name: string; rank: Rank; count: number }>();
+
+      mainInventory.items
+        .filter(i => i.type === "plant")
+        .filter(plant => {
+          // Include ONLY medical plants
+          const plantName = plant.plantName || plant.name;
+          const isMedical = MEDICAL_PLANT_NAMES.includes(plantName);
+          return isMedical;
+        })
+        .forEach(plant => {
+          const key = `${plant.plantName}-${plant.rank}`;
+          const existing = medicalPlantGroups.get(key);
+          if (existing) {
+            existing.count += plant.count;
+          } else {
+            medicalPlantGroups.set(key, {
+              name: plant.plantName!,
+              rank: plant.rank,
+              count: plant.count
+            });
+          }
+        });
+
+      return Array.from(medicalPlantGroups.values()).map(g => ({
+        id: `remedy-${g.name}-${g.rank}`,
+        icon: "💊",
+        plantName: g.name,
+        displayName: `Remède (${g.name})`,
+        rank: g.rank,
+        count: g.count,
+        canCraft: g.count >= 2,
+        craftType: "remedy" as const
+      }));
     }
     return [];
   }, [selectedRecipe, mainInventory]);
@@ -362,6 +417,51 @@ export default function CraftPage() {
         } else {
           console.log("ERROR: No next rank for upgrade recipe");
           console.log("  current rank:", selectedItem.rank);
+        }
+      } else if (selectedItem.craftType === "remedy") {
+        console.log("--- Processing Remedy Recipe ---");
+        // Find 2 medical plants of this type and rank
+        const medicalPlantName = selectedItem.plantName || selectedItem.name;
+        console.log("Searching for medical plant with name:", medicalPlantName);
+
+        const medicalPlants = freshInventory.items
+          .filter(i => i.type === "plant" && i.rank === selectedItem.rank)
+          .filter(i => {
+            const plantName = i.plantName || i.name;
+            const matches = plantName && plantName.toLowerCase() === medicalPlantName.toLowerCase();
+            console.log(`Checking medical plant: ${plantName || i.name} (${i.rank}) vs search: ${medicalPlantName} (${selectedItem.rank}) → matches: ${matches}`);
+            return matches;
+          })
+          .slice(0, 2);
+
+        console.log(`Filtered medical plants for "${medicalPlantName}" (rank ${selectedItem.rank}):`, medicalPlants);
+        console.log("Medical plants found:", medicalPlants.length);
+        if (medicalPlants.length >= 1) {
+          console.log("Medical plant count check:", medicalPlants[0].count, "(needs 2)");
+        }
+
+        // For remedy, we only need 1 medical plant item with count >= 2
+        if (medicalPlants.length >= 1 && medicalPlants[0] && medicalPlants[0].count >= 2) {
+          const plantId = medicalPlants[0].id;
+          console.log("Using medical plant ID (twice):", plantId, "with count:", medicalPlants[0].count);
+
+          const { resultItem } = craftRemedy(medicalPlants[0].rank);
+          console.log("Craft result item:", resultItem);
+
+          // Remove 2 from the SAME plantID
+          removeFromInventory(plantId, 2);
+          console.log("Removed 2 from medical plant:", plantId);
+
+          setMessage({
+            type: "success",
+            text: `Remède (${selectedItem.rank}) créé! Restaure ${resultItem.healPercent}% HP ❤️`
+          });
+        } else {
+          console.log("ERROR: Not enough medical plants found for remedy recipe");
+          setMessage({
+            type: "error",
+            text: "Pas assez de plantes médicales pour ce remède"
+          });
         }
       }
 
