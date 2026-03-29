@@ -1232,11 +1232,7 @@ export default function HuntingPage() {
                             </span>
                           );
                         })()}
-                        {c.gambleBonuses && c.gambleBonuses.length > 0 && (
-                          <div className="inline-block mt-1 px-2 py-0.5 rounded bg-yellow-800 text-yellow-200 text-xs">
-                            🎰 {c.gambleBonuses.length}
-                          </div>
-                        )}
+                        </div>
                         <div className="flex items-center gap-1 mt-1">
                           {renderStars(c.stars || 0)}
                         </div>
