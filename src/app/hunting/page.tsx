@@ -1189,8 +1189,8 @@ export default function HuntingPage() {
                   <div className="grid grid-cols-5 gap-1 mt-3 text-center text-xs pointer-events-none">
                     {/* HP with current/max display and color indicator */}
                     {(() => {
-                      const currentHP = c.currentHP || c.maxHP || c.finalStats.hp;
-                      const maxHP = c.maxHP || c.finalStats.hp;
+                      const currentHP = Math.floor(c.currentHP || c.maxHP || c.finalStats.hp);
+                      const maxHP = Math.floor(c.maxHP || c.finalStats.hp);
                       const hpPercent = Math.min(100, Math.max(0, (currentHP / maxHP) * 100));
                       const hpColor = hpPercent > 50 ? "text-green-100" : hpPercent > 25 ? "text-yellow-100" : "text-red-100";
                       return (
@@ -1244,8 +1244,8 @@ export default function HuntingPage() {
                   <div className="space-y-2 mb-4">
                     {/* HP with current/max and color indicator */}
                     {(() => {
-                      const currentHP = peekingCreature.currentHP || peekingCreature.maxHP || peekingCreature.finalStats.hp;
-                      const maxHP = peekingCreature.maxHP || peekingCreature.finalStats.hp;
+                      const currentHP = Math.floor(peekingCreature.currentHP || peekingCreature.maxHP || peekingCreature.finalStats.hp);
+                      const maxHP = Math.floor(peekingCreature.maxHP || peekingCreature.finalStats.hp);
                       const hpPercent = Math.min(100, Math.max(0, (currentHP / maxHP) * 100));
                       return (
                         <div>
