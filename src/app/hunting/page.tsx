@@ -990,15 +990,8 @@ export default function HuntingPage() {
                   <div
                     key={c.id}
                     onClick={() => handleViewCreature(c)}
-                    className={`bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-4 border border-green-700 hover:border-green-600 cursor-pointer hover:scale-105 transition-all duration-200 relative ${onBreedingCooldown ? "opacity-60" : ""}`}
+                    className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-4 border border-green-700 hover:border-green-600 cursor-pointer hover:scale-105 transition-all duration-200 relative"
                   >
-                    {/* Breeding cooldown indicator */}
-                    {onBreedingCooldown && (
-                      <div className="absolute top-2 left-2 bg-purple-600 text-white text-lg px-2 py-1 rounded-lg" title="En incubation">
-                        🥚
-                      </div>
-                    )}
-
                     {/* Exploration level badge */}
                     <div className="absolute top-2 right-2 bg-amber-500 text-white text-xs px-2 py-1 rounded-lg font-semibold">
                       🗺️ Lvl {c.explorationLevel || 0}
@@ -1023,7 +1016,7 @@ export default function HuntingPage() {
                         <img
                           src={getCreatureImage(c.creatureId, c.finalStats.rank)}
                           alt={c.name}
-                          className={`w-full h-full object-cover rounded border border-green-700 ${onBreedingCooldown ? "grayscale" : ""}`}
+                          className="w-full h-full object-cover rounded border border-green-700"
                         />
                       </div>
                       <div className="flex-1">
