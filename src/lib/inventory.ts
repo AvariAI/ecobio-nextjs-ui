@@ -98,6 +98,63 @@ export const PLANT_DEFINITIONS: Record<string, {
     rank: "S+",
     description: "Plante légendaire utilisée pour le breeding avancé",
     icon: "🌺"
+  },
+
+  // === Medical Plants (Healing) ===
+  "aloe_vera": {
+    id: "aloe_vera",
+    name: "Aloe Vera",
+    rank: "E",
+    description: "Plante soignante pour petites blessures",
+    icon: "🌱"
+  },
+
+  "menthe": {
+    id: "menthe",
+    name: "Menthe",
+    rank: "D",
+    description: "Menthe fraîche avec propriétés apaisantes",
+    icon: "🍃"
+  },
+
+  "camomille": {
+    id: "camomille",
+    name: "Camomille",
+    rank: "C",
+    description: "Fleur apaisante qui guérit bien",
+    icon: "🌸"
+  },
+
+  "ginseng": {
+    id: "ginseng",
+    name: "Ginseng",
+    rank: "B",
+    description: "Herbe médicale puissante",
+    icon: "🌿"
+  },
+
+  "ginseng_royal": {
+    id: "ginseng_royal",
+    name: "Ginseng Royale",
+    rank: "A",
+    description: "Ginseng sacré très puissant",
+    icon: "👑"
+  },
+
+  "nephenta": {
+    id: "nephenta",
+    name: "Néphenta",
+    rank: "S",
+    description: "Plante ancienne aux vertus curatives",
+    icon: "💚"
+  },
+
+  "nephenta_ichor": {
+    id: "nephenta_ichor",
+    name: "Néphenta Ichor",
+    rank: "S+",
+    description: "Essence planétaire légendaire",
+    icon: "✨"
   }
 };
 
