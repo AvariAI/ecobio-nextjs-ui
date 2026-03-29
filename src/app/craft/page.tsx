@@ -15,6 +15,9 @@ import {
 import { loadInventory, removeFromInventory, type Inventory, type InventoryItem } from "@/lib/inventory";
 import { Rank } from "@/lib/database";
 
+// Rank order for sorting: E on left, S+ on right
+const RANK_ORDER: Rank[] = ["E", "D", "C", "B", "A", "S", "S+"];
+
 export default function CraftPage() {
   const [selectedRecipe, setSelectedRecipe] = useState<RecipeType>("plantEssence");
   const [mainInventory, setMainInventory] = useState<Inventory>({ items: [], totalLootObtained: 0 });
@@ -151,82 +154,141 @@ export default function CraftPage() {
     return [];
   }, [selectedRecipe, mainInventory]);
 
-  const craftableItems = getCraftableItems();
+  // Sort craftable items by rank (E on left, S+ on right)
+  const craftableItems = [...getCraftableItems()].sort((a, b) => {
+    const rankA = RANK_ORDER.indexOf(a.rank);
+    const rankB = RANK_ORDER.indexOf(b.rank);
+    return rankA - rankB;
+  });
 
   // Handle craft click
   const handleCraftItem = async (item: any) => {
-    if (!item.canCraft || isCrafting) return;
+    console.log("=== CRAFT ITEM CLICKED ===");
+    console.log("Item:", item);
+    console.log("Item canCraft:", item.canCraft);
+    console.log("Item craftType:", item.craftType);
+
+    if (!item.canCraft || isCrafting) {
+      console.log("Craft blocked: canCraft =", item.canCraft, ", isCrafting =", isCrafting);
+      return;
+    }
 
     setIsCrafting(true);
     setMessage(null);
 
     try {
+      // Reload fresh inventory to ensure we have latest state
+      const freshInventory = loadInventory();
+      console.log("Fresh inventory loaded:", freshInventory);
+
       if (item.craftType === "plantEssence") {
+        console.log("--- Processing Plant Essence Recipe ---");
         // Find 2 plants of this type and rank, consume them
-        const plants = mainInventory.items.filter(
+        const plants = freshInventory.items.filter(
           i => i.type === "plant" && i.plantName === item.name && i.rank === item.rank
         ).slice(0, 2);
 
+        console.log("Found plants:", plants);
+        console.log("Plants count:", plants.length, "(needs 2)");
+
         if (plants.length >= 2) {
           const { resultRank } = craftPlantEssence(plants[0].id, plants[1].id, plants[0].rank, plants[1].rank);
+          console.log("Craft result rank:", resultRank);
+
           addCraftedItemToInventory("plantEssence", resultRank, 1);
+          console.log("Added plant essence to inventory");
+
           removeFromInventory(plants[0].id, 1);
+          console.log("Removed plant 1:", plants[0].id);
           removeFromInventory(plants[1].id, 1);
-          
+          console.log("Removed plant 2:", plants[1].id);
+
           setMessage({
             type: "success",
             text: `Essence de ${item.name} (${resultRank}) créée!`
           });
+        } else {
+          console.log("ERROR: Not enough plants found for plant essence recipe");
         }
       } else if (item.craftType === "breedingBuffer") {
+        console.log("--- Processing Breeding Buffer Recipe ---");
         // Find 1 insect essence and 1 plant essence of this rank
-        const insectEssence = mainInventory.items.find(
+        const insectEssence = freshInventory.items.find(
           i => i.type === "insectEssence" && i.rank === item.rank
         );
-        const plantEssence = mainInventory.items.find(
+        const plantEssence = freshInventory.items.find(
           i => i.type === "plantEssence" && i.rank === item.rank
         );
 
+        console.log("Found insect essence:", insectEssence);
+        console.log("Found plant essence:", plantEssence);
+
         if (insectEssence && plantEssence) {
           const { resultRank } = craftBreedingBuffer(insectEssence.rank, plantEssence.rank);
+          console.log("Craft result rank:", resultRank);
+
           addCraftedItemToInventory("breedingBuffer", resultRank, 1);
+          console.log("Added breeding buffer to inventory");
+
           removeFromInventory(insectEssence.id, 1);
+          console.log("Removed insect essence:", insectEssence.id);
           removeFromInventory(plantEssence.id, 1);
-          
+          console.log("Removed plant essence:", plantEssence.id);
+
           setMessage({
             type: "success",
             text: `Buffer Breeding (${resultRank}) créé!`
           });
+        } else {
+          console.log("ERROR: Missing essences for breeding buffer recipe");
+          console.log("  insectEssence:", insectEssence ? "found" : "NOT found");
+          console.log("  plantEssence:", plantEssence ? "found" : "NOT found");
         }
       } else if (item.craftType === "upgrade") {
+        console.log("--- Processing Upgrade Recipe ---");
         // Find 2 items of this type and rank
-        const items = mainInventory.items.filter(
+        const items = freshInventory.items.filter(
           i => i.type === item.itemType && i.rank === item.rank
         ).slice(0, 2);
+
+        console.log("Found upgrade items:", items);
+        console.log("Items count:", items.length, "(needs 2)");
+        console.log("Next rank:", item.nextRank);
 
         if (items.length >= 2 && item.nextRank) {
           const itemType = item.itemType as "insectEssence" | "plantEssence" | "breedingBuffer";
           const { resultRank } = craftUpgrade(itemType, item.rank);
-          
+          console.log("Craft result rank:", resultRank);
+
           if (resultRank) {
             addCraftedItemToInventory(itemType, resultRank, 1);
+            console.log("Added upgraded item to inventory");
+
             removeFromInventory(items[0].id, 1);
+            console.log("Removed item 1:", items[0].id);
             removeFromInventory(items[1].id, 1);
-            
+            console.log("Removed item 2:", items[1].id);
+
             setMessage({
               type: "success",
               text: `${item.name} amélioré en rang ${resultRank}!`
             });
           }
+        } else {
+          console.log("ERROR: Not enough items or no next rank for upgrade recipe");
+          console.log("  item count:", items.length, "(need 2)");
+          console.log("  nextRank:", item.nextRank);
         }
       }
 
-      // Trigger inventory update
-      window.dispatchEvent(new CustomEvent("inventory-updated"));
-      
+      // Reload inventory state immediately after successful craft
+      loadInventoryData();
+      console.log("Inventory reloaded after craft");
+
       // Clear message after 3 seconds
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
+      console.error("Error during craft:", error);
       setMessage({
         type: "error",
         text: "Erreur lors du craft"
@@ -234,6 +296,7 @@ export default function CraftPage() {
       setTimeout(() => setMessage(null), 3000);
     } finally {
       setIsCrafting(false);
+      console.log("=== CRAFT COMPLETED ===");
     }
   };
 
