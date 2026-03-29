@@ -10,7 +10,8 @@ import {
   calculateExplorationXP,
   getUnlockedDurations,
   getMaxConcurrentMissions,
-  DURATION_UNLOCK_THRESHOLDS
+  DURATION_UNLOCK_THRESHOLDS,
+  DURATION_LEVEL_REQUIREMENTS
 } from "@/lib/exploration";
 import { PlantResource } from "@/lib/resources";
 import { RARITY_COLORS, RANK_BORDER_COLORS } from "@/lib/inventory";
@@ -229,10 +230,15 @@ export default function ExplorationPage() {
       return;
     }
 
-    // Check duration is unlocked
-    const unlockedDurations = getUnlockedDurations(Math.floor(avgExplorationLevel));
-    if (!unlockedDurations.includes(selectedDuration)) {
-      alert(`Duration ${selectedDuration} is locked. Gain exploration level ${DURATION_UNLOCK_THRESHOLDS[selectedDuration]} XP to unlock.`);
+    // Check duration is unlocked by exploration LEVEL (not XP anymore)
+    const durationLevelRequirement = DURATION_LEVEL_REQUIREMENTS[selectedDuration] || 1;
+
+    // All team members must meet or exceed the duration level requirement
+    const insufficientLevelCreatures = teamCreatures.filter(c => (c.explorationLevel || 0) < durationLevelRequirement);
+
+    if (insufficientLevelCreatures.length > 0) {
+      const creatureNames = insufficientLevelCreatures.map(c => c.name).join(", ");
+      alert(`Exploration Level ${durationLevelRequirement} requis pour ${selectedDuration === "8h" ? "8 heures" : selectedDuration}. ${insufficientLevelCreatures.length > 1 ? 'Les spécimens suivants' : 'Le spécimen suivant'} (${creatureNames}) n'${insufficientLevelCreatures.length > 1 ? 'ont' : 'a'} pas le niveau requis.`);
       return;
     }
 
@@ -338,6 +344,14 @@ export default function ExplorationPage() {
     );
   };
 
+  // Get average exploration level of selected team
+  const getSelectedTeamAvgLevel = (): number => {
+    if (selectedTeam.length === 0) return 0;
+    const teamCreatures = collection.filter(c => selectedTeam.includes(c.id));
+    const totalLevel = teamCreatures.reduce((sum, c) => sum + (c.explorationLevel || 0), 0);
+    return totalLevel / teamCreatures.length;
+  };
+
   // Format time remaining
   const formatTimeRemaining = (endTime: number): string => {
     const remaining = endTime - Date.now();
@@ -364,23 +378,39 @@ export default function ExplorationPage() {
           <div className="mb-6">
             <label className="block text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">Durée de la mission</label>
             <div className="flex flex-wrap gap-3">
-              {(["15min", "30min", "1h", "2h", "4h", "8h"] as DurationOption[]).map(duration => (
-                <button
-                  key={duration}
-                  onClick={() => setSelectedDuration(duration)}
-                  className={`px-6 py-3 rounded-xl font-semibold transition-all ${
-                    selectedDuration === duration
-                      ? "bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg"
-                      : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-                  }`}
-                >
-                  {duration === "15min" ? "15 min" :
-                   duration === "30min" ? "30 min" :
-                   duration === "1h" ? "1 heure" :
-                   duration === "2h" ? "2 heures" :
-                   duration === "4h" ? "4 heures" : "8 heures"}
-                </button>
-              ))}
+              {(["15min", "30min", "1h", "2h", "4h", "8h"] as DurationOption[]).map(duration => {
+                const requiredLevel = DURATION_LEVEL_REQUIREMENTS[duration];
+                const avgLevel = getSelectedTeamAvgLevel();
+                const meetsRequirement = avgLevel >= requiredLevel;
+
+                return (
+                  <button
+                    key={duration}
+                    onClick={() => setSelectedDuration(duration)}
+                    className={`px-6 py-3 rounded-xl font-semibold transition-all ${
+                      selectedDuration === duration
+                        ? "bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg"
+                        : meetsRequirement || selectedTeam.length === 0
+                          ? "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                          : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50"
+                    }`}
+                    title={selectedTeam.length > 0 && !meetsRequirement ? `Exploration Level ${requiredLevel} requis` : ""}
+                  >
+                    <div>
+                      {duration === "15min" ? "15 min" :
+                       duration === "30min" ? "30 min" :
+                       duration === "1h" ? "1 heure" :
+                       duration === "2h" ? "2 heures" :
+                       duration === "4h" ? "4 heures" : "8 heures"}
+                    </div>
+                    {requiredLevel > 1 && (
+                      <div className="text-xs mt-1 text-gray-500 dark:text-gray-400">
+                        Lvl {requiredLevel}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

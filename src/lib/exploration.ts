@@ -39,6 +39,16 @@ export const DURATION_UNLOCK_THRESHOLDS: Record<string, number> = {
   "8h": 1500
 };
 
+// New: Exploration level requirements for duration unlocks
+export const DURATION_LEVEL_REQUIREMENTS: Record<string, number> = {
+  "15min": 1,
+  "30min": 5,
+  "1h": 10,
+  "2h": 20,
+  "4h": 25,
+  "8h": 30
+};
+
 export const MISSION_LOCKED_COUNTS: Record<number, number> = {
   1: 1, // 1 max concurrent mission at level 1
   100: 2, // Unlock 2 missions at 100 XP
@@ -47,14 +57,61 @@ export const MISSION_LOCKED_COUNTS: Record<number, number> = {
   2000: 5  // Unlock 5 missions at 2000 XP
 };
 
+// Exploration level benefits (cumulative bonuses)
+export const EXPLORATION_BONUS_MAX = {
+  deathReduction: -50, // Maximum -50% death chance at level 20
+  doubleLoot: 25,      // Maximum 25% chance at level 25
+  timeReduction: -25,  // Maximum -25% duration at level 25
+  rarityBonus: 20      // Maximum +20% chance at level 30
+};
+
+/**
+ * Calculate exploration level benefits (cumulative bonuses)
+ * Returns percentage values for each bonus type
+ */
+export function getExplorationBonus(explorationLevel: number): {
+  deathReduction: number;      // Negative % reduction to death chance
+  doubleLoot: number;          // % chance of double loot
+  timeReduction: number;       // Negative % reduction to mission duration
+  rarityBonus: number;         // % bonus chance for higher rank loot
+} {
+  // Death reduction: -10% per 2 levels (mailed at -50% at level 20)
+  const deathReduction = Math.min(
+    EXPLORATION_BONUS_MAX.deathReduction,
+    -Math.floor(explorationLevel / 2) * 10
+  );
+
+  // Double loot: +5% per level until 25 (max 25%)
+  const doubleLoot = Math.min(
+    EXPLORATION_BONUS_MAX.doubleLoot,
+    explorationLevel * 1
+  );
+
+  // Time reduction: -5% per level until 25 (max -25%)
+  const timeReduction = Math.min(
+    EXPLORATION_BONUS_MAX.timeReduction,
+    -explorationLevel * 1
+  );
+
+  // Rarity bonus: +2% per level until 30 (max +20%)
+  const rarityBonus = Math.min(
+    EXPLORATION_BONUS_MAX.rarityBonus,
+    explorationLevel * 0.8
+  );
+
+  return { deathReduction, doubleLoot, timeReduction, rarityBonus };
+}
+
 /**
  * Calculate death chance based on creature level and mission duration
  * Higher duration = higher death chance
  * Higher level creature = lower death chance
+ * Exploration level reduces death chance (cumulative bonus)
  */
 function calculateDeathChance(
   creatureLevel: number,
-  missionDuration: string
+  missionDuration: string,
+  explorationLevel: number = 0
 ): number {
   const baseChances: Record<string, number> = {
     "15min": 0.05,
@@ -68,7 +125,12 @@ function calculateDeathChance(
 
   // Level 50 creatures have half the death chance
   const levelReduction = Math.min(0.5, creatureLevel / 100);
-  return baseChance * (1 - levelReduction);
+
+  // Exploration level bonus: reduces death chance further
+  const explorationBonus = getExplorationBonus(explorationLevel);
+  const explorationReduction = Math.abs(explorationBonus.deathReduction) / 100;
+
+  return baseChance * (1 - levelReduction - explorationReduction);
 }
 
 /**
@@ -96,19 +158,24 @@ function calculateInjuryChance(
  * Generate loot for exploration mission
  * Loot quantity depends on team size and duration
  * Rarity chances depend on duration
+ * Exploration level provides bonus double loot and rarity chances
  * Uses native rank system (E-S+)
  */
 export function generateLoot(
   teamSize: number,
   missionDuration: string,
-  lootReduction: number // 0-1 based on casualties
+  lootReduction: number, // 0-1 based on casualties
+  explorationLevel: number = 0 // Exploration level for bonuses
 ): PlantResource[] {
   const rarityChances = PLANT_RARITY_CHANCES[missionDuration] ?? PLANT_RARITY_CHANCES["15min"];
   const loot: PlantResource[] = [];
 
+  // Get exploration level bonuses
+  const explorationBonus = getExplorationBonus(explorationLevel);
+
   // Determine eligible plants by rank
   const eligiblePlants = new Map<Rank, PlantResource[]>();
-  
+
   PLANTS.forEach(plant => {
     const rank = plant.rarity;
     if (!eligiblePlants.has(rank)) {
@@ -131,28 +198,60 @@ export function generateLoot(
       continue;
     }
 
-    // Roll for rarity based on mission duration chances
+    // Roll for rarity based on mission duration chances + exploration bonus
     const roll = Math.random();
     let selectedRank: Rank = "E";
     let cumulativeChance = 0;
-    
+
+    // Apply rarity bonus: shift roll downward to favor higher ranks
+    const adjustedRoll = Math.max(0, roll - (explorationBonus.rarityBonus / 100));
+
     for (const [rank, chance] of Object.entries(rarityChances)) {
       cumulativeChance += chance;
-      if (roll <= cumulativeChance) {
+      if (adjustedRoll <= cumulativeChance) {
         selectedRank = rank as Rank;
         break;
       }
     }
-    
+
     // Randomly select a plant of that rarity
     const rankPlants = eligiblePlants.get(selectedRank) || [];
     if (rankPlants.length > 0) {
       const selectedPlant = rankPlants[Math.floor(Math.random() * rankPlants.length)];
       loot.push(selectedPlant);
+
+      // Double loot bonus: add another plant of same rank
+      if (Math.random() < (explorationBonus.doubleLoot / 100)) {
+        const doublePlant = rankPlants[Math.floor(Math.random() * rankPlants.length)];
+        loot.push(doublePlant);
+      }
     }
   }
 
   return loot;
+}
+
+/**
+ * Calculate adjusted mission duration with exploration level time reduction
+ */
+export function calculateAdjustedDuration(
+  missionDuration: string,
+  explorationLevel: number
+): number {
+  const durationMsMap: Record<string, number> = {
+    "15min": 15 * 60 * 1000,
+    "30min": 30 * 60 * 1000,
+    "1h": 60 * 60 * 1000,
+    "2h": 2 * 60 * 60 * 1000,
+    "4h": 4 * 60 * 60 * 1000,
+    "8h": 8 * 60 * 60 * 1000
+  };
+  const baseDurationMs = durationMsMap[missionDuration] ?? 15 * 60 * 1000;
+
+  const explorationBonus = getExplorationBonus(explorationLevel);
+  const timeReduction = Math.abs(explorationBonus.timeReduction) / 100;
+
+  return baseDurationMs * (1 - timeReduction);
 }
 
 /**
@@ -176,7 +275,11 @@ export function simulateExplorationMission(
 
   // Process each creature
   for (const creature of creatures) {
-    const deathChance = calculateDeathChance(creature.level || 1, mission.duration);
+    const deathChance = calculateDeathChance(
+      creature.level || 1,
+      mission.duration,
+      creature.explorationLevel || 0
+    );
     const roll = Math.random();
 
     if (roll < deathChance) {
@@ -193,8 +296,15 @@ export function simulateExplorationMission(
   const survivorCount = survivors.length;
   const lootReduction = casualtyCount > 0 ? Math.min(0.7, casualtyCount / 5) : 0;
 
+  // Calculate average exploration level for loot bonuses
+  const avgExplorationLevel = creatures.length > 0
+    ? creatures.reduce((sum, c) => sum + (c.explorationLevel || 0), 0) / creatures.length
+    : 0;
+
   // Generate loot (no loot if everyone died)
-  const loot = survivorCount > 0 ? generateLoot(survivorCount, mission.duration, lootReduction) : [];
+  const loot = survivorCount > 0
+    ? generateLoot(survivorCount, mission.duration, lootReduction, avgExplorationLevel)
+    : [];
 
   return {
     casualties: casualtyCount,
