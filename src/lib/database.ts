@@ -77,9 +77,9 @@ export const CREATURES: Record<string, Creature> = {
     name: "Mouche",
     rank: "E",
     baseStats: {
-      hp: 250,
+      hp: 500,
       attack: 100,
-      defense: 50,
+      defense: 100,
       speed: 100,
       crit: 100,
     },
@@ -362,4 +362,5 @@ export function applyPersonalityStats(
     speed: Math.floor(baseStats.speed * personalityDef.statModifiers.speed),
     crit: Math.floor(baseStats.crit * personalityDef.statModifiers.crit)
   };
+}
 }
