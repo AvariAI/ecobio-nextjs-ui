@@ -7,7 +7,7 @@ import { PLANTS, getMedicalPlantsByRank } from "@/lib/resources";
 
 export default function InventoryPage() {
   const [inventory, setInventory] = useState<Inventory>({ items: [], totalLootObtained: 0 });
-  const [filterType, setFilterType] = useState<"all" | "plant" | "insectEssence" | "plantEssence" | "breedingBuffer" | "object">("all");
+  const [filterType, setFilterType] = useState<"all" | "plant" | "insectEssence" | "plantEssence" | "breedingBuffer" | "remedy" | "object">("all");
   const [filterRank, setFilterRank] = useState<"all" | "S+" | "S" | "A" | "B" | "C" | "D" | "E">("all");
 
   // Load inventory
@@ -45,7 +45,7 @@ export default function InventoryPage() {
     }
   };
 
-  // Helper function to determine if an item is an "object" (not essence or buffer)
+  // Helper function to determine if an item is an "object" (not plant, essence, buffer, or remedy)
   const isObject = (item: any): boolean => {
     return !["plant", "insectEssence", "plantEssence", "breedingBuffer", "remedy"].includes(item.type);
   };
@@ -148,6 +148,12 @@ export default function InventoryPage() {
               ⚗️ Buffer Breeding
             </button>
             <button
+              className={`px-3 py-1 rounded-lg text-sm ${filterType === "remedy" ? "bg-pink-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
+              onClick={() => setFilterType("remedy")}
+            >
+              💊 Remèdes
+            </button>
+            <button
               className={`px-3 py-1 rounded-lg text-sm ${filterType === "object" ? "bg-orange-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
               onClick={() => setFilterType("object")}
             >
@@ -224,6 +230,8 @@ export default function InventoryPage() {
                       itemDef = ESSENCE_DEFINITIONS[`essence_${item.type === "insectEssence" ? "insect" : "plant"}_${item.rank}`];
                     } else if (item.type === "breedingBuffer") {
                       itemDef = BUFFER_DEFINITIONS[`buffer_${item.rank}`];
+                    } else if (item.type === "remedy") {
+                      itemDef = REMEDY_DEFINITIONS[`remedy_${item.rank}`];
                     }
                     
                     if (!itemDef) {
@@ -243,6 +251,9 @@ export default function InventoryPage() {
                     const displayIcon = itemDef.icon;
                     const isMedical = item.type === "plant" && isMedicalPlant(item);
 
+                    // Show heal% badge for remedies (use item.healPercent directly)
+                    const showHealPercent = item.type === "remedy" && (item as any).healPercent;
+
                     return (
                       <div
                         key={item.id}
@@ -257,6 +268,11 @@ export default function InventoryPage() {
                               {isMedical && (
                                 <span className="inline-block mt-1 px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs font-bold rounded-full">
                                   🌿 Médical
+                                </span>
+                              )}
+                              {showHealPercent && (
+                                <span className="inline-block mt-1 px-2 py-1 bg-pink-100 dark:bg-pink-900 text-pink-800 dark:text-pink-200 text-xs font-bold rounded-full">
+                                  💚 +{showHealPercent}% HP
                                 </span>
                               )}
                             </div>
