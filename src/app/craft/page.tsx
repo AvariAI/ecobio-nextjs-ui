@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   calculateAverageRank,
@@ -17,25 +17,19 @@ import { Rank } from "@/lib/database";
 
 export default function CraftPage() {
   const [selectedRecipe, setSelectedRecipe] = useState<RecipeType>("plantEssence");
-  const [ingredient1, setIngredient1] = useState<string>("");
-  const [ingredient2, setIngredient2] = useState<string>("");
-  const [preview, setPreview] = useState<{
-    resultRank: Rank | null;
-    canCraft: boolean;
-  }>({ resultRank: null, canCraft: false });
   const [mainInventory, setMainInventory] = useState<Inventory>({ items: [], totalLootObtained: 0 });
+  const [isCrafting, setIsCrafting] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error", text: string } | null>(null);
 
   // Load data
   useEffect(() => {
-    const loadedInventory = loadInventory();
-    setMainInventory(loadedInventory);
+    loadInventoryData();
   }, [selectedRecipe]);
 
   // Listen for updates
   useEffect(() => {
     const handleUpdate = () => {
-      const inventory = loadInventory();
-      setMainInventory(inventory);
+      loadInventoryData();
     };
 
     window.addEventListener("inventory-updated", handleUpdate);
@@ -44,311 +38,227 @@ export default function CraftPage() {
     };
   }, [selectedRecipe]);
 
-  // Sync ingredient2 rank with ingredient1 for plant essence craft
-  useEffect(() => {
-    if (selectedRecipe === "plantEssence" && ingredient1) {
-      const plant1 = mainInventory.items.find(p => p.id === ingredient1);
-      if (plant1 && ingredient2) {
-        const plant2 = mainInventory.items.find(p => p.id === ingredient2);
-        if (plant2 && plant2.rank !== plant1.rank) {
-          // Reset ingredient2 if ranks don't match
-          setIngredient2("");
-        }
-      }
-    }
-  }, [selectedRecipe, ingredient1, ingredient2, mainInventory]);
+  const loadInventoryData = useCallback(() => {
+    const loadedInventory = loadInventory();
+    setMainInventory(loadedInventory);
+  }, [selectedRecipe]);
 
-  // Sync ingredient1 rank with ingredient2 for plant essence craft
-  useEffect(() => {
-    if (selectedRecipe === "plantEssence" && ingredient2) {
-      const plant2 = mainInventory.items.find(p => p.id === ingredient2);
-      if (plant2 && ingredient1) {
-        const plant1 = mainInventory.items.find(p => p.id === ingredient1);
-        if (plant1 && plant1.rank !== plant2.rank) {
-          // Reset ingredient1 if ranks don't match
-          setIngredient1("");
-        }
-      }
-    }
-
-    // Sync ingredient1 with ingredient2 for upgrade craft
-    if (selectedRecipe === "upgrade" && ingredient2) {
-      const item2 = mainInventory.items.find(i => i.id === ingredient2);
-      if (item2 && ingredient1) {
-        const item1 = mainInventory.items.find(i => i.id === ingredient1);
-        if (item1 && (item1.type !== item2.type || item1.rank !== item2.rank)) {
-          // Reset ingredient1 if type/rank don't match
-          setIngredient1("");
-        }
-      }
-    }
-  }, [selectedRecipe, ingredient1, ingredient2, mainInventory]);
-
-  // Update preview
-  useEffect(() => {
-    if (!ingredient1 || !ingredient2) {
-      setPreview({ resultRank: null, canCraft: false });
-      return;
-    }
-
+  // Get craftable items based on recipe type
+  const getCraftableItems = useCallback(() => {
     if (selectedRecipe === "plantEssence") {
-      const plant1 = mainInventory.items.find(p => p.id === ingredient1);
-      const plant2 = mainInventory.items.find(p => p.id === ingredient2);
-
-      if (plant1 && plant2) {
-        const avgRank = calculateAverageRank(plant1.rank, plant2.rank);
-        // Allow crafting with the same plant only if we have at least 2 copies
-        const canCraftSamePlant = plant1.id === plant2.id && plant1.count >= 2;
-        setPreview({
-          resultRank: avgRank,
-          canCraft: plant1.id !== plant2.id || canCraftSamePlant
-        });
-      } else {
-        setPreview({ resultRank: null, canCraft: false });
-      }
-    } else if (selectedRecipe === "breedingBuffer") {
-      const essence1 = mainInventory.items.find(i => i.id === ingredient1 && i.type === "insectEssence");
-      const essence2 = mainInventory.items.find(i => i.id === ingredient2 && i.type === "plantEssence");
-
-      if (essence1 && essence2) {
-        const avgRank = calculateAverageRank(essence1.rank, essence2.rank);
-        setPreview({
-          resultRank: avgRank,
-          canCraft: essence1.id !== essence2.id && essence1.count > 0 && essence2.count > 0
-        });
-      } else {
-        setPreview({ resultRank: null, canCraft: false });
-      }
-    } else if (selectedRecipe === "upgrade") {
-      const item1 = mainInventory.items.find(i => i.id === ingredient1);
-      const item2 = mainInventory.items.find(i => i.id === ingredient2);
-
-      if (item1 && item2) {
-        const nextRank = getNextRank(item1.rank);
-
-        // Check if items are same type/rank and can be upgraded
-        const canSameItem = item1.id === item2.id && item1.count >= 2;
-        const canUpgrade = (item1.type === item2.type && item1.rank === item2.rank)
-          && (item1.id !== item2.id || canSameItem)
-          && nextRank !== null;
-
-        setPreview({
-          resultRank: nextRank,
-          canCraft: canUpgrade
-        });
-      } else {
-        setPreview({ resultRank: null, canCraft: false });
-      }
-    }
-  }, [selectedRecipe, ingredient1, ingredient2, mainInventory]);
-
-  // Handle craft
-  const handleCraft = () => {
-    if (!preview.canCraft || !preview.resultRank) return;
-
-    if (selectedRecipe === "plantEssence") {
-      const plant1 = mainInventory.items.find(p => p.id === ingredient1);
-      const plant2 = mainInventory.items.find(p => p.id === ingredient2);
-
-      if (plant1 && plant2 && plant1.count > 0 && plant2.count > 0) {
-        const { resultRank } = craftPlantEssence(plant1.id, plant2.id, plant1.rank, plant2.rank);
-
-        // Add crafted essence to main inventory
-        addCraftedItemToInventory("plantEssence", resultRank, 1);
-
-        // Remove plants from inventory (consume ingredients)
-        // If same plant selected, remove 2 copies; otherwise remove 1 from each
-        if (plant1.id === plant2.id) {
-          removeFromInventory(plant1.id, 2);
+      // Group plants by (name, rank) and count them
+      const plantGroups = new Map<string, { name: string; rank: Rank; count: number }>();
+      
+      mainInventory.items.filter(i => i.type === "plant").forEach(plant => {
+        const key = `${plant.plantName}-${plant.rank}`;
+        const existing = plantGroups.get(key);
+        if (existing) {
+          existing.count += plant.count;
         } else {
-          removeFromInventory(plant1.id, 1);
-          removeFromInventory(plant2.id, 1);
+          plantGroups.set(key, {
+            name: plant.plantName!,
+            rank: plant.rank,
+            count: plant.count
+          });
         }
+      });
 
-        // Reset form
-        setIngredient1("");
-        setIngredient2("");
-        setPreview({ resultRank: null, canCraft: false });
-
-        // Trigger inventory update event
-        window.dispatchEvent(new CustomEvent("inventory-updated"));
-      }
+      return Array.from(plantGroups.values()).map(g => ({
+        id: `plant-${g.name}-${g.rank}`,
+        icon: "🌿",
+        name: g.name,
+        displayName: `Essence de ${g.name}`,
+        rank: g.rank,
+        count: g.count,
+        canCraft: g.count >= 2,
+        craftType: "plantEssence" as const
+      }));
     } else if (selectedRecipe === "breedingBuffer") {
-      const essence1 = mainInventory.items.find(i => i.id === ingredient1 && i.type === "insectEssence");
-      const essence2 = mainInventory.items.find(i => i.id === ingredient2 && i.type === "plantEssence");
+      // Check which ranks have both insect essence and plant essence available
+      const rankGroups = new Map<Rank, { insectEssence: number; plantEssence: number }>();
 
-      if (essence1 && essence2 && essence1.count > 0 && essence2.count > 0) {
-        const { resultRank } = craftBreedingBuffer(essence1.rank, essence2.rank);
-
-        // Add crafted buffer to main inventory
-        addCraftedItemToInventory("breedingBuffer", resultRank, 1);
-
-        // Remove essences from inventory (consume)
-        removeFromInventory(essence1.id, 1);
-        removeFromInventory(essence2.id, 1);
-
-        // Reset form
-        setIngredient1("");
-        setIngredient2("");
-        setPreview({ resultRank: null, canCraft: false });
-
-        // Trigger inventory update event
-        window.dispatchEvent(new CustomEvent("inventory-updated"));
-      }
-    } else if (selectedRecipe === "upgrade") {
-      const item1 = mainInventory.items.find(i => i.id === ingredient1);
-      const item2 = mainInventory.items.find(i => i.id === ingredient2);
-
-      if (item1 && item2 && item1.count > 0 && item2.count > 0) {
-        // Determine item type
-        const itemType = item1.type as "insectEssence" | "plantEssence" | "breedingBuffer";
-
-        const { resultRank } = craftUpgrade(itemType, item1.rank);
-
-        if (resultRank) {
-          // Add upgraded item to main inventory
-          addCraftedItemToInventory(itemType, resultRank, 1);
-
-          // Remove both items from inventory (consume ingredients)
-          // If same item selected, remove 2 copies; otherwise remove 1 from each
-          if (item1.id === item2.id) {
-            removeFromInventory(item1.id, 2);
+      mainInventory.items.forEach(item => {
+        if (item.type === "insectEssence" || item.type === "plantEssence") {
+          const existing = rankGroups.get(item.rank);
+          if (existing) {
+            if (item.type === "insectEssence") {
+              existing.insectEssence += item.count;
+            } else {
+              existing.plantEssence += item.count;
+            }
           } else {
-            removeFromInventory(item1.id, 1);
-            removeFromInventory(item2.id, 1);
+            rankGroups.set(item.rank, {
+              insectEssence: item.type === "insectEssence" ? item.count : 0,
+              plantEssence: item.type === "plantEssence" ? item.count : 0
+            });
           }
-
-          // Reset form
-          setIngredient1("");
-          setIngredient2("");
-          setPreview({ resultRank: null, canCraft: false });
-
-          // Trigger inventory update event
-          window.dispatchEvent(new CustomEvent("inventory-updated"));
         }
-      }
-    }
-  };
+      });
 
-  // Get available ingredients for selected recipe
-  const getAvailableIngredients = () => {
-    if (selectedRecipe === "plantEssence") {
-      return mainInventory.items.filter(p => p.type === "plant" && p.count > 0);
-    } else if (selectedRecipe === "breedingBuffer") {
-      return mainInventory.items.filter(i =>
-        (i.type === "insectEssence" || i.type === "plantEssence") && i.count > 0
-      );
+      return Array.from(rankGroups.entries()).map(([rank, counts]) => ({
+        id: `buffer-${rank}`,
+        icon: "🧬",
+        name: "Buffer Breeding",
+        displayName: `Buffer Breeding`,
+        rank: rank,
+        count: Math.min(counts.insectEssence, counts.plantEssence),
+        canCraft: counts.insectEssence >= 1 && counts.plantEssence >= 1,
+        craftType: "breedingBuffer" as const,
+        details: { insectEssence: counts.insectEssence, plantEssence: counts.plantEssence }
+      }));
     } else if (selectedRecipe === "upgrade") {
-      return mainInventory.items.filter(i =>
-        (i.type === "insectEssence" || i.type === "plantEssence" || i.type === "breedingBuffer") && i.count > 0
-      );
+      // Group upgradeable items by (type, rank)
+      const upgradeGroups = new Map<string, { type: string; rank: Rank; count: number; displayName: string }>();
+
+      mainInventory.items.filter(i =>
+        ["insectEssence", "plantEssence", "breedingBuffer"].includes(i.type)
+      ).forEach(item => {
+        const key = `${item.type}-${item.rank}`;
+        const displayName = item.type === "insectEssence" ? "Essence Insecte" :
+                          item.type === "plantEssence" ? "Essence Plante" :
+                          "Buffer Breeding";
+        
+        const existing = upgradeGroups.get(key);
+        if (existing) {
+          existing.count += item.count;
+        } else {
+          upgradeGroups.set(key, {
+            type: item.type,
+            rank: item.rank,
+            count: item.count,
+            displayName
+          });
+        }
+      });
+
+      return Array.from(upgradeGroups.values()).map(g => {
+        const nextRank = getNextRank(g.rank);
+        return {
+          id: `upgrade-${g.type}-${g.rank}`,
+          icon: g.type === "insectEssence" ? "🐛" :
+               g.type === "plantEssence" ? "🌿" : "🧬",
+          name: g.displayName,
+          displayName: `${g.displayName} → ${nextRank || "?"}`,
+          rank: g.rank,
+          nextRank: nextRank,
+          count: g.count,
+          canCraft: g.count >= 2 && nextRank !== null,
+          craftType: "upgrade" as const,
+          itemType: g.type
+        };
+      });
     }
     return [];
-  };
+  }, [selectedRecipe, mainInventory]);
 
-  const getIngredientName = (id: string) => {
-    const item = mainInventory.items.find(item => item.id === id);
-    if (!item) return "";
+  const craftableItems = getCraftableItems();
 
-    if (item.type === "plant") {
-      return `${item.plantName} (${item.rank}) ${item.count}×`;
-    } else if (item.type === "insectEssence") {
-      return `Essence Insecte (${item.rank}) ${item.count}×`;
-    } else if (item.type === "plantEssence") {
-      return `Essence Plante (${item.rank}) ${item.count}×`;
-    } else if (item.type === "breedingBuffer") {
-      return `Buffer Breeding (${item.rank}) ${item.count}×`;
-    }
-    return "";
-  };
+  // Handle craft click
+  const handleCraftItem = async (item: any) => {
+    if (!item.canCraft || isCrafting) return;
 
-  const getPlaceholderForSlot = (slot: number) => {
-    if (selectedRecipe === "plantEssence") {
-      return slot === 1 ? "Sélectionner plante 1..." : "Sélectionner plante 2...";
-    } else if (selectedRecipe === "breedingBuffer") {
-      return slot === 1 ? "Essence Insecte..." : "Essence Plante...";
-    } else if (selectedRecipe === "upgrade") {
-      return slot === 1 ? "Item 1..." : "Item 2...";
-    }
-    return "Sélectionner...";
-  };
+    setIsCrafting(true);
+    setMessage(null);
 
-  const filterIngredientsForSlot = (items: InventoryItem[], slot: number) => {
-    if (selectedRecipe === "plantEssence") {
-      // For plant essence, enforce same rank first
-      const otherSlotId = slot === 1 ? ingredient2 : ingredient1;
+    try {
+      if (item.craftType === "plantEssence") {
+        // Find 2 plants of this type and rank, consume them
+        const plants = mainInventory.items.filter(
+          i => i.type === "plant" && i.plantName === item.name && i.rank === item.rank
+        ).slice(0, 2);
 
-      // If the other slot has an ingredient, only show items with the same rank
-      let filtered = items;
-      if (otherSlotId) {
-        const otherItem = mainInventory.items.find(i => i.id === otherSlotId);
-        if (otherItem) {
-          filtered = items.filter(item => item.rank === otherItem.rank);
+        if (plants.length >= 2) {
+          const { resultRank } = craftPlantEssence(plants[0].id, plants[1].id, plants[0].rank, plants[1].rank);
+          addCraftedItemToInventory("plantEssence", resultRank, 1);
+          removeFromInventory(plants[0].id, 1);
+          removeFromInventory(plants[1].id, 1);
+          
+          setMessage({
+            type: "success",
+            text: `Essence de ${item.name} (${resultRank}) créée!`
+          });
+        }
+      } else if (item.craftType === "breedingBuffer") {
+        // Find 1 insect essence and 1 plant essence of this rank
+        const insectEssence = mainInventory.items.find(
+          i => i.type === "insectEssence" && i.rank === item.rank
+        );
+        const plantEssence = mainInventory.items.find(
+          i => i.type === "plantEssence" && i.rank === item.rank
+        );
 
-          // Allow selecting the same plant if we have at least 2 copies
-          if (otherItem.count >= 2) {
-            // Don't filter out the already selected item
-            return filtered;
+        if (insectEssence && plantEssence) {
+          const { resultRank } = craftBreedingBuffer(insectEssence.rank, plantEssence.rank);
+          addCraftedItemToInventory("breedingBuffer", resultRank, 1);
+          removeFromInventory(insectEssence.id, 1);
+          removeFromInventory(plantEssence.id, 1);
+          
+          setMessage({
+            type: "success",
+            text: `Buffer Breeding (${resultRank}) créé!`
+          });
+        }
+      } else if (item.craftType === "upgrade") {
+        // Find 2 items of this type and rank
+        const items = mainInventory.items.filter(
+          i => i.type === item.itemType && i.rank === item.rank
+        ).slice(0, 2);
+
+        if (items.length >= 2 && item.nextRank) {
+          const itemType = item.itemType as "insectEssence" | "plantEssence" | "breedingBuffer";
+          const { resultRank } = craftUpgrade(itemType, item.rank);
+          
+          if (resultRank) {
+            addCraftedItemToInventory(itemType, resultRank, 1);
+            removeFromInventory(items[0].id, 1);
+            removeFromInventory(items[1].id, 1);
+            
+            setMessage({
+              type: "success",
+              text: `${item.name} amélioré en rang ${resultRank}!`
+            });
           }
         }
       }
 
-      // Otherwise, filter out the already selected plant
-      return filtered.filter(item => item.id !== otherSlotId);
-    } else if (selectedRecipe === "breedingBuffer") {
-      // For breeding buffer:
-      // Slot 1: only insectEssence
-      // Slot 2: only plantEssence
-      if (slot === 1) {
-        return items.filter(item => item.type === "insectEssence");
-      } else {
-        return items.filter(item => item.type === "plantEssence");
-      }
-    } else if (selectedRecipe === "upgrade") {
-      // For upgrade: enforce same type AND rank
-      const otherSlotId = slot === 1 ? ingredient2 : ingredient1;
-
-      // If the other slot has an ingredient, only show items with same type/rank
-      let filtered = items;
-      if (otherSlotId) {
-        const otherItem = mainInventory.items.find(i => i.id === otherSlotId);
-        if (otherItem) {
-          // Only allow upgradeable item types
-          const isUpgradeableItem = ["insectEssence", "plantEssence", "breedingBuffer"].includes(otherItem.type);
-
-          if (!isUpgradeableItem) {
-            return [];
-          }
-
-          filtered = items.filter(item =>
-            item.rank === otherItem.rank &&
-            item.type === otherItem.type
-          );
-
-          // Allow selecting the same item if we have at least 2 copies
-          if (otherItem.count >= 2) {
-            return filtered;
-          }
-        }
-      }
-
-      // Otherwise, filter out the already selected item
-      return filtered.filter(item => item.id !== otherSlotId);
+      // Trigger inventory update
+      window.dispatchEvent(new CustomEvent("inventory-updated"));
+      
+      // Clear message after 3 seconds
+      setTimeout(() => setMessage(null), 3000);
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text: "Erreur lors du craft"
+      });
+      setTimeout(() => setMessage(null), 3000);
+    } finally {
+      setIsCrafting(false);
     }
-    return items;
   };
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <header className="text-center mb-8">
           <h1 className="text-6xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent mb-4">
             🧪 Atelier de Craft
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300">
-            Crée des ressources et des boosters pour breeding
+            Cliquez sur un item pour craft instantanément
           </p>
         </header>
+
+        {/* Message Toast */}
+        {message && (
+          <div className={`fixed top-4 right-4 p-4 rounded-xl shadow-lg z-50 ${
+            message.type === "success" 
+              ? "bg-green-500 text-white" 
+              : "bg-red-500 text-white"
+          }`}>
+            {message.text}
+          </div>
+        )}
 
         {/* Recipe Selection */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
@@ -358,22 +268,18 @@ export default function CraftPage() {
 
           <div className="grid md:grid-cols-3 gap-4">
             {[
-              { id: "plantEssence", label: "Essence de Plante", icon: "🌿", desc: "Plante + Plante → Essence" },
+              { id: "plantEssence", label: "Essence de Plante", icon: "🌿", desc: "2 plantes même rang → Essence" },
               { id: "breedingBuffer", label: "Buffer Breeding", icon: "🧬", desc: "Essence Insecte + Essence Plante → Buffer" },
               { id: "upgrade", label: "Amélioration", icon: "⬆️", desc: "2 items identiques → Rang supérieur" }
             ].map(recipe => (
               <button
                 key={recipe.id}
-                className={`p-4 rounded-xl border-4 transition-all ${selectedRecipe === recipe.id
-                  ? "bg-amber-600 text-white border-amber-700"
-                  : "bg-white dark:bg-gray-700 border-amber-600 hover:bg-amber-100 dark:hover:bg-gray-600"
+                className={`p-4 rounded-xl border-4 transition-all ${
+                  selectedRecipe === recipe.id
+                    ? "bg-amber-600 text-white border-amber-700"
+                    : "bg-white dark:bg-gray-700 border-amber-600 hover:bg-amber-100 dark:hover:bg-gray-600"
                 }`}
-                onClick={() => {
-                  setSelectedRecipe(recipe.id as RecipeType);
-                  setIngredient1("");
-                  setIngredient2("");
-                  setPreview({ resultRank: null, canCraft: false });
-                }}
+                onClick={() => setSelectedRecipe(recipe.id as RecipeType)}
               >
                 <div className="text-4xl mb-2">{recipe.icon}</div>
                 <h3 className="text-xl font-bold mb-1">{recipe.label}</h3>
@@ -383,86 +289,74 @@ export default function CraftPage() {
           </div>
         </div>
 
-        {/* Ingredients Selection */}
+        {/* Craftable Items Grid */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
           <h2 className="text-2xl font-bold text-amber-800 dark:text-amber-200 mb-4">
-            Ingrédients
+            Items disponibles
           </h2>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold mb-2">
-                {selectedRecipe === "plantEssence" ? "Plante 1" :
-                 selectedRecipe === "breedingBuffer" ? "Essence Insecte" :
-                 selectedRecipe === "upgrade" ? "Item 1" : "Ingrédient 1"}
-              </label>
-              <select
-                value={ingredient1}
-                onChange={(e) => setIngredient1(e.target.value)}
-                className="w-full p-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
-              >
-                <option value="">{getPlaceholderForSlot(1)}</option>
-                {filterIngredientsForSlot(getAvailableIngredients(), 1).map(item => (
-                  <option key={item.id} value={item.id}>
-                    {getIngredientName(item.id) || `Item ${item.id}`}
-                  </option>
-                ))}
-              </select>
+          {craftableItems.length === 0 ? (
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <p className="text-xl">Aucun item disponible pour cette recette</p>
+              <p className="text-sm mt-2">Allez collecter des ressources! 🌱</p>
             </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {craftableItems.map((item) => (
+                <button
+                  key={item.id}
+                  disabled={!item.canCraft || isCrafting}
+                  onClick={() => handleCraftItem(item)}
+                  className={`
+                    p-4 rounded-xl border-2 transition-all text-left
+                    ${item.canCraft
+                      ? "border-amber-300 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer"
+                      : "border-gray-300 dark:border-gray-600 opacity-50 cursor-not-allowed"
+                    }
+                  `}
+                >
+                  {/* Icon */}
+                  <div className="text-4xl mb-2">{item.icon}</div>
+                  
+                  {/* Name */}
+                  <h3 className="font-bold text-lg mb-1 text-gray-800 dark:text-gray-200">
+                    {item.displayName}
+                  </h3>
+                  
+                  {/* Rank Badge */}
+                  <div className="mb-2">
+                    <span className={`px-2 py-1 rounded-full text-sm font-semibold ${RANK_COLORS[item.rank as Rank]}`}>
+                      {item.rank}
+                    </span>
+                    {item.craftType === "upgrade" && item.nextRank && (
+                      <span className="ml-2 text-gray-500">→ {item.nextRank}</span>
+                    )}
+                  </div>
+                  
+                  {/* Count */}
+                  <div className="text-sm">
+                    {item.canCraft ? (
+                      <span className={`font-semibold ${item.count >= 2 ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}`}>
+                        Disponible ×{item.count}
+                      </span>
+                    ) : (
+                      <span className="text-red-500 dark:text-red-400 font-semibold">
+                        Besoin de 2 (×{item.count})
+                      </span>
+                    )}
+                  </div>
 
-            <div>
-              <label className="block text-sm font-semibold mb-2">
-                {selectedRecipe === "plantEssence" ? "Plante 2" :
-                 selectedRecipe === "breedingBuffer" ? "Essence Plante" :
-                 selectedRecipe === "upgrade" ? "Item 2" : "Ingrédient 2"}
-              </label>
-              <select
-                value={ingredient2}
-                onChange={(e) => setIngredient2(e.target.value)}
-                className="w-full p-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
-              >
-                <option value="">{getPlaceholderForSlot(2)}</option>
-                {filterIngredientsForSlot(getAvailableIngredients(), 2).map(item => (
-                  <option key={item.id} value={item.id}>
-                    {getIngredientName(item.id) || `Item ${item.id}`}
-                  </option>
-                ))}
-              </select>
+                  {/* Extra details for breeding buffer */}
+                  {item.craftType === "breedingBuffer" && item.details && (
+                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      <div>🐛 Essence Insecte: ×{item.details.insectEssence}</div>
+                      <div>🌿 Essence Plante: ×{item.details.plantEssence}</div>
+                    </div>
+                  )}
+                </button>
+              ))}
             </div>
-          </div>
-
-          {/* Preview */}
-          <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-700 rounded-xl">
-            <h3 className="font-bold mb-2">Prévision</h3>
-            {preview.resultRank ? (
-              <div className="flex items-center gap-2">
-                <span className="text-gray-600">Résultat:</span>
-                <span className={`px-3 py-1 rounded-full ${RANK_COLORS[preview.resultRank as Rank]}`}>
-                  {preview.resultRank}
-                </span>
-                <span className="text-sm text-gray-500">
-                  {selectedRecipe === "plantEssence" ? "Essence Plante" :
-                   selectedRecipe === "breedingBuffer" ? "Buffer Breeding" :
-                   "Item Amélioré"}
-                </span>
-              </div>
-            ) : (
-              <p className="text-gray-500">Sélectionnez deux ingrédients pour voir la prévision</p>
-            )}
-          </div>
-
-          {/* Craft Button */}
-          <button
-            className={`w-full mt-4 py-4 text-xl font-bold rounded-xl transition-all ${
-              !preview.canCraft
-                ? "bg-gray-400 text-white cursor-not-allowed"
-                : "bg-amber-600 hover:bg-amber-700 text-white"
-            }`}
-            disabled={!preview.canCraft}
-            onClick={handleCraft}
-          >
-            🧪 CRAFT
-          </button>
+          )}
         </div>
 
         {/* Back button */}
