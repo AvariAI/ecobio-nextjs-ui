@@ -209,15 +209,16 @@ export default function CraftPage() {
         const searchName = selectedItem.plantName || selectedItem.name;
         console.log("Searching for plant with name:", searchName);
 
-        const plants = freshInventory.items.filter(
-          i => {
-            console.log(`Checking plant: ${i.plantName} (${i.rank}) vs search: ${searchName} (${selectedItem.rank})`);
-            return i.type === "plant" && 
-                   i.plantName && 
-                   i.plantName.toLowerCase() === searchName.toLowerCase() && 
-                   i.rank === selectedItem.rank;
-          }
-        ).slice(0, 2);
+        const plants = freshInventory.items
+          .filter(i => i.type === "plant" && i.rank === selectedItem.rank)
+          .filter(i => {
+            const plantName = i.plantName || i.name;
+            const searchName = selectedItem.plantName || selectedItem.name;
+            const matches = plantName && plantName.toLowerCase() === searchName.toLowerCase();
+            console.log(`Checking plant: ${plantName || i.name} (${i.rank}) vs search: ${searchName} (${selectedItem.rank}) → matches: ${matches}`);
+            return matches;
+          })
+          .slice(0, 2);
 
         console.log(`Filtered plants for "${selectedItem.plantName || selectedItem.name}" (rank ${selectedItem.rank}):`, plants);
         console.log("Plants count:", plants.length, "(needs 2)");
