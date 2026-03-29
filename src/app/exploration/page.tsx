@@ -242,7 +242,7 @@ export default function ExplorationPage() {
       return;
     }
 
-    const mission = createExplorationMission(selectedTeam, selectedDuration, creatureLevels);
+    const mission = createExplorationMission(selectedTeam, selectedDuration, creatureLevels, Math.floor(avgExplorationLevel));
 
     // Set creatures on mission status
     const updatedCollection = collection.map(creature => {

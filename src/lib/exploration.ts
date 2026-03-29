@@ -322,27 +322,20 @@ export function simulateExplorationMission(
 export function createExplorationMission(
   team: string[],
   duration: "15min" | "30min" | "1h" | "2h" | "4h" | "8h",
-  creatureLevels: number[]
+  creatureLevels: number[],
+  avgExplorationLevel: number = 0 // Average exploration level for time reduction bonus
 ): ExplorationMission {
   const startTime = Date.now();
-  const durationMsMap: Record<string, number> = {
-    "15min": 15 * 60 * 1000,
-    "30min": 30 * 60 * 1000,
-    "1h": 60 * 60 * 1000,
-    "2h": 2 * 60 * 60 * 1000,
-    "4h": 4 * 60 * 60 * 1000,
-    "8h": 8 * 60 * 60 * 1000
-  };
-  const durationMs = durationMsMap[duration] ?? 15 * 60 * 1000; // Default to 15min if not found
+  const adjustedDurationMs = calculateAdjustedDuration(duration, avgExplorationLevel);
 
   return {
     id: `mission-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     team,
     duration,
     startTime,
-    endTime: startTime + durationMs,
+    endTime: startTime + adjustedDurationMs,
     status: "active",
-    explorationLevel: 0 // Should be passed from creature data
+    explorationLevel: avgExplorationLevel // Store for debugging/reference
   };
 }
 
