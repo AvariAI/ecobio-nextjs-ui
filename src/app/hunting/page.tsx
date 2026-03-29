@@ -992,19 +992,19 @@ export default function HuntingPage() {
                     onClick={() => handleViewCreature(c)}
                     className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-4 border border-green-700 hover:border-green-600 cursor-pointer hover:scale-105 transition-all duration-200 relative"
                   >
-                    {/* Exploration level badge */}
-                    <div className="absolute top-2 right-2 bg-amber-500 text-white text-xs px-2 py-1 rounded-lg font-semibold">
-                      🗺️ Lvl {c.explorationLevel || 0}
+                    {/* Exploration level badge - top left, compact */}
+                    <div className="absolute top-2 left-2 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-lg font-semibold">
+                      🗺️{c.explorationLevel || 0}
                     </div>
 
-                    {/* Exploration mission indicator */}
+                    {/* Exploration mission indicator - below exploration level */}
                     {c.isOnMission && (
-                      <div className="absolute top-10 right-2 bg-orange-600 text-white text-xs px-2 py-1 rounded-lg" title="En mission d'exploration">
-                        🗺️ Mission
+                      <div className="absolute top-8 left-2 bg-orange-600 text-white text-xs px-1.5 py-0.5 rounded-lg" title="En mission d'exploration">
+                        🗺️
                       </div>
                     )}
 
-                    <div className="flex items-start gap-3 mb-2">
+                    <div className="flex items-start gap-3 mb-2 pl-4">
                       <button
                         onClick={(e) => { e.stopPropagation(); toggleFavorite(c.id); }}
                         className="text-xl hover:scale-125 transition-transform"
