@@ -292,7 +292,7 @@ const renderExplorationProgress = (creature: HuntedCreature, onViewBonuses: (e?:
         <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">
           Expl. Lvl {currentLevel}
         </span>
-        <span className="text-xs text-gray-600 dark:text-gray-400">
+        <span className="text-xs text-gray-700 dark:text-gray-200 font-medium">
           ({xpInCurrentLevel}/{xpRequiredPerLevel} XP)
         </span>
         <span className="text-xs text-blue-500">ℹ️</span>
