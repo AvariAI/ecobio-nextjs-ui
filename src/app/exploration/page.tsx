@@ -231,7 +231,7 @@ export default function ExplorationPage() {
     }
 
     // Check duration is unlocked by exploration LEVEL (not XP anymore)
-    const durationLevelRequirement = DURATION_LEVEL_REQUIREMENTS[selectedDuration] || 1;
+    const durationLevelRequirement = DURATION_LEVEL_REQUIREMENTS[selectedDuration] ?? 1;
 
     // 15min (level 0) allows ALL creatures regardless of exploration level
     if (durationLevelRequirement > 0) {
@@ -656,7 +656,7 @@ export default function ExplorationPage() {
 
               {getAvailableCreatures().length === 0 && (
                 <p className="text-center text-gray-600 dark:text-gray-400 py-8">
-                  Aucune créature disponible pour {selectedDuration === "8h" ? "8 heures" : selectedDuration}. Elles sont soit en mission, soit n'ont pas le niveau d'exploration requis ({DURATION_LEVEL_REQUIREMENTS[selectedDuration]}).
+                  Aucune créature disponible pour {selectedDuration === "8h" ? "8 heures" : selectedDuration}. Elles sont soit en mission, soit n'ont pas le niveau d'exploration requis ({DURATION_LEVEL_REQUIREMENTS[selectedDuration] ?? 0}).
                 </p>
               )}
             </div>
