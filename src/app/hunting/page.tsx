@@ -6,6 +6,8 @@ import { getVarianceRange, BattleStats } from "@/lib/battle";
 import { rollRandomTraits, getTraitsByIds } from "@/lib/traits";
 import { transformCreatureToEssence } from "@/lib/craft";
 import { loadBreedingEggs, getEggRemainingTime } from "@/lib/breeding";
+import { getExplorationBonus } from "@/lib/exploration";
+import { DURATION_LEVEL_REQUIREMENTS } from "@/lib/exploration";
 import Link from "next/link";
 
 type HuntingPhase = "ready" | "spawned" | "viewing";
@@ -267,7 +269,7 @@ const renderStars = (stars: number) => {
 };
 
 // Render exploration progress
-const renderExplorationProgress = (creature: HuntedCreature) => {
+const renderExplorationProgress = (creature: HuntedCreature, onViewBonuses: () => void) => {
   const totalXP = creature.explorationXP || 0;
   const currentLevel = creature.explorationLevel || 0;
   const xpRequiredPerLevel = 100;
@@ -275,7 +277,11 @@ const renderExplorationProgress = (creature: HuntedCreature) => {
   const progressPercent = Math.min(100, (xpInCurrentLevel / xpRequiredPerLevel) * 100);
 
   return (
-    <div>
+    <div
+      onClick={onViewBonuses}
+      className="cursor-pointer hover:opacity-80 transition-opacity"
+      title="Cliquez pour voir les bonus d'exploration"
+    >
       <div className="flex items-center gap-1 mb-1">
         <span className="text-amber-500">🗺️</span>
         <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">
@@ -284,6 +290,7 @@ const renderExplorationProgress = (creature: HuntedCreature) => {
         <span className="text-xs text-gray-600 dark:text-gray-400">
           ({xpInCurrentLevel}/{xpRequiredPerLevel} XP)
         </span>
+        <span className="text-xs text-blue-500">ℹ️</span>
       </div>
       <div className="w-full bg-gray-700 rounded-full h-2">
         <div
@@ -310,6 +317,7 @@ export default function HuntingPage() {
   const [peekingCreature, setPeekingCreature] = useState<HuntedCreature | null>(null);
   const [feedRankFilter, setFeedRankFilter] = useState<Rank | null>(null);
   const [breedingEggs, setBreedingEggs] = useState<any[]>([]);
+  const [showExplorationBonuses, setShowExplorationBonuses] = useState<HuntedCreature | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("ecobio-collection");
@@ -758,7 +766,7 @@ export default function HuntingPage() {
                   <h3 className="text-lg font-bold text-amber-700 dark:text-amber-400 mb-3">
                     Progression d'Exploration
                   </h3>
-                  {renderExplorationProgress(selectedCreature)}
+                  {renderExplorationProgress(selectedCreature, () => setShowExplorationBonuses(selectedCreature))}
                   <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
                     Envoyez cette créature en mission pour gagner de l'XP et débloquer des durées de mission plus longues.
                   </p>
@@ -1145,6 +1153,145 @@ export default function HuntingPage() {
               <button
                 onClick={() => setPeekingCreature(null)}
                 className="w-full mt-6 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-lg p-3 font-bold"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Exploration Bonuses Modal */}
+        {showExplorationBonuses && (
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div className="bg-gradient-to-br from-amber-900 to-orange-800 rounded-2xl p-6 max-w-lg w-full">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-white">
+                  📊 Bonus d'Exploration - {showExplorationBonuses.name}
+                </h3>
+                <button
+                  onClick={() => setShowExplorationBonuses(null)}
+                  className="text-gray-300 hover:text-white text-2xl"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-lg text-amber-200 mb-2">
+                  Niveau {showExplorationBonuses.explorationLevel || 0}
+                </p>
+                <p className="text-sm text-amber-400">
+                  {showExplorationBonuses.explorationXP || 0} XP total
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-black bg-opacity-30 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-lg font-bold text-green-400">💚 Réduction Mort</span>
+                    <span className="text-2xl font-bold text-green-200">
+                      {Math.min(-30, -(showExplorationBonuses.explorationLevel || 0)).toFixed(0)}%
+                    </span>
+                  </div>
+                  <p className="text-sm text-amber-300">
+                    Maximale: -30% au niveau 30
+                  </p>
+                </div>
+
+                <div className="bg-black bg-opacity-30 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-lg font-bold text-yellow-400">💰 Double Loot</span>
+                    <span className="text-2xl font-bold text-yellow-200">
+                      {Math.min(30, showExplorationBonuses.explorationLevel || 0).toFixed(0)}%
+                    </span>
+                  </div>
+                  <p className="text-sm text-amber-300">
+                    Maximale: +30% au niveau 30
+                  </p>
+                </div>
+
+                <div className="bg-black bg-opacity-30 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-lg font-bold text-blue-400">⏱️ Réduction Temps</span>
+                    <span className="text-2xl font-bold text-blue-200">
+                      {Math.min(-7.5, -(showExplorationBonuses.explorationLevel || 0) * 0.25).toFixed(2)}%
+                    </span>
+                  </div>
+                  <p className="text-sm text-amber-300">
+                    Maximale: -7.5% par créature au niveau 30 (cumulé à -37.5% avec 5 créatures)
+                  </p>
+                </div>
+
+                <div className="bg-black bg-opacity-30 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-lg font-bold text-purple-400">✨ Bonus Rareté</span>
+                    <span className="text-2xl font-bold text-purple-200">
+                      {Math.min(15, (showExplorationBonuses.explorationLevel || 0) * 0.5).toFixed(1)}%
+                    </span>
+                  </div>
+                  <p className="text-sm text-amber-300">
+                    Maximale: +15% au niveau 30
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <h4 className="text-lg font-bold text-white mb-3">🗺️ Durées Débloquées</h4>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className={`rounded-lg p-3 text-center ${
+                    (showExplorationBonuses.explorationLevel || 0) >= DURATION_LEVEL_REQUIREMENTS["15min"]
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-600 text-gray-400"
+                  }`}>
+                    <div className="font-bold">15 min</div>
+                    <div className="text-xs">Lvl 1</div>
+                  </div>
+                  <div className={`rounded-lg p-3 text-center ${
+                    (showExplorationBonuses.explorationLevel || 0) >= DURATION_LEVEL_REQUIREMENTS["30min"]
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-600 text-gray-400"
+                  }`}>
+                    <div className="font-bold">30 min</div>
+                    <div className="text-xs">Lvl 5</div>
+                  </div>
+                  <div className={`rounded-lg p-3 text-center ${
+                    (showExplorationBonuses.explorationLevel || 0) >= DURATION_LEVEL_REQUIREMENTS["1h"]
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-600 text-gray-400"
+                  }`}>
+                    <div className="font-bold">1h</div>
+                    <div className="text-xs">Lvl 10</div>
+                  </div>
+                  <div className={`rounded-lg p-3 text-center ${
+                    (showExplorationBonuses.explorationLevel || 0) >= DURATION_LEVEL_REQUIREMENTS["2h"]
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-600 text-gray-400"
+                  }`}>
+                    <div className="font-bold">2h</div>
+                    <div className="text-xs">Lvl 20</div>
+                  </div>
+                  <div className={`rounded-lg p-3 text-center ${
+                    (showExplorationBonuses.explorationLevel || 0) >= DURATION_LEVEL_REQUIREMENTS["4h"]
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-600 text-gray-400"
+                  }`}>
+                    <div className="font-bold">4h</div>
+                    <div className="text-xs">Lvl 25</div>
+                  </div>
+                  <div className={`rounded-lg p-3 text-center ${
+                    (showExplorationBonuses.explorationLevel || 0) >= DURATION_LEVEL_REQUIREMENTS["8h"]
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-600 text-gray-400"
+                  }`}>
+                    <div className="font-bold">8h</div>
+                    <div className="text-xs">Lvl 30</div>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowExplorationBonuses(null)}
+                className="w-full mt-6 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white rounded-lg p-4 font-bold text-lg"
               >
                 Fermer
               </button>
