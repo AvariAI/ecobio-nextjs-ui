@@ -152,7 +152,7 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     id: "agressive",
     name: "Agressive",
     emoji: "🦁",
-    description: "Attacking first, brutal. +12% ATK, +8% others, CRIT +10%/level",
+    description: "Attacking first, brutal. +12% ATK, +8% others",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -173,7 +173,7 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     id: "protective",
     name: "Protective",
     emoji: "🛡️",
-    description: "Protects allies first. +12% DEF, +8% others, CRIT +10%/level",
+    description: "Protects allies first. +12% DEF, +8% others",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -194,7 +194,7 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     id: "rapide",
     name: "Rapide",
     emoji: "💨",
-    description: "Attacks first and runs. +12% SPD, +8% others, CRIT +10%/level",
+    description: "Attacks first and runs. +12% SPD, +8% others",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -215,7 +215,7 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     id: "soin_leurre",
     name: "Soin-Leurre",
     emoji: "❤️",
-    description: "Gentle, caring. +12% HP, +8% others, CRIT +10%/level",
+    description: "Gentle, caring. +12% HP, +8% others",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -257,7 +257,7 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     id: "balancee",
     name: "Balancee",
     emoji: "✨",
-    description: "Balanced, adaptable. +10% ALL stats/level scaling, no maluses",
+    description: "Balanced, adaptable. +10% ALL stats",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -278,7 +278,7 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     id: "mysterieuse",
     name: "Mysterieuse",
     emoji: "🌙",
-    description: "Mysterious, unpredictable. +15% to random stat EACH level",
+    description: "Mysterious, unpredictable. +15% to random stat each level",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
