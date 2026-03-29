@@ -95,6 +95,7 @@ export default function InventoryPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-8">
       <div className="max-w-6xl mx-auto">
+        <Link href="/" className="text-emerald-700 dark:text-emerald-300 mb-6 inline-block">← Retour</Link>
         <header className="text-center mb-8">
           <h1 className="text-6xl font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent mb-4">
             📦 Inventaire
@@ -280,14 +281,6 @@ export default function InventoryPage() {
           </div>
         )}
 
-        {/* Back button */}
-        <div className="mt-8 text-center">
-          <Link href="/">
-            <button className="bg-gray-600 hover:bg-gray-700 text-white text-xl font-bold py-3 px-8 rounded-xl transition-all">
-              ← Retour à l'Accueil
-            </button>
-          </Link>
-        </div>
       </div>
     </main>
   );
