@@ -152,16 +152,16 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     id: "agressive",
     name: "Agressive",
     emoji: "🦁",
-    description: "Attacking first, brutal. +20% ATK, -10% HP",
+    description: "Attacking first, brutal. No spawn bonuses. +15% ATK/level scaling",
     statModifiers: {
-      hp: 0.90,      // -10%
-      attack: 1.20,    // +20%
+      hp: 1.00,
+      attack: 1.00,
       defense: 1.00,
       speed: 1.00,
       crit: 1.00
     },
     scalingMultipliers: {
-      hp: 0.10,      // Standard +10% per level (but -10% from stat modifier = net 0%)
+      hp: 0.10,
       attack: 0.15,    // +15% per level (fast scaling!)
       defense: 0.10,
       speed: 0.10,
@@ -173,11 +173,11 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     id: "protective",
     name: "Protective",
     emoji: "🛡️",
-    description: "Protects allies first. +20% DEF, -10% ATK",
+    description: "Protects allies first. No spawn bonuses. +15% DEF/level scaling",
     statModifiers: {
       hp: 1.00,
-      attack: 0.90,    // -10%
-      defense: 1.20,    // +20%
+      attack: 1.00,
+      defense: 1.00,
       speed: 1.00,
       crit: 1.00
     },
@@ -194,12 +194,12 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     id: "rapide",
     name: "Rapide",
     emoji: "💨",
-    description: "Attacks first and runs. +20% SPD, -10% DEF",
+    description: "Attacks first and runs. No spawn bonuses. +15% SPD/level scaling",
     statModifiers: {
-      hp: 0.90,      // -10%
+      hp: 1.00,
       attack: 1.00,
-      defense: 0.90,    // -10%
-      speed: 1.20,    // +20%
+      defense: 1.00,
+      speed: 1.00,
       crit: 1.00
     },
     scalingMultipliers: {
@@ -215,19 +215,19 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     id: "soin_leurre",
     name: "Soin-Leurre",
     emoji: "❤️",
-    description: "Gentle, caring. +15% HP, -5% ATK, -5% SPD",
+    description: "Gentle, caring. No spawn bonuses. +15% HP/level scaling",
     statModifiers: {
-      hp: 1.15,      // +15%
-      attack: 0.95,    // -5%
+      hp: 1.00,
+      attack: 1.00,
       defense: 1.00,
-      speed: 0.95,    // -5%
+      speed: 1.00,
       crit: 1.00
     },
     scalingMultipliers: {
       hp: 0.15,      // +15% per level (fast scaling for HP!)
-      attack: 0.05,    // -5% per level (slow)
+      attack: 0.05,    // +5% per level (slow)
       defense: 0.10,
-      speed: 0.05,    // -5% per level (slow)
+      speed: 0.05,    // +5% per level (slow)
       crit: 0.05
     },
     rarity: 12     // 12% spawn chance
@@ -236,20 +236,20 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     id: "precise",
     name: "Précise",
     emoji: "🎯",
-    description: "Precision hunter. +15% CRIT, -10% HP",
+    description: "Precision hunter. No spawn bonuses. +15% CRIT/level scaling",
     statModifiers: {
-      hp: 0.90,      // -10%
+      hp: 1.00,
       attack: 1.00,
       defense: 1.00,
       speed: 1.00,
-      crit: 1.15,     // +15%
+      crit: 1.00,
     },
     scalingMultipliers: {
       hp: 0.10,
       attack: 0.10,
       defense: 0.10,
       speed: 0.10,
-      crit: 0.10     // +10% per level (fast scaling for crit!)
+      crit: 0.15     // +15% per level (fast scaling for CRIT!)
     },
     rarity: 12     // 12% spawn chance
   },
@@ -257,34 +257,34 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     id: "balancee",
     name: "Balancee",
     emoji: "✨",
-    description: "Balanced, adaptable. +5% ALL stats",
+    description: "Balanced, adaptable. No spawn bonuses. +10% ALL stats/level scaling",
     statModifiers: {
-      hp: 1.05,      // +5%
-      attack: 1.05,    // +5%
-      defense: 1.05,    // +5%
-      speed: 1.05,    // +5%
-      crit: 1.05      // +5%
+      hp: 1.00,
+      attack: 1.00,
+      defense: 1.00,
+      speed: 1.00,
+      crit: 1.00,
     },
     scalingMultipliers: {
       hp: 0.10,
       attack: 0.10,
       defense: 0.10,
       speed: 0.10,
-      crit: 0.05
+      crit: 0.10
     },
     rarity: 10     // 10% spawn chance
   },
-  mysterieuse: {
+   mysterieuse: {
     id: "mysterieuse",
     name: "Mysterieuse",
     emoji: "🌙",
-    description: "Mysterious, unpredictable. -5% ALL stats. Gamble RNG: +10-25% to random stat at levels 10, 25, 40",
+    description: "Mysterious, unpredictable. No spawn bonuses. +15% to random stat EACH level",
     statModifiers: {
-      hp: 0.95,      // -5%
-      attack: 0.95,    // -5%
-      defense: 0.95,    // -5%
-      speed: 0.95,    // -5%
-      crit: 0.95      // -5%
+      hp: 1.00,
+      attack: 1.00,
+      defense: 1.00,
+      speed: 1.00,
+      crit: 1.00,
     },
     scalingMultipliers: {
       hp: 0.10,
@@ -294,8 +294,8 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
       crit: 0.10
     },
     rarity: 6,      // 6% spawn chance (rare!)
-    gambleTriggerLevels: [10, 25, 40],  // Gamble triggers at these levels
-    gambleBonusRange: [10, 25]  // Random bonus: 10% to 25%
+    gambleTriggerLevels: [],  // Gambling happens EVERY level
+    gambleBonusRange: [15, 15]  // Fixed +15% always
   }
 };
 
@@ -361,6 +361,11 @@ export interface GambleBonus {
 // Check if gamble trigger at this level for mysterieuse
 export function shouldTriggerGamble(level: number, personality: PersonalityType): boolean {
   const personalityDef = PERSONALITIES[personality];
+  // Mysterieuse gambles on EVERY level
+  if (personality === "mysterieuse" && level > 1) {
+    return true;
+  }
+  // Other personalities can gamble at specific trigger levels
   return personalityDef.gambleTriggerLevels?.includes(level) || false;
 }
 
@@ -369,9 +374,17 @@ export function generateGambleBonus(personality: PersonalityType): GambleBonus {
   const personalityDef = PERSONALITIES[personality];
   const stats: (keyof BaseStats)[] = ["hp", "attack", "defense", "speed", "crit"];
   const stat = stats[Math.floor(Math.random() * stats.length)];
-  const bonusPercent = personalityDef.gambleBonusRange
-    ? personalityDef.gambleBonusRange[0] + Math.random() * (personalityDef.gambleBonusRange[1] - personalityDef.gambleBonusRange[0])
-    : 10 + Math.random() * 15;  // Default: 10-25%
+  let bonusPercent: number;
+
+  if (personality === "mysterieuse" || personalityDef.gambleBonusRange) {
+    // For mysterieuse: fixed +15%
+    // For others with range: random within range
+    const range = personalityDef.gambleBonusRange || [15, 15];
+    bonusPercent = range[0] + Math.random() * (range[1] - range[0]);
+  } else {
+    // Default: 10-25%
+    bonusPercent = 10 + Math.random() * 15;
+  }
 
   return {
     level: 0,  // Will be set by caller

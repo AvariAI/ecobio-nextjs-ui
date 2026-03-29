@@ -796,11 +796,20 @@ export default function HuntingPage() {
                 })()}
                 {huntedCreature.gambleBonuses && huntedCreature.gambleBonuses.length > 0 && (
                   <div className="bg-yellow-700 bg-opacity-50 rounded-lg p-3 mb-4">
-                    <h3 className="font-bold text-yellow-100">🎰 Gamble Bonuses</h3>
-                    <div className="text-sm text-yellow-200 space-y-1">
-                      {huntedCreature.gambleBonuses.map((bonus, idx) => (
-                        <p key={idx}>Lvl {bonus.level}: +{bonus.bonusPercent.toFixed(1)}% {bonus.stat}</p>
-                      ))}
+                    <h3 className="font-bold text-yellow-100">🎰 Gamble Stats</h3>
+                    <div className="text-sm text-yellow-200">
+                      {(() => {
+                        const counts: Record<string, number> = {};
+                        huntedCreature.gambleBonuses!.forEach(b => {
+                          counts[b.stat] = (counts[b.stat] || 0) + 1;
+                        });
+                        return Object.entries(counts).map(([stat, count]) => (
+                          <span key={stat} className="inline-block mr-2">
+                            {stat.toUpperCase()}: +{count}×15%
+                          </span>
+                        ));
+                      })()}
+                      <p className="text-xs text-yellow-300 mt-1">Total gambles: {huntedCreature.gambleBonuses.length}</p>
                     </div>
                   </div>
                 )}
