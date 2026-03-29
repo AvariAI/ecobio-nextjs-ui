@@ -1232,7 +1232,6 @@ export default function HuntingPage() {
                             </span>
                           );
                         })()}
-                        </div>
                         <div className="flex items-center gap-1 mt-1">
                           {renderStars(c.stars || 0)}
                         </div>
