@@ -85,12 +85,13 @@ export default function PokedexPage() {
 
   // Filter only base creature types, not captured instances
   const baseCreatures = Object.values(CREATURES).filter(
-    (creature) => ["ant", "housefly", "honeybee"].includes(creature.id)
+    (creature) => ["ant", "housefly", "honeybee", "spider_mutant"].includes(creature.id)
   );
 
   const filteredCreatures = baseCreatures.filter(
     (creature) =>
-      selectedTypes.has("Insect") &&
+      (selectedTypes.has("Insect") && ["ant", "housefly", "honeybee"].includes(creature.id)) ||
+      (selectedTypes.has("Mutant") && creature.id === "spider_mutant") &&
       creature.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -167,8 +168,12 @@ export default function PokedexPage() {
                       <h2 className="text-3xl font-bold text-gray-800 dark:text-white">
                         {creature.name}
                       </h2>
-                      <span className="px-4 py-1 rounded-full text-sm font-semibold bg-green-600 text-white">
-                        Insect
+                      <span className={`px-4 py-1 rounded-full text-sm font-semibold ${
+                        creature.id === "spider_mutant"
+                          ? "bg-purple-600 text-white"
+                          : "bg-green-600 text-white"
+                      }`}>
+                        {creature.id === "spider_mutant" ? "Mutant" : "Insect"}
                       </span>
                     </div>
 
