@@ -312,7 +312,7 @@ export function generateRandomPersonality(): PersonalityType {
   return "balancee";
 }
 
-// Apply personality stat modifiers to base stats
+// Apply personality stat modifiers to base stats (NOT USED in sandbox mode)
 export function applyPersonalityStats(
   baseStats: BaseStats,
   personality: PersonalityType
@@ -325,5 +325,24 @@ export function applyPersonalityStats(
     defense: Math.floor(baseStats.defense * personalityDef.statModifiers.defense),
     speed: Math.floor(baseStats.speed * personalityDef.statModifiers.speed),
     crit: Math.floor(baseStats.crit * personalityDef.statModifiers.crit)
+  };
+}
+
+// Apply level scaling based on personality
+// Formula: scaledStat = baseStat * (1 + (level - 1) * scalingMultiplier)
+export function applyLevelScaling(
+  baseStats: BaseStats,
+  level: number,
+  personality: PersonalityType
+): BaseStats {
+  const personalityDef = PERSONALITIES[personality];
+  const levelFactor = level - 1; // Level 1 = 0 bonus, Level 50 = 49 bonus levels
+
+  return {
+    hp: Math.floor(baseStats.hp * (1 + levelFactor * personalityDef.scalingMultipliers.hp)),
+    attack: Math.floor(baseStats.attack * (1 + levelFactor * personalityDef.scalingMultipliers.attack)),
+    defense: Math.floor(baseStats.defense * (1 + levelFactor * personalityDef.scalingMultipliers.defense)),
+    speed: Math.floor(baseStats.speed * (1 + levelFactor * personalityDef.scalingMultipliers.speed)),
+    crit: Math.floor(baseStats.crit * (1 + levelFactor * personalityDef.scalingMultipliers.crit))
   };
 }

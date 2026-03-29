@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react";
-import { CREATURES, Rank, Creature, generateRandomPersonality, PERSONALITIES, PersonalityType } from "@/lib/database";
+import { CREATURES, Rank, Creature, generateRandomPersonality, PERSONALITIES, PersonalityType, applyLevelScaling, BaseStats } from "@/lib/database";
 import { getVarianceRange, BattleStats } from "@/lib/battle";
 import { rollRandomTraits, getTraitsByIds } from "@/lib/traits";
 import { transformCreatureToEssence } from "@/lib/craft";
@@ -101,7 +101,7 @@ function spawnCreature(): HuntedCreature {
   const critVariance = minVar + Math.random() * (maxVar - minVar);
 
   // Stats POST-variance ONLY (variance RNG only, no personality modifiers at spawn)
-  const finalStats: BattleStats = {
+  const varianceStats: BattleStats = {
     hp: Math.max(1, Math.floor(creature.baseStats.hp * hpVariance)),
     attack: Math.max(1, Math.floor(creature.baseStats.attack * atkVariance)),
     defense: Math.max(1, Math.floor(creature.baseStats.defense * defVariance)),
@@ -113,9 +113,14 @@ function spawnCreature(): HuntedCreature {
   // Generate random personality (RNG!)
   const personality = generateRandomPersonality();
 
-  // Personality NOTE: Personality does NOT modify stats at spawn
-  // Personality only influences level scaling progression (future feature)
-  // Stats are based on variance RNG ONLY at spawn
+  // Apply personality-based level scaling (level 1 = no scaling, future growth)
+  // Level 1 = no scaling applied, stats remain from variance RNG
+  const scaledStats = applyLevelScaling({ ...varianceStats }, 1, personality);
+
+  const finalStats: BattleStats = {
+    ...scaledStats,
+    rank,
+  };
 
   // Générer un ID unique pour chaque créature spawnée
   const uniqueId = `cre_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -216,20 +221,32 @@ function feedCreature(creature: HuntedCreature, foodXP: number): { creature: Hun
     remainingXP -= currentCreature.xpToNextLevel;
 
     const oldLevel = currentCreature.level;
+    const newLevel = oldLevel + 1;
+
+    // Recalculate stats with personality-based level scaling
+    // customStats stores the variance stats (level 1 base)
+    // finalStats applies personality scaling for the new level
+    const varianceStats: BaseStats = {
+      hp: currentCreature.customStats.hp,
+      attack: currentCreature.customStats.attack,
+      defense: currentCreature.customStats.defense,
+      speed: currentCreature.customStats.speed,
+      crit: currentCreature.customStats.crit,
+    };
+
+    const scaledStats = applyLevelScaling(varianceStats, newLevel, currentCreature.personality);
+
+    const finalStats: BattleStats = {
+      ...scaledStats,
+      rank: currentCreature.finalStats.rank,
+    };
 
     currentCreature = {
       ...currentCreature,
-      level: oldLevel + 1,
+      level: newLevel,
       currentXP: 0,
-      xpToNextLevel: calculateXPToNextLevel(oldLevel + 1),
-      finalStats: {
-        ...currentCreature.finalStats,
-        hp: Math.floor(currentCreature.customStats.hp * getLevelScale(oldLevel + 1, "hp")),
-        attack: Math.floor(currentCreature.customStats.attack * getLevelScale(oldLevel + 1, "other")),
-        defense: Math.floor(currentCreature.customStats.defense * getLevelScale(oldLevel + 1, "other")),
-        speed: Math.floor(currentCreature.customStats.speed * getLevelScale(oldLevel + 1, "other")),
-        crit: Math.floor(currentCreature.customStats.crit * getLevelScale(oldLevel + 1, "other")),
-      },
+      xpToNextLevel: calculateXPToNextLevel(newLevel),
+      finalStats,
     };
 
     levelUps++;
