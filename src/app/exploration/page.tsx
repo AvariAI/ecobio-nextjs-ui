@@ -336,11 +336,14 @@ export default function ExplorationPage() {
     setSelectedSlotIndex(null);
   };
 
-  // Get available creatures for selection
+  // Get available creatures for selection (filtered by duration requirement)
   const getAvailableCreatures = () => {
+    const durationLevelRequirement = DURATION_LEVEL_REQUIREMENTS[selectedDuration];
+
     return collection.filter(c =>
       !c.isOnMission &&
-      !selectedTeam.includes(c.id)
+      !selectedTeam.includes(c.id) &&
+      (c.explorationLevel || 0) >= durationLevelRequirement
     );
   };
 
@@ -647,7 +650,7 @@ export default function ExplorationPage() {
 
               {getAvailableCreatures().length === 0 && (
                 <p className="text-center text-gray-600 dark:text-gray-400 py-8">
-                  Aucune créature disponible. Elles sont peut-être toutes en mission!
+                  Aucune créature disponible pour {selectedDuration === "8h" ? "8 heures" : selectedDuration}. Elles sont soit en mission, soit n'ont pas le niveau d'exploration requis ({DURATION_LEVEL_REQUIREMENTS[selectedDuration]}).
                 </p>
               )}
             </div>

@@ -41,7 +41,7 @@ export const DURATION_UNLOCK_THRESHOLDS: Record<string, number> = {
 
 // New: Exploration level requirements for duration unlocks
 export const DURATION_LEVEL_REQUIREMENTS: Record<string, number> = {
-  "15min": 1,
+  "15min": 0,
   "30min": 5,
   "1h": 10,
   "2h": 20,
