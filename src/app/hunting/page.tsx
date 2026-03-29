@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react";
-import { CREATURES, Rank, Creature } from "@/lib/database";
+import { CREATURES, Rank, Creature, generateRandomPersonality, PERSONALITIES, PersonalityType, applyPersonalityStats, BaseStats } from "@/lib/database";
 import { getVarianceRange, BattleStats } from "@/lib/battle";
 import { rollRandomTraits, getTraitsByIds } from "@/lib/traits";
 import { transformCreatureToEssence } from "@/lib/craft";
@@ -57,6 +57,9 @@ interface HuntedCreature extends Creature {
   currentHP: number; // Current HP (0 to maxHP)
   lastHealTime: number; // Last time auto-regeneration ran
   maxHP: number; // Maximum HP based on stats and level
+
+  // Personality system (NEW)
+  personality: "agressive" | "protective" | "rapide" | "soin_leurre" | "precise" | "balancee" | "mysterieuse";
 }
 
 function rollRarity(): RarityRank {
@@ -84,21 +87,6 @@ function spawnCreature(): HuntedCreature {
   const creatureId = creaturePool[Math.floor(Math.random() * creaturePool.length)];
   const creature: Creature = CREATURES[creatureId];
 
-  // RNG buffer pour l'Abeille (50-50 ATK/DEF)
-  let skillOverride: any = null;
-  if (creatureId === "honeybee") {
-    const hasATKSkill = Math.random() > 0.5;
-    skillOverride = {
-      name: "Essaim Stimulant",
-      description: hasATKSkill
-        ? "Buff +40% ATK sur un allié pendant 2 tours"
-        : "Buff +40% DEF sur un allié pendant 2 tours",
-      effect: hasATKSkill ? "attack" : "defense",
-      value: 0.40,
-      duration: 2,
-      cooldown: 3,
-    };
-  }
   const rank: Rank = rollRarity();
   const [minVar, maxVar] = getVarianceRange(rank);
 
@@ -111,25 +99,48 @@ function spawnCreature(): HuntedCreature {
   const spdVariance = minVar + Math.random() * (maxVar - minVar);
   const critVariance = minVar + Math.random() * (maxVar - minVar);
 
-  const finalStats: BattleStats = {
+  // Stats POST-variance
+  var varianceStats: BattleStats = {
     hp: Math.max(1, Math.floor(creature.baseStats.hp * hpVariance)),
     attack: Math.max(1, Math.floor(creature.baseStats.attack * atkVariance)),
     defense: Math.max(1, Math.floor(creature.baseStats.defense * defVariance)),
     speed: Math.max(1, Math.floor(creature.baseStats.speed * spdVariance)),
     crit: Math.max(1, Math.floor(creature.baseStats.crit * critVariance)),
-    rank,
+    rank, // Add rank field
   };
 
-  const creatureWithSkill = skillOverride ? { ...creature, skill: skillOverride } : creature;
+  // Generate random personality (RNG!)
+  const personality = generateRandomPersonality();
+
+  // Apply personality stat modifiers to BaseStats (not BattleStats)
+  const personalityDef = PERSONALITIES[personality];
+  
+  const baseStatsWithPersonality: BaseStats = {
+    hp: Math.floor(varianceStats.hp * personalityDef.statModifiers.hp),
+    attack: Math.floor(varianceStats.attack * personalityDef.statModifiers.attack),
+    defense: Math.floor(varianceStats.defense * personalityDef.statModifiers.defense),
+    speed: Math.floor(varianceStats.speed * personalityDef.statModifiers.speed),
+    crit: Math.floor(varianceStats.crit * personalityDef.statModifiers.crit)
+  };
+
+  // Create final Stats as BattleStats
+  const finalStats: BattleStats = {
+    hp: baseStatsWithPersonality.hp,
+    attack: baseStatsWithPersonality.attack,
+    defense: baseStatsWithPersonality.defense,
+    speed: baseStatsWithPersonality.speed,
+    crit: baseStatsWithPersonality.crit,
+    rank,  // Preserve rank
+  };
 
   // Générer un ID unique pour chaque créature spawnée
   const uniqueId = `cre_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   return {
-    ...creatureWithSkill,
+    ...creature,
     id: uniqueId,  // ID unique pour cette créature spécifique
     finalStats,
-    customStats: finalStats,  // Stats POST-variance deviennent la base de cette créature
+    customStats: finalStats,  // Stats POST-variance + personality deviennent la base de cette créature
     level: 1, // Start at level 1
     currentXP: 0,
     xpToNextLevel: calculateXPToNextLevel(1),
@@ -160,10 +171,13 @@ function spawnCreature(): HuntedCreature {
     explorationXPToNext: 100,
     isOnMission: false,
 
-    // Health system initialization (NEW)
-    currentHP: Math.max(1, Math.floor(creature.baseStats.hp * hpVariance)), // Start at full HP
-    lastHealTime: Date.now(), // Last heal time = now
-    maxHP: Math.max(1, Math.floor(creature.baseStats.hp * hpVariance)), // Max HP = final HP at spawn
+    // Health system initialization
+    currentHP: finalStats.hp,
+    lastHealTime: Date.now(),
+    maxHP: finalStats.hp,
+
+    // Personality system (NEW)
+    personality: personality
   };
 }
 

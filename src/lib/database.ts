@@ -157,11 +157,209 @@ export const RANK_MULTIPLIERS: Record<Rank, number> = {
   "S+": 2.2,
 };
 
-// Standard base stats for all creatures (sandbox system)
-export const STANDARD_BASE_STATS = {
-  hp: 100,
-  attack: 50,
-  defense: 50,
-  speed: 50,
-  crit: 10
+export type PersonalityType = "agressive" | "protective" | "rapide" | "soin_leurre" | "precise" | "balancee" | "mysterieuse";
+
+export interface Personality {
+  id: PersonalityType;
+  name: string;
+  emoji: string;
+  description: string;
+  statModifiers: {
+    hp: number;      // Percentage modifier (e.g., 0.90 = -10%)
+    attack: number;
+    defense: number;
+    speed: number;
+    crit: number;
+  };
+  scalingMultipliers: {
+    hp: number;      // Level scaling multiplier (e.g., 0.10 = 10% per level)
+    attack: number;
+    defense: number;
+    speed: number;
+    crit: number;
+  };
+  rarity: number;   // Weight for RNG pool (higher = more common)
+}
+
+export const PERSONALITIES: Record<PersonalityType, Personality> = {
+  agressive: {
+    id: "agressive",
+    name: "Agressive",
+    emoji: "🦁",
+    description: "Attacking first, brutal. +20% ATK, -10% HP",
+    statModifiers: {
+      hp: 0.90,      // -10%
+      attack: 1.20,    // +20%
+      defense: 1.00,
+      speed: 1.00,
+      crit: 1.00
+    },
+    scalingMultipliers: {
+      hp: 0.10,      // Standard +10% per level (but -10% from stat modifier = net 0%)
+      attack: 0.15,    // +15% per level (fast scaling!)
+      defense: 0.10,
+      speed: 0.10,
+      crit: 0.05
+    },
+    rarity: 25     // 25% spawn chance
+  },
+  protective: {
+    id: "protective",
+    name: "Protective",
+    emoji: "🛡️",
+    description: "Protects allies first. +20% DEF, -10% ATK",
+    statModifiers: {
+      hp: 1.00,
+      attack: 0.90,    // -10%
+      defense: 1.20,    // +20%
+      speed: 1.00,
+      crit: 1.00
+    },
+    scalingMultipliers: {
+      hp: 0.10,
+      attack: 0.05,    // +5% per level (slow)
+      defense: 0.15,    // +15% per level (fast scaling!)
+      speed: 0.10,
+      crit: 0.05
+    },
+    rarity: 20     // 20% spawn chance
+  },
+  rapide: {
+    id: "rapide",
+    name: "Rapide",
+    emoji: "💨",
+    description: "Attacks first and runs. +20% SPD, -10% DEF",
+    statModifiers: {
+      hp: 0.90,      // -10%
+      attack: 1.00,
+      defense: 0.90,    // -10%
+      speed: 1.20,    // +20%
+      crit: 1.00
+    },
+    scalingMultipliers: {
+      hp: 0.10,
+      attack: 0.10,
+      defense: 0.05,    // +5% per level (slow)
+      speed: 0.15,    // +15% per level (fast scaling!)
+      crit: 0.05
+    },
+    rarity: 15     // 15% spawn chance
+  },
+  soin_leurre: {
+    id: "soin_leurre",
+    name: "Soin-Leurre",
+    emoji: "❤️",
+    description: "Gentle, caring. +15% HP, -5% ATK, -5% SPD",
+    statModifiers: {
+      hp: 1.15,      // +15%
+      attack: 0.95,    // -5%
+      defense: 1.00,
+      speed: 0.95,    // -5%
+      crit: 1.00
+    },
+    scalingMultipliers: {
+      hp: 0.15,      // +15% per level (fast scaling for HP!)
+      attack: 0.05,    // -5% per level (slow)
+      defense: 0.10,
+      speed: 0.05,    // -5% per level (slow)
+      crit: 0.05
+    },
+    rarity: 12     // 12% spawn chance
+  },
+  precise: {
+    id: "precise",
+    name: "Précise",
+    emoji: "🎯",
+    description: "Precision hunter. +15% CRIT, -10% HP",
+    statModifiers: {
+      hp: 0.90,      // -10%
+      attack: 1.00,
+      defense: 1.00,
+      speed: 1.00,
+      crit: 1.15,     // +15%
+    },
+    scalingMultipliers: {
+      hp: 0.10,
+      attack: 0.10,
+      defense: 0.10,
+      speed: 0.10,
+      crit: 0.10     // +10% per level (fast scaling for crit!)
+    },
+    rarity: 12     // 12% spawn chance
+  },
+  balancee: {
+    id: "balancee",
+    name: "Balancee",
+    emoji: "✨",
+    description: "Balanced, adaptable. +5% ALL stats",
+    statModifiers: {
+      hp: 1.05,      // +5%
+      attack: 1.05,    // +5%
+      defense: 1.05,    // +5%
+      speed: 1.05,    // +5%
+      crit: 1.05      // +5%
+    },
+    scalingMultipliers: {
+      hp: 0.10,
+      attack: 0.10,
+      defense: 0.10,
+      speed: 0.10,
+      crit: 0.05
+    },
+    rarity: 10     // 10% spawn chance
+  },
+  mysterieuse: {
+    id: "mysterieuse",
+    name: "Mysterieuse",
+    emoji: "🌙",
+    description: "Mysterious, unpredictable. -5% ALL stats",
+    statModifiers: {
+      hp: 0.95,      // -5%
+      attack: 0.95,    // -5%
+      defense: 0.95,    // -5%
+      speed: 0.95,    // -5%
+      crit: 0.95      // -5%
+    },
+    scalingMultipliers: {
+      hp: 0.10,
+      attack: 0.10,
+      defense: 0.10,
+      speed: 0.10,
+      crit: 0.10
+    },
+    rarity: 6      // 6% spawn chance (rare!)
+  }
 };
+
+// Generate random personality based on rarity weights
+export function generateRandomPersonality(): PersonalityType {
+  const personalities = Object.values(PERSONALITIES);
+  const totalRarity = personalities.reduce((sum, p) => sum + p.rarity, 0);
+  let random = Math.random() * totalRarity;
+  
+  for (const personality of personalities) {
+    random -= personality.rarity;
+    if (random <= 0) {
+      return personality.id;
+    }
+  }
+  
+  // Fallback
+  return "balancee";
+}
+
+// Apply personality stat modifiers to base stats
+export function applyPersonalityStats(
+  baseStats: BaseStats,
+  personality: PersonalityType
+): BaseStats {
+  const personalityDef = PERSONALITIES[personality];
+  
+  return {
+    hp: Math.floor(baseStats.hp * personalityDef.statModifiers.hp),
+    attack: Math.floor(baseStats.attack * personalityDef.statModifiers.attack),
+    defense: Math.floor(baseStats.defense * personalityDef.statModifiers.defense),
+    speed: Math.floor(baseStats.speed * personalityDef.statModifiers.speed),
+    crit: Math.floor(baseStats.crit * personalityDef.statModifiers.crit)
+  };
+}
