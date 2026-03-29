@@ -990,7 +990,7 @@ export default function HuntingPage() {
                   <div
                     key={c.id}
                     onClick={() => handleViewCreature(c)}
-                    className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-4 border border-green-700 hover:border-green-600 cursor-pointer hover:scale-105 transition-all duration-200 relative"
+                    className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-4 pt-12 border border-green-700 hover:border-green-600 cursor-pointer hover:scale-105 transition-all duration-200 relative"
                   >
                     {/* Exploration level badge - top left, compact */}
                     <div className="absolute top-2 left-2 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-lg font-semibold">
@@ -1007,7 +1007,7 @@ export default function HuntingPage() {
                     {/* Favorite button - top right */}
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleFavorite(c.id); }}
-                      className="absolute top-2 right-2 text-xl hover:scale-125 transition-transform"
+                      className="absolute top-2 right-2 text-xl hover:scale-125 transition-transform z-10"
                       title={c.isFavorite ? "Retirer des favoris" : "Mettre en favori"}
                     >
                       {c.isFavorite ? "❤️" : "🤍"}
@@ -1021,7 +1021,7 @@ export default function HuntingPage() {
                           className="w-full h-full object-cover rounded border border-green-700"
                         />
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 pr-8">
                         <div className="flex items-center justify-between">
                           <h3 className="text-xl font-bold text-green-100">{c.name}</h3>
                           <span className={`font-bold ${getRankBadgeColor(c.finalStats.rank)} text-white px-2 py-1 rounded-full text-sm`}>{c.finalStats.rank}</span>
