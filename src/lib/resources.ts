@@ -1,22 +1,98 @@
+import { Rank } from "./database";
+
+// Plant definition interface
 export interface PlantResource {
   id: string;
   name: string;
   rarity: Rank;
   description: string;
   icon: string;
+  isMedical?: boolean; // NEW: medicinal plants for healing
+  healPercent?: number; // NEW: heal % for medicinal remedies
 }
 
+// Exploration loot interface
 export interface ExplorationLoot {
   plants: PlantResource[];
   totalLootCount: number;
   plantCounts: Record<string, number>;
 }
 
-import { Rank } from "./database";
-
 // Plant definitions with ranks (E-S+)
+// Medical plants integrated as normal plants with isMedical flag
 export const PLANTS: PlantResource[] = [
-  // E
+  // === Médical Plants (Healing) ===
+  {
+    id: "aloe_vera",
+    name: "Aloe Vera",
+    rarity: "E",
+    description: "Plante soignante pour petites blessures",
+    icon: "🌱",
+    isMedical: true,
+    healPercent: 10
+  },
+
+  {
+    id: "menthe",
+    name: "Menthe",
+    rarity: "D",
+    description: "Menthe fraîche avec propriétés apaisantes",
+    icon: "🍃",
+    isMedical: true,
+    healPercent: 15
+  },
+
+  {
+    id: "camomille",
+    name: "Camomille",
+    rarity: "C",
+    description: "Fleur apaisante qui guérit bien",
+    icon: "🌸",
+    isMedical: true,
+    healPercent: 20
+  },
+
+  {
+    id: "ginseng",
+    name: "Ginseng",
+    rarity: "B",
+    description: "Herbe médicale puissante",
+    icon: "🌿",
+    isMedical: true,
+    healPercent: 25
+  },
+
+  {
+    id: "ginseng_royal",
+    name: "Ginseng Royale",
+    rarity: "A",
+    description: "Ginseng sacré très puissant",
+    icon: "👑",
+    isMedical: true,
+    healPercent: 30
+  },
+
+  {
+    id: "nephenta",
+    name: "Néphenta",
+    rarity: "S",
+    description: "Plante ancienne aux vertus curatives",
+    icon: "💚",
+    isMedical: true,
+    healPercent: 40
+  },
+
+  {
+    id: "nephenta_ichor",
+    name: "Néphenta Ichor",
+    rarity: "S+",
+    description: "Essence planétaire légendaire",
+    icon: "✨",
+    isMedical: true,
+    healPercent: 50
+  },
+
+  // === Regular Plants (for crafting) ===
   {
     id: "herbe_commune",
     name: "Herbe Commune",
@@ -24,8 +100,7 @@ export const PLANTS: PlantResource[] = [
     description: "Plante commune trouvée dans les prés",
     icon: "🌿"
   },
-  
-  // D
+
   {
     id: "pissenlit",
     name: "Pissenlit",
@@ -33,8 +108,7 @@ export const PLANTS: PlantResource[] = [
     description: "Petite fleur jaune très commune",
     icon: "🌼"
   },
-  
-  // C
+
   {
     id: "herbe_prairie",
     name: "Herbe de Prairie",
@@ -42,8 +116,7 @@ export const PLANTS: PlantResource[] = [
     description: "Herbe qui pousse dans les prairies vastes",
     icon: "🌿"
   },
-  
-  // B
+
   {
     id: "fleur_rouge",
     name: "Fleur Rouge",
@@ -51,8 +124,7 @@ export const PLANTS: PlantResource[] = [
     description: "Fleur vibrante aux pétales rouges",
     icon: "🌸"
   },
-  
-  // A
+
   {
     id: "fleur_bleue",
     name: "Fleur Bleue",
@@ -60,8 +132,7 @@ export const PLANTS: PlantResource[] = [
     description: "Fleur rare aux propriétés magiques",
     icon: "💙"
   },
-  
-  // S
+
   {
     id: "tige_mystique",
     name: "Tige Mystique",
@@ -69,8 +140,7 @@ export const PLANTS: PlantResource[] = [
     description: "Tige chargée d'énergie ancienne",
     icon: "✨"
   },
-  
-  // S+
+
   {
     id: "lotus_ancien",
     name: "Lotus Ancien",
@@ -80,7 +150,7 @@ export const PLANTS: PlantResource[] = [
   }
 ];
 
-// Rarity spawn chances by mission duration
+// Plant rarity spawn chances by mission duration
 export const PLANT_RARITY_CHANCES: Record<string, Record<string, number>> = {
   "15min": { "E": 0.60, "D": 0.30, "C": 0.08, "B": 0.02, "A": 0, "S": 0, "S+": 0 },
   "30min": { "E": 0.50, "D": 0.30, "C": 0.12, "B": 0.06, "A": 0.02, "S": 0, "S+": 0 },
@@ -108,4 +178,28 @@ export function getPlantRankFromLegacy(rarity: string): Rank {
     "epic": "S+" as Rank
   };
   return map[rarity] || "E";
+}
+
+// Helper to get medicinal plants by rank
+export function getMedicalPlantsByRank(rank: Rank): PlantResource[] {
+  return PLANTS.filter(plant => plant.isMedical && plant.rarity === rank);
+}
+
+// Helper to get remedy from medical plants
+export function craftRemedy(medicalPlant: PlantResource): {
+  name: string;
+  icon: string;
+  healPercent: number;
+  rank: Rank;
+} | null {
+  if (!medicalPlant.isMedical || !medicalPlant.healPercent) {
+    return null;
+  }
+
+  return {
+    name: `Remède ${medicalPlant.rarity}`,
+    icon: medicalPlant.icon,
+    healPercent: medicalPlant.healPercent,
+    rank: medicalPlant.rarity
+  };
 }

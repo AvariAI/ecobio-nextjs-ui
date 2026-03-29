@@ -130,7 +130,8 @@ export default function ExplorationPage() {
                 casualtiesData: results.casualtiesData,
                 survivors: results.survivors,
                 missionSuccess: results.survivors.length > 0,
-                lootReduction: results.lootReduction
+                lootReduction: results.lootReduction,
+                explorationXP: calculateExplorationXP(mission.duration)
               }
             };
           }
@@ -203,6 +204,7 @@ export default function ExplorationPage() {
             survivors: results.survivors,
             missionSuccess: results.survivors.length > 0,
             lootReduction: results.lootReduction,
+            explorationXP: calculateExplorationXP(mission.duration),
             instant: true // Flag to indicate instant completion
           }
         };

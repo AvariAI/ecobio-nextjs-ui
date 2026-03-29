@@ -18,18 +18,13 @@ export interface ExplorationMission {
     casualtyIds: string[]; // IDs of creatures that died
     casualtiesData: any[]; // Full creature data for display purposes
     survivors: string[]; // IDs of surviving creatures
-    missionSuccess: boolean; // true if at least 1 creature survived
-    lootReduction: number; // 0-1 based on deaths
+    missionSuccess: boolean; // Did mission succeed (any survivors)
+    lootReduction: number; // 0-1 based on casualties
+    explorationXP: number; // XP gained from exploration
   };
 }
 
-export interface ExplorationLevel {
-  level: number;
-  xp: number;
-  xpToNext: number;
-  unlockedDurations: string[];
-}
-
+// Duration thresholds for unlocks (in XP - DEPRECATED, now using level requirements)
 export const DURATION_UNLOCK_THRESHOLDS: Record<string, number> = {
   "15min": 0,
   "30min": 50,
@@ -136,32 +131,12 @@ function calculateDeathChance(
 }
 
 /**
- * Calculate injury chance (lose HP but not die)
- */
-function calculateInjuryChance(
-  creatureLevel: number,
-  missionDuration: string
-): number {
-  const baseChances: Record<string, number> = {
-    "15min": 0.10,
-    "30min": 0.20,
-    "1h": 0.35,
-    "2h": 0.50,
-    "4h": 0.65,
-    "8h": 0.80
-  };
-  const baseChance = baseChances[missionDuration] ?? 0.10; // Default to 0.10 if not found
-
-  const levelReduction = Math.min(0.5, creatureLevel / 100);
-  return baseChance * (1 - levelReduction);
-}
-
-/**
  * Generate loot for exploration mission
  * Loot quantity depends on team size and duration
  * Rarity chances depend on duration
  * Exploration level provides bonus double loot and rarity chances
  * Uses native rank system (E-S+)
+ * Generates plants including medical plants
  */
 export function generateLoot(
   teamSize: number,
@@ -175,7 +150,7 @@ export function generateLoot(
   // Get exploration level bonuses
   const explorationBonus = getExplorationBonus(explorationLevel);
 
-  // Determine eligible plants by rank
+  // Determine eligible plants by rank (includes medical plants)
   const eligiblePlants = new Map<Rank, PlantResource[]>();
 
   PLANTS.forEach(plant => {
@@ -235,7 +210,7 @@ export function generateLoot(
 
 /**
  * Calculate adjusted mission duration with exploration level time reduction
- * Now uses cumulative time reduction from all creatures, capped at -50%
+ * Now uses cumulative time reduction from all creatures, capped at -37.5%
  */
 export function calculateAdjustedDuration(
   missionDuration: string,
@@ -269,7 +244,7 @@ export function calculateAdjustedDuration(
 
 /**
  * Simulate exploration mission outcome
- * Returns casualties, survivors, and loot
+ * Returns casualties, survivors, and loot (plants including medicals)
  */
 export function simulateExplorationMission(
   mission: ExplorationMission,
@@ -336,7 +311,7 @@ export function createExplorationMission(
   team: string[],
   duration: "15min" | "30min" | "1h" | "2h" | "4h" | "8h",
   creatures: any[], // Creatures with explorationLevel for cumulative time reduction
-  avgExplorationLevel: number = 0 // Still passed for display/reference
+  avgExplorationLevel: number = 0 // Still passed for display/reference (loot/rarity still use avg)
 ): ExplorationMission {
   const startTime = Date.now();
   const adjustedDurationMs = calculateAdjustedDuration(duration, creatures);
@@ -353,67 +328,51 @@ export function createExplorationMission(
 }
 
 /**
- * Check if mission is complete
+ * Check if a mission is complete based on current time
  */
 export function isMissionComplete(mission: ExplorationMission): boolean {
-  return Date.now() >= mission.endTime;
+  return Date.now() >= mission.endTime && mission.status === "active";
 }
 
 /**
- * Calculate XP gained from exploration mission
+ * Calculate exploration XP rewards based on mission duration
  */
-export function calculateExplorationXP(
-  missionDuration: string
-): number {
-  return MISSION_XP_VALUES[missionDuration] || 20; // Default 20 XP
+export function calculateExplorationXP(duration: string): number {
+  return MISSION_XP_VALUES[duration] || 20;
 }
 
 /**
- * Apply exploration XP to creatures
- */
-export function applyExplorationXP(
-  creatures: any[],
-  xpGained: number
-): any[] {
-  return creatures.map(creature => {
-    const currentXP = creature.explorationXP || 0;
-    const explorationLevel = creature.explorationLevel || 0;
-
-    // Simple XP to level (100 XP per level)
-    const newXPTotal = currentXP + xpGained;
-    const newExplorationLevel = Math.floor(newXPTotal / 100);
-
-    return {
-      ...creature,
-      explorationXP: newXPTotal,
-      explorationLevel: newExplorationLevel,
-      explorationXPToNext: ((newExplorationLevel + 1) * 100) - newXPTotal
-    };
-  });
-}
-
-/**
- * Check which durations are unlocked based on exploration level
+ * Check what durations are unlocked based on exploration level
  */
 export function getUnlockedDurations(explorationLevel: number): string[] {
-  const unlocked = [];
-  for (const [duration, threshold] of Object.entries(DURATION_UNLOCK_THRESHOLDS)) {
-    if (explorationLevel >= threshold) {
-      unlocked.push(duration);
-    }
-  }
-  return unlocked;
+  return Object.entries(DURATION_LEVEL_REQUIREMENTS)
+    .filter(([_, reqLevel]) => explorationLevel >= reqLevel)
+    .map(([duration, _]) => duration);
 }
 
 /**
- * Check how many concurrent missions are unlocked
+ * Check max concurrent missions based on total exploration XP
  */
-export function getMaxConcurrentMissions(explorationLevel: number): number {
+export function getMaxConcurrentMissions(totalXP: number): number {
   let max = 1;
   for (const [xpThreshold, count] of Object.entries(MISSION_LOCKED_COUNTS)) {
-    if (explorationLevel >= parseInt(xpThreshold)) {
+    if (parseFloat(xpThreshold) <= totalXP) {
       max = count;
     }
   }
   return max;
+}
+
+/**
+ * Get XP threshold for next exploration level
+ */
+export function getExplorationXPToNext(currentLevel: number): number {
+  return 100; // XP per level is constant: 100 XP = 1 level
+}
+
+/**
+ * Get total XP required for target exploration level
+ */
+export function getTotalXPForLevel(targetLevel: number): number {
+  return targetLevel * 100;
 }
