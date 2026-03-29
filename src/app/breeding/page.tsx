@@ -202,7 +202,6 @@ export default function BreedingPage() {
 
   // Filter creatures for dropdown based on search and creature type
   const getDropdownCreatures = (search: string, otherParent: CollectionItem | null) => {
-    const parentCooldowns = getParentCooldowns();
     return filteredCollection.filter(creature => {
       const matchesSearch = creature.name.toLowerCase().includes(search.toLowerCase());
       const notSelectedAsOther = otherParent ? creature.id !== otherParent.id : true;
@@ -210,8 +209,8 @@ export default function BreedingPage() {
       const notSelectedAsSelf2 = parent2 ? creature.id !== parent2.id : true;
       const matchesType = otherParent ? creature.creatureId === otherParent.creatureId : true;
       const notOnMission = 'isOnMission' in creature ? !(creature as HuntedCreature).isOnMission : true;
-      const notOnCooldown = !parentCooldowns.has(creature.id);
-      return matchesSearch && notSelectedAsOther && notSelectedAsSelf1 && notSelectedAsSelf2 && matchesType && notOnMission && notOnCooldown;
+      // Show breeding cooldown creatures (they'll be grayed out and non-selectable)
+      return matchesSearch && notSelectedAsOther && notSelectedAsSelf1 && notSelectedAsSelf2 && matchesType && notOnMission;
     });
   };
 
