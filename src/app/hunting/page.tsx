@@ -8,6 +8,7 @@ import { transformCreatureToEssence } from "@/lib/craft";
 import { loadBreedingEggs, getEggRemainingTime } from "@/lib/breeding";
 import { getExplorationBonus } from "@/lib/exploration";
 import { DURATION_LEVEL_REQUIREMENTS } from "@/lib/exploration";
+import { applyHealthRegenerationToCollection } from "@/lib/health-regen";
 import Link from "next/link";
 
 type HuntingPhase = "ready" | "spawned" | "viewing";
@@ -372,7 +373,20 @@ export default function HuntingPage() {
 
           return migrated;
         });
-        setCollection(migrated);
+
+        // Apply health regeneration to all creatures
+        const regenerated = applyHealthRegenerationToCollection(migrated);
+        setCollection(regenerated as HuntedCreature[]);
+
+        // Save regenerated HP if any changed (compare migrated vs regenerated)
+        const hpChanged = regenerated.some((c, i) =>
+          c.currentHP !== migrated[i].currentHP ||
+          c.lastHealTime !== migrated[i].lastHealTime
+        );
+        if (hpChanged) {
+          localStorage.setItem("ecobio-collection", JSON.stringify(regenerated));
+          console.log("Health regeneration applied and saved");
+        }
       } catch (e) {
         console.error("Failed load collection", e);
       }
