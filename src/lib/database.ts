@@ -118,9 +118,32 @@ export const CREATURES: Record<string, Creature> = {
       target: "ally",
     },
   },
+  spider_mutant: {
+    id: "spider_mutant",
+    name: "Araignée Mutante",
+    rank: "E",
+    baseStats: {
+      hp: 100,      // Standard base HP
+      attack: 50,   // Standard base ATK
+      defense: 50,  // Standard base DEF
+      speed: 50,    // Standard base SPD
+      crit: 10,     // Standard base CRIT
+    },
+    desc: "Créature mutante bizarre avec multiples yeux et des filaments lumineux",
+    image: "/images/creatures/spider_mutant_e.png",
+    skill: {
+      name: "Toxin Mutagène",
+      description: "ATK +40% pendant 3 tours (forme mutante agressive)",
+      effect: "attack",
+      value: 0.40,
+      duration: 3,
+      cooldown: 3,
+      target: "self",
+    },
+  },
 };
 
-export const CREATURE_TYPES: string[] = ["Insect"];
+export const CREATURE_TYPES: string[] = ["Insect", "Mutant"];
 export const RANKS: Rank[] = ["E", "D", "C", "B", "A", "S", "S+"];
 
 export const RANK_MULTIPLIERS: Record<Rank, number> = {
@@ -131,4 +154,13 @@ export const RANK_MULTIPLIERS: Record<Rank, number> = {
   A: 1.8,
   S: 2.0,
   "S+": 2.2,
+};
+
+// Standard base stats for all creatures (sandbox system)
+export const STANDARD_BASE_STATS = {
+  hp: 100,
+  attack: 50,
+  defense: 50,
+  speed: 50,
+  crit: 10
 };
