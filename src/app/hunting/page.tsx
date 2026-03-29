@@ -749,6 +749,16 @@ export default function HuntingPage() {
                   <span className={`text-2xl font-bold ${getRankBadgeColor(huntedCreature.finalStats.rank)} text-white px-3 py-1 rounded-full`}>{huntedCreature.finalStats.rank}</span>
                 </div>
                 <p className="text-green-200 mb-4">{huntedCreature.desc}</p>
+                {huntedCreature.personality && (() => {
+                  const p = PERSONALITIES[huntedCreature.personality];
+                  return (
+                    <div className="mb-3">
+                      <span className="text-x px-3 py-1 rounded-full bg-purple-700 text-purple-100 font-bold">
+                        {p.emoji} {p.name}
+                      </span>
+                    </div>
+                  );
+                })()}
                 {huntedCreature.skill && (
                   <div className="bg-green-700 bg-opacity-50 rounded-lg p-3 mb-4">
                     <h3 className="font-bold text-green-100">🎯 Compétence</h3>
@@ -1160,6 +1170,14 @@ export default function HuntingPage() {
                           <span className={`font-bold ${getRankBadgeColor(c.finalStats.rank)} text-white px-2 py-1 rounded-full text-sm`}>{c.finalStats.rank}</span>
                         </div>
                         <p className="text-yellow-300 text-sm mt-1">Level {c.level}</p>
+                        {c.personality && (() => {
+                          const p = PERSONALITIES[c.personality];
+                          return (
+                            <span className="inline-block mt-1 px-2 py-1 rounded-full bg-purple-700 text-purple-200 text-xs font-bold">
+                              {p.emoji} {p.name}
+                            </span>
+                          );
+                        })()}
                         <div className="flex items-center gap-1 mt-1">
                           {renderStars(c.stars || 0)}
                         </div>
@@ -1227,7 +1245,7 @@ export default function HuntingPage() {
                   {peekingCreature.personality && (() => {
                     const p = PERSONALITIES[peekingCreature.personality];
                     return (
-                      <span className="ml-3 px-3 py-1 rounded-full text-sm font-bold bg-gray-600 text-gray-200">
+                      <span className="ml-3 px-3 py-1 rounded-full text-sm font-bold bg-purple-700 text-purple-200">
                         {p.emoji} {p.name}
                       </span>
                     );
