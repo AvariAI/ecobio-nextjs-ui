@@ -1171,7 +1171,7 @@ export default function HuntingPage() {
         {/* Exploration Bonuses Modal */}
         {showExplorationBonuses && (
           <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-            <div className="bg-gradient-to-br from-amber-900 to-orange-800 rounded-2xl p-6 max-w-lg w-full">
+            <div className="bg-gradient-to-br from-amber-900 to-orange-800 rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-2xl font-bold text-white">
                   📊 Bonus d'Exploration - {showExplorationBonuses.name}
