@@ -268,19 +268,21 @@ const renderStars = (stars: number) => {
 
 // Render exploration progress
 const renderExplorationProgress = (creature: HuntedCreature) => {
-  const currentXP = creature.explorationXP || 0;
-  const xpToNext = creature.explorationXPToNext || 100;
-  const progressPercent = Math.min(100, (currentXP / xpToNext) * 100);
+  const totalXP = creature.explorationXP || 0;
+  const currentLevel = creature.explorationLevel || 0;
+  const xpRequiredPerLevel = 100;
+  const xpInCurrentLevel = totalXP - (currentLevel * xpRequiredPerLevel);
+  const progressPercent = Math.min(100, (xpInCurrentLevel / xpRequiredPerLevel) * 100);
 
   return (
     <div>
       <div className="flex items-center gap-1 mb-1">
         <span className="text-amber-500">🗺️</span>
         <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">
-          Expl. Lvl {creature.explorationLevel || 0}
+          Expl. Lvl {currentLevel}
         </span>
         <span className="text-xs text-gray-600 dark:text-gray-400">
-          ({currentXP}/{xpToNext} XP)
+          ({xpInCurrentLevel}/{xpRequiredPerLevel} XP)
         </span>
       </div>
       <div className="w-full bg-gray-700 rounded-full h-2">
