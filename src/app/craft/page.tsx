@@ -228,16 +228,17 @@ export default function CraftPage() {
 
         // For plant essence, we only need 1 plant item with count >= 2
         if (plants.length >= 1 && plants[0] && plants[0].count >= 2) {
-          const { resultRank } = craftPlantEssence(plants[0].id, plants[1].id, plants[0].rank, plants[1].rank);
+          const plantId = plants[0].id;
+          console.log("Using plant ID (twice):", plantId, "with count:", plants[0].count);
+          const { resultRank } = craftPlantEssence(plantId, plantId, plants[0].rank, plants[0].rank);
           console.log("Craft result rank:", resultRank);
 
           addCraftedItemToInventory("plantEssence", resultRank, 1);
           console.log("Added plant essence to inventory");
 
-          removeFromInventory(plants[0].id, 1);
-          console.log("Removed plant 1:", plants[0].id);
-          removeFromInventory(plants[1].id, 1);
-          console.log("Removed plant 2:", plants[1].id);
+          // Remove 2 from the SAME plantID (not 2 different plants)
+          removeFromInventory(plantId, 2);
+          console.log("Removed 2 from plant:", plantId);
 
           setMessage({
             type: "success",
