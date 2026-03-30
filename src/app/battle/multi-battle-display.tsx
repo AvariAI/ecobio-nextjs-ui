@@ -473,7 +473,7 @@ export function MultiCreatureBattleDisplay({
               <div className="flex gap-2 justify-start flex-wrap">
                 {playerTeam && playerTeam.creatures
                   .filter(c => getRowPositions(teamSize, "front").includes(c.position || 0))
-                  .sort((a, b) => (a.position || 0) - (b.position || 0))
+                  .sort((a, b) => (b.position || 0) - (a.position || 0))
                   .map((creature, i) => (
                     <MiniCreatureCard
                       key={i}
@@ -536,7 +536,7 @@ export function MultiCreatureBattleDisplay({
               <div className="flex gap-2 justify-start flex-wrap">
                 {playerTeam && playerTeam.creatures
                   .filter(c => getRowPositions(teamSize, "back").includes(c.position || 0))
-                  .sort((a, b) => (a.position || 0) - (b.position || 0))
+                  .sort((a, b) => (b.position || 0) - (a.position || 0))
                   .map((creature, i) => (
                     <MiniCreatureCard
                       key={i}
