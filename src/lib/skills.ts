@@ -187,7 +187,7 @@ export const SPECIMEN_SKILLS: Record<string, Skill> = {
   ant: {
     id: "ant_mandibles",
     name: "Morsure de Mandibules",
-    description: "Attack front row enemies with combined mandible force (reduced damage to all front)",
+    description: "Attaque la rangée avant ennemie avec la force combinée des mandibules (dégâts réduits à tous les ennemis avant)",
     creatureId: "ant",
     source: "specimen",
     type: "offensive",
@@ -206,7 +206,7 @@ export const SPECIMEN_SKILLS: Record<string, Skill> = {
   fly: {
     id: "fly_infiltration",
     name: "Attaque Sournoise",
-    description: "Infiltrate and bypass front row tanks: strike a back-row target for normal damage (breaks their protection)",
+    description: "Infiltre et contourne les tanks de la rangée avant: frappe une cible de l'arrière pour des dégâts normaux (casse leur protection)",
     creatureId: "fly",
     source: "specimen",
     type: "offensive",
@@ -224,7 +224,7 @@ export const SPECIMEN_SKILLS: Record<string, Skill> = {
   honeybee: {
     id: "honeybee_sting",
     name: "Pollisation Soignante",
-    description: "Heal 10% maxHP to ALL allies instantly (biological GFP-based healing)",
+    description: "Soigne 10% du PV maximum de TOUS les alliés instantanément (soin biologique basé sur GFP)",
     creatureId: "honeybee",
     source: "specimen",
     type: "heal",
@@ -243,7 +243,7 @@ export const SPECIMEN_SKILLS: Record<string, Skill> = {
   spider_mutant: {
     id: "spider_mutant_web",
     name: "Toile Mutante",
-    description: "Cast strange web: Slow entire enemy team (15% SPD reduction, 2 turns)",
+    description: "Lance une toile étrange: Ralentit toute l'équipe ennemie (réduction de 15% VIT, 2 tours)",
     creatureId: "spider_mutant",
     source: "specimen",
     type: "debuff",

@@ -48,6 +48,9 @@ interface HuntedCreature extends Creature {
   battlesWon: number; // Track battle wins for stats
   battlesTotal: number; // Total battles fought
 
+  // Personality identifier
+  personalityType?: PersonalityType;
+
   // Exploration system (NEW)
   explorationXP: number; // Exploration experience points
   explorationLevel: number; // Current exploration level
@@ -133,6 +136,27 @@ function spawnCreature(): HuntedCreature {
   // Générer un ID unique pour chaque créature spawnée
   const uniqueId = `cre_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+  // Assign skills with all compatibility fields
+  const fullSpecimenSkill: Creature["specimenSkill"] = specimenSkill ? {
+    name: specimenSkill.name,
+    description: specimenSkill.description,
+    effect: specimenSkill.effect,
+    value: specimenSkill.value,
+    duration: specimenSkill.duration,
+    cooldown: specimenSkill.cooldown,
+    target: specimenSkill.target,
+  } : undefined;
+
+  const fullPersonalitySkill: Creature["personalitySkill"] = personalitySkill ? {
+    name: personalitySkill.name,
+    description: personalitySkill.description,
+    effect: personalitySkill.effect,
+    value: personalitySkill.value,
+    duration: personalitySkill.duration,
+    cooldown: personalitySkill.cooldown,
+    target: personalitySkill.target,
+  } : undefined;
+
   return {
     ...creature,
     id: uniqueId,  // ID unique pour cette créature spécifique
@@ -175,15 +199,16 @@ function spawnCreature(): HuntedCreature {
 
     // Personality system (NEW)
     personality: personality,
+    personalityType: personality,
 
     // Gamble bonuses initialization (mysterieuse only, starts empty)
     gambleBonuses: [],
 
     // Dual skill system: specimen (species-based) + personality (archetype-based)
-    specimenSkill,
-    personalitySkill,
+    specimenSkill: fullSpecimenSkill,
+    personalitySkill: fullPersonalitySkill,
     // Legacy field - set to specimenSkill for backward compatibility
-    skill: specimenSkill,
+    skill: fullSpecimenSkill,
   };
 }
 
@@ -899,26 +924,30 @@ export default function HuntingPage() {
                     <p className="text-yellow-300 text-sm mt-2">Affichage: rang {selectedRank} (créature rang {selectedCreature.finalStats.rank})</p>
                   )}
                 </div>
-                {selectedCreature.specimenSkill && selectedCreature.personalitySkill && (
+                {(selectedCreature.specimenSkill || selectedCreature.personalitySkill) && (
                   <div className="bg-green-700 bg-opacity-50 rounded-lg p-3 mb-4">
                     <h3 className="font-bold text-green-100 mb-3">🎯 Compétences</h3>
                     <div className="space-y-3">
-                      <div className="bg-green-600 bg-opacity-50 rounded-lg p-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold text-green-300 px-2 py-1 rounded-full border border-green-400">SPECIMEN</span>
-                          <span className="font-semibold text-green-100">{selectedCreature.specimenSkill.name}</span>
+                      {selectedCreature.specimenSkill && (
+                        <div className="bg-green-600 bg-opacity-50 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-bold text-green-300 px-2 py-1 rounded-full border border-green-400">SPECIMEN</span>
+                            <span className="font-semibold text-green-100">{selectedCreature.specimenSkill.name}</span>
+                          </div>
+                          <p className="text-sm text-green-200">{selectedCreature.specimenSkill.description}</p>
+                          <p className="text-xs text-green-300 mt-1">CD: {selectedCreature.specimenSkill.cooldown}t | Durée: {selectedCreature.specimenSkill.duration}t</p>
                         </div>
-                        <p className="text-sm text-green-200">{selectedCreature.specimenSkill.description}</p>
-                        <p className="text-xs text-green-300 mt-1">CD: {selectedCreature.specimenSkill.cooldown}t | Durée: {selectedCreature.specimenSkill.duration}t</p>
-                      </div>
-                      <div className="bg-blue-600 bg-opacity-50 rounded-lg p-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold text-blue-300 px-2 py-1 rounded-full border border-blue-400">PERSONNALITÉ</span>
-                          <span className="font-semibold text-blue-100">{selectedCreature.personalitySkill.name}</span>
+                      )}
+                      {selectedCreature.personalitySkill && (
+                        <div className="bg-blue-600 bg-opacity-50 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-bold text-blue-300 px-2 py-1 rounded-full border border-blue-400">PERSONNALITÉ</span>
+                            <span className="font-semibold text-blue-100">{selectedCreature.personalitySkill.name}</span>
+                          </div>
+                          <p className="text-sm text-blue-200">{selectedCreature.personalitySkill.description}</p>
+                          <p className="text-xs text-blue-300 mt-1">CD: {selectedCreature.personalitySkill.cooldown}t | Durée: {selectedCreature.personalitySkill.duration}t</p>
                         </div>
-                        <p className="text-sm text-blue-200">{selectedCreature.personalitySkill.description}</p>
-                        <p className="text-xs text-blue-300 mt-1">CD: {selectedCreature.personalitySkill.cooldown}t | Durée: {selectedCreature.personalitySkill.duration}t</p>
-                      </div>
+                      )}
                     </div>
                   </div>
                 )}
