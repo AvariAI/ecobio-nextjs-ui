@@ -713,61 +713,56 @@ export function useSkill(
     buffType = BuffType.HEAL;
   } else if (skill.effect === "aoe_damage") {
     // Handle AOE skills actually dealing damage (ant's mandibles, fly's infiltration)
-    if (!targetTeam) {
-      log.push({
-        text: `${battleCreature.name} utilise ${skill.name} (aucune cible disponible)`,
-        type: "info",
-      });
-      return false;
-    }
 
-    // Determine targets based on skill.target
+    // Select targets (use direct target for 1v1, position logic for 3v3/5v5)
     let targets: BattleCreature[] = [];
-    if (skill.target === "front") {
-      // Front row targets
-      targets = targetTeam.creatures.filter(c => c.currentHP > 0 && (c.position || 0) < Math.ceil(targetTeam.creatures.length / 2));
-    } else if (skill.target === "back") {
-      // Back row targets
-      targets = targetTeam.creatures.filter(c => c.currentHP > 0 && (c.position || 0) >= Math.ceil(targetTeam.creatures.length / 2));
-    } else if (skill.target === "all") {
-      // All targets
-      targets = targetTeam.creatures.filter(c => c.currentHP > 0);
-    } else {
-      // Random target
-      const aliveTargets = targetTeam.creatures.filter(c => c.currentHP > 0);
-      if (aliveTargets.length > 0) {
+    if (targetTeam) {
+      // Multi-battle mode: front row, back row, or all
+      if (skill.target === "front") {
+        targets = targetTeam.creatures.filter(c => c.currentHP > 0 && (c.position || 0) < Math.ceil(targetTeam.creatures.length / 2));
+      } else if (skill.target === "back") {
+        targets = targetTeam.creatures.filter(c => c.currentHP > 0 && (c.position || 0) >= Math.ceil(targetTeam.creatures.length / 2));
+      } else if (skill.target === "all") {
+        targets = targetTeam.creatures.filter(c => c.currentHP > 0);
+      } else {
+        const aliveTargets = targetTeam.creatures.filter(c => c.currentHP > 0);
         targets = [aliveTargets[Math.floor(Math.random() * aliveTargets.length)]];
+      }
+    } else {
+      // 1v1 mode: use the direct target
+      if (target && target.currentHP > 0) {
+        targets = [target];
+      } else {
+        log.push({
+          text: `${battleCreature.name} utilise ${skill.name} (aucune cible)`,
+          type: "info",
+        });
+        battleCreature.skillCooldowns[cooldownKey] = skill.cooldown;
+        return false;
       }
     }
 
-    // Deal damage to all targets
-    if (targets.length > 0) {
-      const damageMultiplier = skill.value || 1.0;  // 0.5 for ant, 1.0 for fly
-      let totalDamage = 0;
+    // Deal damage
+    targets.forEach(target => {
+      const damage = Math.floor(battleCreature.stats.attack * skill.value);
+      const finalDamage = Math.max(1, damage - Math.floor(target.stats.defense / 2));
+      target.currentHP = Math.max(0, target.currentHP - finalDamage);
 
-      targets.forEach(target => {
-        const baseDamage = battleCreature.stats.attack;
-        const damage = Math.floor(baseDamage * damageMultiplier);
-        const finalDamage = Math.max(1, damage - Math.floor(target.stats.defense / 2));
-        target.currentHP = Math.max(0, target.currentHP - finalDamage);
-        totalDamage += finalDamage;
-
-        log.push({
-          text: `${battleCreature.name} ${skill.name} sur ${target.name}: ${finalDamage} dégâts (ATK ${baseDamage} × ${damageMultiplier} - DEF/2 ${Math.floor(target.stats.defense / 2)})`,
-          type: "damage",
-        });
-
-        if (target.currentHP <= 0) {
-          battleCreature.kills++;
-          log.push({
-            text: `💀 ${target.name} est KO!`,
-            type: "critical",
-          });
-        }
+      log.push({
+        text: `${battleCreature.name} utilise ${skill.name} sur ${target.name}: ${finalDamage} dégâts`,
+        type: "damage",
       });
 
-      battleCreature.damageDealt += totalDamage;
-    }
+      battleCreature.damageDealt += finalDamage;
+
+      if (target.currentHP <= 0) {
+        battleCreature.kills++;
+        log.push({
+          text: `💀 ${target.name} est KO!`,
+          type: "critical",
+        });
+      }
+    });
 
     battleCreature.skillCooldowns[cooldownKey] = skill.cooldown;
     return true;
