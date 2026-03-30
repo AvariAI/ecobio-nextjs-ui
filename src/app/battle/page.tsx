@@ -18,6 +18,13 @@ import {
   BattleElement,
   getBuffExpirationMessages,
   calculateXPRewards,
+  // BACKWARD COMPATIBILITY: Buff getters for UI
+  getDefenseBuff,
+  getAttackBuff,
+  getDodgeBuff,
+  getDefenseBuffTurns,
+  getAttackBuffTurns,
+  getDodgeBuffTurns,
 } from "@/lib/battle";
 import { getTraitsByIds, applyTraitStatModifiers } from "@/lib/traits";
 import { applyCombatXP } from "@/lib/combat-xp";
@@ -917,9 +924,9 @@ export default function BattlePage() {
       setEnemy({ ...enemy, currentHP: enemy.currentHP });
     }
 
-    const oldDefenseBuff = player.buffs.defenseBuff;
-    const oldDodgeBuff = player.buffs.dodgeBuff;
-    const oldAttackBuff = player.buffs.attackBuff;
+    const oldDefenseBuff = getDefenseBuff(player);
+    const oldDodgeBuff = getDodgeBuff(player);
+    const oldAttackBuff = getAttackBuff(player);
     tickCooldownsAndBuffs(player);
     tickStatusEffects(player, logCopy);
 
@@ -929,14 +936,14 @@ export default function BattlePage() {
       logCopy.push({ text: `✨ Buff expiré sur ${player.name}: ${expiredBuffs.join(", ")}`, type: "info" });
     }
 
-    if (oldDefenseBuff !== player.buffs.defenseBuff) {
-      logCopy.push({ text: `✨ ${player.name}: ${formatBuffChange("DEF buff", oldDefenseBuff, player.buffs.defenseBuff)}`, type: "info" });
+    if (oldDefenseBuff !== getDefenseBuff(player)) {
+      logCopy.push({ text: `✨ ${player.name}: ${formatBuffChange("DEF buff", oldDefenseBuff, getDefenseBuff(player))}`, type: "info" });
     }
-    if (oldDodgeBuff !== player.buffs.dodgeBuff) {
-      logCopy.push({ text: `${player.name}: ${formatBuffChange("Dodge buff", oldDodgeBuff, player.buffs.dodgeBuff)}`, type: "info" });
+    if (oldDodgeBuff !== getDodgeBuff(player)) {
+      logCopy.push({ text: `${player.name}: ${formatBuffChange("Dodge buff", oldDodgeBuff, getDodgeBuff(player))}`, type: "info" });
     }
-    if (oldAttackBuff !== player.buffs.attackBuff) {
-      logCopy.push({ text: `${player.name}: ${formatBuffChange("ATK buff", oldAttackBuff, player.buffs.attackBuff)}`, type: "info" });
+    if (oldAttackBuff !== getAttackBuff(player)) {
+      logCopy.push({ text: `${player.name}: ${formatBuffChange("ATK buff", oldAttackBuff, getAttackBuff(player))}`, type: "info" });
     }
 
     const damage = executeAttack(player, enemy, logCopy);
@@ -1187,15 +1194,15 @@ export default function BattlePage() {
     const logCopy = [...log];
     logCopy.push({ text: `--- Round ${round}: Player Turn (Skill) ---`, type: "info" });
 
-    const oldDefenseBuff = player.buffs.defenseBuff;
-    const oldDodgeBuff = player.buffs.dodgeBuff;
+    const oldDefenseBuff = getDefenseBuff(player);
+    const oldDodgeBuff = getDodgeBuff(player);
     tickCooldownsAndBuffs(player);
 
-    if (oldDefenseBuff !== player.buffs.defenseBuff) {
-      logCopy.push({ text: `✨ ${player.name}: ${formatBuffChange("DEF buff", oldDefenseBuff, player.buffs.defenseBuff)}`, type: "info" });
+    if (oldDefenseBuff !== getDefenseBuff(player)) {
+      logCopy.push({ text: `✨ ${player.name}: ${formatBuffChange("DEF buff", oldDefenseBuff, getDefenseBuff(player))}`, type: "info" });
     }
-    if (oldDodgeBuff !== player.buffs.dodgeBuff) {
-      logCopy.push({ text: `${player.name}: ${formatBuffChange("Dodge buff", oldDodgeBuff, player.buffs.dodgeBuff)}`, type: "info" });
+    if (oldDodgeBuff !== getDodgeBuff(player)) {
+      logCopy.push({ text: `${player.name}: ${formatBuffChange("Dodge buff", oldDodgeBuff, getDodgeBuff(player))}`, type: "info" });
     }
 
     const success = useSkill(player, logCopy);
@@ -1207,7 +1214,7 @@ export default function BattlePage() {
     }
 
     const buffType = skill.effect === "defense" ? "DEF" : "Dodge";
-    const newBuff = skill.effect === "defense" ? player.buffs.defenseBuff : player.buffs.dodgeBuff;
+    const newBuff = skill.effect === "defense" ? getDefenseBuff(player) : getDodgeBuff(player);
     logCopy.push({ text: `✨ ${player.name}: ${buffType} buff actif!`, type: "skill" });
 
     if (skill.effect === "defense") {
@@ -1280,9 +1287,9 @@ export default function BattlePage() {
       setPlayer({ ...player, currentHP: player.currentHP });
     }
 
-    const oldDefenseBuff = enemy.buffs.defenseBuff;
-    const oldDodgeBuff = enemy.buffs.dodgeBuff;
-    const oldAttackBuff = enemy.buffs.attackBuff;
+    const oldDefenseBuff = getDefenseBuff(enemy);
+    const oldDodgeBuff = getDodgeBuff(enemy);
+    const oldAttackBuff = getAttackBuff(enemy);
     tickCooldownsAndBuffs(enemy);
     tickStatusEffects(enemy, logCopy);
 
@@ -1292,14 +1299,14 @@ export default function BattlePage() {
       logCopy.push({ text: `✨ Buff expiré sur ${enemy.name}: ${expiredBuffsEnemy.join(", ")}`, type: "info" });
     }
 
-    if (oldDefenseBuff !== enemy.buffs.defenseBuff) {
-      logCopy.push({ text: `${enemy.name}: ${formatBuffChange("DEF buff", oldDefenseBuff, enemy.buffs.defenseBuff)}`, type: "info" });
+    if (oldDefenseBuff !== getDefenseBuff(enemy)) {
+      logCopy.push({ text: `${enemy.name}: ${formatBuffChange("DEF buff", oldDefenseBuff, getDefenseBuff(enemy))}`, type: "info" });
     }
-    if (oldDodgeBuff !== enemy.buffs.dodgeBuff) {
-      logCopy.push({ text: `${enemy.name}: ${formatBuffChange("Dodge buff", oldDodgeBuff, enemy.buffs.dodgeBuff)}`, type: "info" });
+    if (oldDodgeBuff !== getDodgeBuff(enemy)) {
+      logCopy.push({ text: `${enemy.name}: ${formatBuffChange("Dodge buff", oldDodgeBuff, getDodgeBuff(enemy))}`, type: "info" });
     }
-    if (oldAttackBuff !== enemy.buffs.attackBuff) {
-      logCopy.push({ text: `${enemy.name}: ${formatBuffChange("ATK buff", oldAttackBuff, enemy.buffs.attackBuff)}`, type: "info" });
+    if (oldAttackBuff !== getAttackBuff(enemy)) {
+      logCopy.push({ text: `${enemy.name}: ${formatBuffChange("ATK buff", oldAttackBuff, getAttackBuff(enemy))}`, type: "info" });
     }
 
     logCopy.push({ text: `--- Round ${round}: Enemy Turn ---`, type: "info" });
@@ -1689,8 +1696,8 @@ function BattleCreatureDisplay({
 }) {
   const maxHP = creature.stats.hp;
   const hpPercent = (creature.currentHP / maxHP) * 100;
-  const defenseBuffActive = creature.buffs.defenseBuff > 0;
-  const dodgeBuffActive = creature.buffs.dodgeBuff > 0;
+  const defenseBuffActive = getDefenseBuff(creature) > 0;
+  const dodgeBuffActive = getDodgeBuff(creature) > 0;
 
   const skillOnCooldown = creature.creature.skill
     ? Object.entries(creature.skillCooldowns).some(([k, v]) => k === creature.creature.skill?.name && v > 0)
@@ -1764,8 +1771,8 @@ function BattleCreatureDisplay({
           <div className="flex justify-between">
             <span>DEF</span>
             <div>
-              <span className="text-purple-600 font-bold">{Math.floor(creature.stats.defense * (1 + creature.buffs.defenseBuff))}</span>
-              <span className="text-xs ml-1">(+{Math.floor(creature.buffs.defenseBuff * 100)}%)</span>
+              <span className="text-purple-600 font-bold">{Math.floor(creature.stats.defense * (1 + getDefenseBuff(creature)))}</span>
+              <span className="text-xs ml-1">(+{Math.floor(getDefenseBuff(creature) * 100)}%)</span>
             </div>
           </div>
         ) : (
@@ -1831,8 +1838,8 @@ function BattleCreatureDisplay({
       {(defenseBuffActive || dodgeBuffActive) && (
         <div className="pt-2 border-t">
           <div className="text-xs">
-            {defenseBuffActive && <div>✨ DEF +{Math.floor(creature.buffs.defenseBuff * 100)}% ({creature.buffs.defenseBuffTurns}t)</div>}
-            {dodgeBuffActive && <div>💨 Dodge +{Math.floor(creature.buffs.dodgeBuff * 100)}% ({creature.buffs.dodgeBuffTurns}t)</div>}
+            {defenseBuffActive && <div>✨ DEF +{Math.floor(getDefenseBuff(creature) * 100)}% ({getDefenseBuffTurns(creature)}t)</div>}
+            {dodgeBuffActive && <div>💨 Dodge +{Math.floor(getDodgeBuff(creature) * 100)}% ({getDodgeBuffTurns(creature)}t)</div>}
           </div>
         </div>
       )}
