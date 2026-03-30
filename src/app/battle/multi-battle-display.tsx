@@ -431,30 +431,31 @@ export function MultiCreatureBattleDisplay({
         <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4">
           <p className="text-sm font-semibold mb-2">Ordre de tour (vitesse):</p>
           <div className="flex flex-wrap gap-2">
-            {turnOrder
-              .filter(el => el.creature.currentHP > 0) // Filter out dead creatures
-              .map((el, i) => {
-                const isCurrent = el.creature === currentActingCreature;
-                const isStunned = el.creature.statusEffects.some(e => e.type === "stun");
+            {turnOrder.map((el, i) => {
+              const isCurrent = el.creature === currentActingCreature;
+              const isStunned = el.creature.statusEffects.some(e => e.type === "stun");
+              const isDead = el.creature.currentHP <= 0;
 
-                return (
-                  <div
-                    key={`${el.team}-${el.name}-${i}`}
-                    className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-all ${
-                      isStunned
-                        ? "bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400 border-2 border-yellow-400 dark:border-yellow-500"
-                        : isCurrent
+              if (isDead) return null; // Don't display dead creatures
+
+              return (
+                <div
+                  key={`${el.team}-${el.name}-${i}`}
+                  className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-all ${
+                    isStunned
+                      ? "bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400 border-2 border-yellow-400 dark:border-yellow-500"
+                      : isCurrent
                         ? "bg-yellow-500 text-white animate-pulse scale-105 shadow-lg"
                         : el.team === "player"
                         ? "bg-blue-500 text-white hover:bg-blue-600"
                         : "bg-red-500 text-white hover:bg-red-600"
-                    }`}
-                    title={isStunned ? "💫 Étourdi - tour sauté" : ""}
-                  >
-                    {i + 1}. {el.name}{isStunned && " 💫"}
-                  </div>
-                );
-              })}
+                  }`}
+                  title={isStunned ? "💫 Étourdi - tour sauté" : ""}
+                >
+                  {i + 1}. {el.name}{isStunned && " 💫"}
+                </div>
+              );
+            })}
           </div>
           {/* Legend */}
           <div className="mt-2 flex gap-3 text-xs text-gray-600 dark:text-gray-400">
@@ -468,7 +469,7 @@ export function MultiCreatureBattleDisplay({
               <span className="w-3 h-3 rounded bg-red-500"></span> Ennemi
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded bg-gray-200 dark:bg-gray-600 border-2 border-yellow-400"></span> Étourdi
+              <span className="w-3 h-3 rounded bg-gray-200 dark:bg-gray-600 border-2 border-yellow-400"></span> Étourdi (passe son tour)
             </span>
           </div>
         </div>

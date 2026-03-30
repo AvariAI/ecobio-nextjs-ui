@@ -321,15 +321,18 @@ export default function BattlePage() {
           const newEnemyTeam = { ...enemyTeam, creatures: enemyTeam.creatures.map(c => ({ ...c })) };
 
           // Rebuild turn order with new creature references
-          const newTurnOrder = getAllBattleElements(newPlayerTeam, newEnemyTeam).sort(
-            (a, b) => getEffectiveSpeed(b.creature) - getEffectiveSpeed(a.creature)
+          const newTurnOrder = getAllBattleElements(newPlayerTeam, newEnemyTeam).sort((a, b) =>
+            getEffectiveSpeed(b.creature) - getEffectiveSpeed(a.creature)
           );
 
-          // Find the new creature reference corresponding to current
-          const newCurrentCreature = newTurnOrder.find(el =>
-            el.creature.name === currentActingCreature.name &&
-            el.team === (playerTeam.creatures.includes(currentActingCreature) ? "player" : "enemy")
-          )?.creature || currentActingCreature;
+          // Find the current creature reference in newTurnOrder by unique combination
+          const isPlayerTeamCurrent = playerTeam.creatures.includes(currentActingCreature);
+          const currentTeamCreatures = isPlayerTeamCurrent ? newPlayerTeam.creatures : newEnemyTeam.creatures;
+
+          const newCurrentCreature = currentTeamCreatures.find(c =>
+            c.name === currentActingCreature.name &&
+            c.position === currentActingCreature.position
+          ) || currentActingCreature;
 
           setLog(newLog);
           setPlayerTeam(newPlayerTeam);
@@ -349,26 +352,24 @@ export default function BattlePage() {
             return;
           }
 
-          // Move to next creature - skip dead AND stunned creatures
-          const isStunned = (creature: BattleCreature) =>
-            creature.statusEffects.some(e => e.type === "stun");
-
-          const currentIndex = newTurnOrder.findIndex(el => el.creature === newCurrentCreature);
+          // Move to next creature - skip DEAD creatures (stunned creatures still get their turn for DoT/poison)
+          const currentIndex = newTurnOrder.findIndex(el =>
+            el.creature.name === newCurrentCreature.name &&
+            el.team === (isPlayerTeamCurrent ? "player" : "enemy") &&
+            el.creature.position === newCurrentCreature.position
+          );
           let nextIndex = (currentIndex + 1) % newTurnOrder.length;
           let nextCreature = newTurnOrder[nextIndex];
 
-          // Find next alive AND not-stunned creature
+          // Find next alive creature (stunned creatures still get their turn - they just skip actions but take DoT/poison)
           let attempts = 0;
-          while (
-            (nextCreature.creature.currentHP <= 0 || isStunned(nextCreature.creature)) &&
-            attempts < newTurnOrder.length
-          ) {
+          while (nextCreature.creature.currentHP <= 0 && attempts < newTurnOrder.length) {
             nextIndex = (nextIndex + 1) % newTurnOrder.length;
             nextCreature = newTurnOrder[nextIndex];
             attempts++;
           }
 
-          // If all creatures are dead or stunned, battle is over
+          // If all creatures are dead, battle is over
           if (attempts >= newTurnOrder.length) {
             const winner = getTeamBattleWinner(newPlayerTeam, newEnemyTeam);
             newLog.push({
