@@ -39,7 +39,8 @@ export interface Skill {
     recoilPercent?: number;
     redirectionDamageReduction?: number;
     effectDuration?: number;
-    taunt?: boolean;  // NEW: Forces enemies to target this creature
+    taunt?: boolean;  // Forces enemies to target this creature
+    ignoreDodge?: boolean;  // Switch to attack: guaranteed hit, bypasses normal dodge checks
   };
 }
 
@@ -48,20 +49,21 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
   agressive: {
     id: "agressive_base",
     name: "Ravage",
-    description: "150% dégâts ATK, soi-même reçoit 20% comme recul (prochaine attaque)",
+    description: "Coup puissant: 150% dégâts ATK instantanés, mais vous prenez 20% des dégâts infligés comme recul",
     archetype: "agressive",
     source: "personality",
     type: "offensive",
-    effect: "attack",  // Battle.ts compat
+    effect: "attack",
     value: 0.5,  // 50% bonus (150% total)
-    duration: 2,  // Buff lasts 2 turns so it applies to next attack (was 1)
+    duration: 0,  // Instant damage, not a buff
     cooldown: 4,
-    target: "random",  // Will be specialized in battle system
+    target: "random",
     level: 1,
     effects: {
       offenseMultiplier: 1.5,
       recoilPercent: 0.20,
-      effectDuration: 2,  // Was 1
+      ignoreDodge: true,  // Switch to attack: guaranteed hit, bypasses normal dodge checks
+      effectDuration: 0,
     }
   },
 
@@ -128,19 +130,20 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
   precise: {
     id: "precise_base",
     name: "Tir Critique",
-    description: "Coup garanti, multiplicateur de dégâts critiques +150%",
+    description: "Coups garantis ignore esquive: +150% dégâts critiques instantanés (coup garanti)",
     archetype: "precise",
     source: "personality",
     type: "offensive",
     effect: "attack",
     value: 1.5,  // 150% crit bonus
-    duration: 1,
+    duration: 0,  // Instant, not a buff
     cooldown: 4,
     target: "random",
     level: 1,
     effects: {
       critDamageBonus: 1.5,
-      effectDuration: 1,
+      ignoreDodge: true,
+      effectDuration: 0,
     }
   },
 

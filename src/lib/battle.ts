@@ -97,6 +97,7 @@ export interface BattleCreature {
   damageDealt: number; // Track damage dealt this battle
   kills: number; // Track kills this battle
   id: string; // Creature ID for XP mapping
+  ignoreDodge?: boolean; // If true, ignore dodge for this attack (Tir Critique)
 }
 
 /**
@@ -953,6 +954,7 @@ export function executeAttack(
 
   // Use NEW buff system for dodge (backward compatible)
   const dodgeBuffValue = getDodgeBuff(defender);
+  
   const dodgeChance = calculateDodgeChance(
     attacker.stats.speed,
     defenderEffectiveSpeed,
@@ -1347,7 +1349,32 @@ function applyDamageEffect(ctx: SkillExecutionContext, targets: BattleCreature[]
 
   const offenseMult = effects.offenseMultiplier || skill.value || 1.0;
 
+  // Check if skill ignores dodge (Ravage, Tir Critique)
+  const ignoreDodge = effects.ignoreDodge || false;
+
   targets.forEach(target => {
+    // If ignoreDodge is true, check dodge anyway but override
+    let targetDodged = false;
+    
+    if (!ignoreDodge) {
+      // Normal dodge calculation (based on speed difference)
+      const attackerEffectiveSpeed = getEffectiveSpeed(attacker);
+      const targetEffectiveSpeed = getEffectiveSpeed(target);
+      const dodgeBuff = getDodgeBuff(target);
+      const dodgeChanceCalc = calculateDodgeChance(attackerEffectiveSpeed, targetEffectiveSpeed, dodgeBuff);
+      
+      targetDodged = Math.random() < dodgeChanceCalc;
+    }
+
+    if (targetDodged) {
+      log.push({
+        text: `${target.name} esquive l'attaque de ${skill.name}!`,
+        type: "dodge",
+      });
+      return; // Exit early for this target
+    }
+
+    // Damage calculation
     let rawDamage = attacker.stats.attack * offenseMult;
 
     // Ignore defense percentage
@@ -1369,10 +1396,17 @@ function applyDamageEffect(ctx: SkillExecutionContext, targets: BattleCreature[]
       }
 
       finalDamage = Math.floor(finalDamage * critMult);
-      log.push({
-        text: `💥 CRITICAL HIT sur ${target.name}! Dégâts: ${finalDamage} (${critMult.toFixed(2)}x)`,
-        type: "critical",
-      });
+      if (ignoreDodge) {
+        log.push({
+          text: `💥 COUP GARANTI CRITICAL HIT sur ${target.name}! Dégâts: ${finalDamage} (${critMult.toFixed(2)}x)`,
+          type: "critical",
+        });
+      } else {
+        log.push({
+          text: `💥 CRITICAL HIT sur ${target.name}! Dégâts: ${finalDamage} (${critMult.toFixed(2)}x)`,
+          type: "critical",
+        });
+      }
     }
 
     // Apply damage
@@ -1380,7 +1414,7 @@ function applyDamageEffect(ctx: SkillExecutionContext, targets: BattleCreature[]
     attacker.damageDealt += finalDamage;
 
     log.push({
-      text: `${attacker.name} utilise ${skill.name} sur ${target.name}: ${finalDamage} dégâts`,
+      text: `${attacker.name} utilise ${skill.name} sur ${target.name}: ${finalDamage} dégâts${ignoreDodge ? " (COUP GARANTI - ignore esquive)" : ""}`,
       type: "damage",
     });
 
