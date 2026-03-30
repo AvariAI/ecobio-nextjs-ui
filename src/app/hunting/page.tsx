@@ -863,12 +863,31 @@ export default function HuntingPage() {
                     </div>
                   );
                 })()}
-                {huntedCreature.skill && (
+
+                {(huntedCreature.specimenSkill || huntedCreature.personalitySkill) && (
                   <div className="bg-green-700 bg-opacity-50 rounded-lg p-3 mb-4">
-                    <h3 className="font-bold text-green-100">🎯 Compétence</h3>
-                    <div className="text-sm text-green-200">
-                      <p><strong>{huntedCreature.skill.name}</strong>: {huntedCreature.skill.description}</p>
-                      <p className="text-xs text-green-300 mt-1">CD: {huntedCreature.skill.cooldown}t | Durée: {huntedCreature.skill.duration}t</p>
+                    <h3 className="font-bold text-green-100 mb-3">🎯 Compétences</h3>
+                    <div className="space-y-3">
+                      {huntedCreature.specimenSkill && (
+                        <div className="bg-green-600 bg-opacity-50 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-bold text-green-300 px-2 py-1 rounded-full border border-green-400">SPECIMEN</span>
+                            <span className="font-semibold text-green-100">{huntedCreature.specimenSkill.name}</span>
+                          </div>
+                          <p className="text-sm text-green-200">{huntedCreature.specimenSkill.description}</p>
+                          <p className="text-xs text-green-300 mt-1">CD: {huntedCreature.specimenSkill.cooldown}t | Durée: {huntedCreature.specimenSkill.duration}t</p>
+                        </div>
+                      )}
+                      {huntedCreature.personalitySkill && (
+                        <div className="bg-blue-600 bg-opacity-50 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-bold text-blue-300 px-2 py-1 rounded-full border border-blue-400">PERSONNALITÉ</span>
+                            <span className="font-semibold text-blue-100">{huntedCreature.personalitySkill.name}</span>
+                          </div>
+                          <p className="text-sm text-blue-200">{huntedCreature.personalitySkill.description}</p>
+                          <p className="text-xs text-blue-300 mt-1">CD: {huntedCreature.personalitySkill.cooldown}t | Durée: {huntedCreature.personalitySkill.duration}t</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
