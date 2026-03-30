@@ -10,7 +10,7 @@ import { getExplorationBonus } from "@/lib/exploration";
 import { DURATION_LEVEL_REQUIREMENTS } from "@/lib/exploration";
 import { applyHealthRegenerationToCollection } from "@/lib/health-regen";
 import { loadInventory, removeFromInventory } from "@/lib/inventory";
-import { getBaseSkill } from "@/lib/skills";
+// TODO: Skills system - import { getBaseSkill } from "@/lib/skills";
 import Link from "next/link";
 
 type HuntingPhase = "ready" | "spawned" | "viewing";
@@ -117,8 +117,9 @@ function spawnCreature(): HuntedCreature {
   // Generate random personality (RNG!)
   const personality = generateRandomPersonality();
 
-  // Assign base skill based on personality (archetype)
-  const baseSkill = getBaseSkill(personality);
+  // TODO: Assign base skill based on personality (archetype) - requires skills.ts
+  // const baseSkill = getBaseSkill(personality);
+  const baseSkill = undefined; // Temporary: no skill until skills.ts is implemented
 
   // Apply personality-based level scaling (level 1 = no scaling, future growth)
   // Level 1 = no scaling applied, stats remain from variance RNG
