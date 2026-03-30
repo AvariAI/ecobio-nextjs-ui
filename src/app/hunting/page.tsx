@@ -10,7 +10,7 @@ import { getExplorationBonus } from "@/lib/exploration";
 import { DURATION_LEVEL_REQUIREMENTS } from "@/lib/exploration";
 import { applyHealthRegenerationToCollection } from "@/lib/health-regen";
 import { loadInventory, removeFromInventory } from "@/lib/inventory";
-// TODO: Skills system - import { getBaseSkill } from "@/lib/skills";
+import { getBaseSkill, getSpecimenSkill } from "@/lib/skills";
 import Link from "next/link";
 
 type HuntingPhase = "ready" | "spawned" | "viewing";
@@ -117,9 +117,9 @@ function spawnCreature(): HuntedCreature {
   // Generate random personality (RNG!)
   const personality = generateRandomPersonality();
 
-  // TODO: Assign base skill based on personality (archetype) - requires skills.ts
-  // const baseSkill = getBaseSkill(personality);
-  const baseSkill = undefined; // Temporary: no skill until skills.ts is implemented
+  // Assign base skills: specimen (species-based) + personality (archetype-based)
+  const specimenSkill = getSpecimenSkill(creatureId);
+  const personalitySkill = getBaseSkill(personality);
 
   // Apply personality-based level scaling (level 1 = no scaling, future growth)
   // Level 1 = no scaling applied, stats remain from variance RNG
@@ -179,8 +179,11 @@ function spawnCreature(): HuntedCreature {
     // Gamble bonuses initialization (mysterieuse only, starts empty)
     gambleBonuses: [],
 
-    // Base skill assignment (archetype-based)
-    skill: baseSkill,
+    // Dual skill system: specimen (species-based) + personality (archetype-based)
+    specimenSkill,
+    personalitySkill,
+    // Legacy field - set to specimenSkill for backward compatibility
+    skill: specimenSkill,
   };
 }
 

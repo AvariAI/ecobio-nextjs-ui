@@ -29,7 +29,26 @@ export interface Creature {
     4: { passive?: string }; // Passive trait ID
     5: { ultimate?: string }; // Ultimate skill ID
   };
-  // Skills assigned via personality/build system (not species-based)
+  // Skills: specimen (species-based) + personality (archetype-based)
+  specimenSkill?: {
+    name: string;
+    description: string;
+    effect: "defense" | "dodge" | "attack" | "heal" | "special" | "debuff";
+    value: number;
+    duration: number;
+    cooldown: number;
+    target?: "front" | "back" | "all" | "random" | "self" | "ally";
+  };
+  personalitySkill?: {
+    name: string;
+    description: string;
+    effect: "defense" | "dodge" | "attack" | "heal" | "special" | "debuff";
+    value: number;
+    duration: number;
+    cooldown: number;
+    target?: "front" | "back" | "all" | "random" | "self" | "ally";
+  };
+  // Legacy field (deprecated - use specimenSkill/personalitySkill)
   skill?: {
     name: string;
     description: string;
