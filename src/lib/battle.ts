@@ -33,21 +33,30 @@ export interface SkillCooldowns {
   [skillName: string]: number;
 }
 
-export interface ActiveBuffs {
-  defenseBuff: number;
-  dodgeBuff: number;
-  attackBuff: number;
-  defenseBuffTurns: number;
-  dodgeBuffTurns: number;
-  attackBuffTurns: number;
-}
-
 export interface StatModifiers {
   hpBonus: number;  // Percentage bonus from traits (e.g., 20 for +20%)
   attackBonus: number;
   defenseBonus: number;
   speedBonus: number;
   critBonus: number;
+}
+
+export enum BuffType {
+  ATTACK = "attack",
+  DEFENSE = "defense",
+  DODGE = "dodge",
+  HEAL = "heal",
+  POISON = "poison",
+  SLOW = "slow",
+  STUN = "stun",
+}
+
+export interface ActiveBuff {
+  type: BuffType;
+  value: number;  // Strength of the effect (e.g., 0.5 for +50%)
+  turnsRemaining: number;  // Turns remaining
+  sourceSkillId: string;  // ID of the skill that created this buff
+  sourceCreatureId: string;  // ID of the creature that created this buff
 }
 
 export enum StatusEffectType {
@@ -62,17 +71,28 @@ export interface StatusEffect {
   value?: number;  // Effect strength (e.g., poison damage %, slow % reduction)
 }
 
+export type BuffsDictionary = { [buffId: string]: ActiveBuff };
+
+export interface BuffsCompatibility {
+  attackBuff: number;
+  defenseBuff: number;
+  dodgeBuff: number;
+  attackBuffTurns: number;
+  defenseBuffTurns: number;
+  dodgeBuffTurns: number;
+}
+
 export interface BattleCreature {
   creature: Creature;
   stats: BattleStats;
   currentHP: number;
   skillCooldowns: SkillCooldowns;
-  buffs: ActiveBuffs;
+  buffs: BuffsDictionary;  // NEW: Dictionary for buffs only
   name: string;
   traits: string[];  // Trait IDs
   baseStats?: BattleStats;  // Original stats before trait modifications
   statModifiers?: StatModifiers;  // Bonus breakdown from traits
-  statusEffects: StatusEffect[];  // Active status effects
+  statusEffects: StatusEffect[];  // Active status effects (deprecated, integrated into buffs)
   attackCounter: number;  // Track attack count for "every X attacks" traits
   position?: number;  // Slot position (0-4) for multi-row battles
   logBuffExpiration?: string[];  // Buff types that expired this turn (for logging)
@@ -81,6 +101,153 @@ export interface BattleCreature {
   damageDealt: number; // Track damage dealt this battle
   kills: number; // Track kills this battle
   id: string; // Creature ID for XP mapping
+}
+
+/**
+ * Generate a unique buff ID
+ */
+function generateBuffId(skillId: string, creatureId: string, type: BuffType): string {
+  return `${skillId}_${creatureId}_${type}`;
+}
+
+/**
+ * Add a buff to a creature
+ * If a buff of the same type from the same source exists, it refreshes duration
+ */
+export function addBuff(
+  creature: BattleCreature,
+  type: BuffType,
+  value: number,
+  turns: number,
+  sourceSkillId: string,
+  sourceCreatureId: string
+): void {
+  const buffId = generateBuffId(sourceSkillId, sourceCreatureId, type);
+  creature.buffs[buffId] = {
+    type,
+    value,
+    turnsRemaining: turns,
+    sourceSkillId,
+    sourceCreatureId,
+  };
+}
+
+/**
+ * Get all buffs of a specific type
+ */
+export function getBuffsByType(creature: BattleCreature, type: BuffType): ActiveBuff[] {
+  return Object.values(creature.buffs).filter(b => b.type === type);
+}
+
+/**
+ * Get the total value of buffs of a specific type
+ * For debuffs (like poison, slow), negative values are summed
+ * For buffs (like attack, defense), positive values are summed
+ */
+export function getBuffValueByType(creature: BattleCreature, type: BuffType): number {
+  const buffs = getBuffsByType(creature, type);
+  return buffs.reduce((sum, b) => sum + b.value, 0);
+}
+
+/**
+ * Remove a specific buff by ID
+ */
+export function removeBuff(creature: BattleCreature, buffId: string): void {
+  delete creature.buffs[buffId];
+}
+
+/**
+ * Tick down all buff durations and remove expired buffs
+ * Returns an array of expired buff types for logging
+ */
+export function tickBuffs(creature: BattleCreature): BuffType[] {
+  const expiredBuffTypes: BuffType[] = [];
+
+  for (const [buffId, buff] of Object.entries(creature.buffs)) {
+    buff.turnsRemaining--;
+
+    if (buff.turnsRemaining <= 0) {
+      expiredBuffTypes.push(buff.type);
+      removeBuff(creature, buffId);
+    }
+  }
+
+  return expiredBuffTypes;
+}
+
+/**
+ * BACKWARD COMPATIBILITY FUNCTIONS
+ * These functions allow existing UI code to work while we migrate internally
+ */
+
+/**
+ * GetDefenseBuff for backward compatibility (DEPRECATED)
+ */
+export function getDefenseBuff(creature: BattleCreature): number {
+  return getBuffValueByType(creature, BuffType.DEFENSE);
+}
+
+/**
+ * GetDodgeBuff for backward compatibility (DEPRECATED)
+ */
+export function getDodgeBuff(creature: BattleCreature): number {
+  return getBuffValueByType(creature, BuffType.DODGE);
+}
+
+/**
+ * GetAttackBuff for backward compatibility (DEPRECATED)
+ */
+export function getAttackBuff(creature: BattleCreature): number {
+  return getBuffValueByType(creature, BuffType.ATTACK);
+}
+
+/**
+ * GetDefenseBuffTurns for backward compatibility (DEPRECATED)
+ * Returns the minimum remaining turns among all defense buffs
+ */
+export function getDefenseBuffTurns(creature: BattleCreature): number {
+  const buffs = getBuffsByType(creature, BuffType.DEFENSE);
+  return buffs.length > 0 ? Math.min(...buffs.map(b => b.turnsRemaining)) : 0;
+}
+
+/**
+ * GetDodgeBuffTurns for backward compatibility (DEPRECATED)
+ * Returns the minimum remaining turns among all dodge buffs
+ */
+export function getDodgeBuffTurns(creature: BattleCreature): number {
+  const buffs = getBuffsByType(creature, BuffType.DODGE);
+  return buffs.length > 0 ? Math.min(...buffs.map(b => b.turnsRemaining)) : 0;
+}
+
+/**
+ * GetAttackBuffTurns for backward compatibility (DEPRECATED)
+ * Returns the minimum remaining turns among all attack buffs
+ */
+export function getAttackBuffTurns(creature: BattleCreature): number {
+  const buffs = getBuffsByType(creature, BuffType.ATTACK);
+  return buffs.length > 0 ? Math.min(...buffs.map(b => b.turnsRemaining)) : 0;
+}
+
+/**
+ * Helper to get buff object with readable fields (for UI compatibility)
+ * Returns an object with .defenseBuff, .attackBuff, etc. for easy access
+ */
+export function getBuffsAsObject(creature: BattleCreature): {
+  attackBuff: number;
+  defenseBuff: number;
+  dodgeBuff: number;
+  attackBuffTurns: number;
+  defenseBuffTurns: number;
+  dodgeBuffTurns: number;
+} {
+  return {
+    attackBuff: getAttackBuff(creature),
+    defenseBuff: getDefenseBuff(creature),
+    dodgeBuff: getDodgeBuff(creature),
+    attackBuffTurns: getAttackBuffTurns(creature),
+    defenseBuffTurns: getDefenseBuffTurns(creature),
+    dodgeBuffTurns: getDodgeBuffTurns(creature),
+  };
 }
 
 /**
@@ -142,13 +309,18 @@ export function getStatusEffects(
 
 /**
  * Calculate effective speed with Slow effect applied
+ * Uses NEW buff system for compatibility
  */
 export function getEffectiveSpeed(creature: BattleCreature): number {
+  // Check both old statusEffects and new buffs (for transition period)
+  let totalSlowReduction = getBuffValueByType(creature, BuffType.SLOW);
+
+  // Also check legacy statusEffects for backward compatibility
   const slowEffects = getStatusEffects(creature, StatusEffectType.SLOW);
-  let totalSlowReduction = 0;
   for (const effect of slowEffects) {
     totalSlowReduction += effect.value || 0;
   }
+
   // Cap at 50% reduction
   totalSlowReduction = Math.min(totalSlowReduction, 0.5);
   return Math.floor(creature.stats.speed * (1 - totalSlowReduction));
@@ -440,14 +612,16 @@ export function calculateDamage(attacker: BattleCreature, defender: BattleCreatu
 
   let damage = atk * (atk / (atk + def));
 
-  // Apply attack buff
-  if (attacker.buffs.attackBuff > 0) {
-    damage = damage * (1 + attacker.buffs.attackBuff);
+  // Apply attack buff (NEW system)
+  const attackBuffValue = getBuffValueByType(attacker, BuffType.ATTACK);
+  if (attackBuffValue > 0) {
+    damage = damage * (1 + attackBuffValue);
   }
 
-  // Apply defense buff
-  if (defender.buffs.defenseBuff > 0) {
-    damage = damage * (1 - defender.buffs.defenseBuff);
+  // Apply defense buff (NEW system)
+  const defenseBuffValue = getBuffValueByType(defender, BuffType.DEFENSE);
+  if (defenseBuffValue > 0) {
+    damage = damage * (1 - Math.min(defenseBuffValue, 0.8)); // Cap damage reduction at 80%
   }
 
   return Math.floor(Math.max(1, damage));
@@ -497,37 +671,50 @@ export function useSkill(
   const targetCreature = isSelfBuff ? battleCreature : target!;
   const targetName = isSelfBuff ? "soi-même" : target!.name;
 
-  // Apply skill effect based on skill type with detailed logging
+  // Map skill effect to BuffType (NEW system)
+  let buffType: BuffType;
   if (skill.effect === "defense") {
-    targetCreature.buffs.defenseBuff = skill.value;
-    targetCreature.buffs.defenseBuffTurns = skill.duration;
+    buffType = BuffType.DEFENSE;
+  } else if (skill.effect === "dodge") {
+    buffType = BuffType.DODGE;
+  } else if (skill.effect === "attack") {
+    buffType = BuffType.ATTACK;
+  } else {
+    // Fallback for other skill types - log without creating buff
+    log.push({
+      text: `${battleCreature.name} utilise ${skill.name} sur ${targetName}!`,
+      type: "skill",
+    });
+    battleCreature.skillCooldowns[cooldownKey] = skill.cooldown;
+    return true;
+  }
 
+  // Apply skill effect using addBuff (NEW system)
+  addBuff(
+    targetCreature,
+    buffType,
+    skill.value,
+    skill.duration,
+    skillName,  // Use skill.name as sourceSkillId since interface doesn't have id field
+    battleCreature.id
+  );
+
+  // Detailed logging
+  if (skill.effect === "defense") {
     const buffedDef = Math.floor(targetCreature.stats.defense * (1 + skill.value));
     log.push({
       text: `${battleCreature.name} utilise ${skill.name} sur ${targetName} (DEF ${targetCreature.stats.defense} → ${buffedDef}, +${Math.floor(skill.value * 100)}% pour ${skill.duration} tours)`,
       type: "skill",
     });
   } else if (skill.effect === "dodge") {
-    targetCreature.buffs.dodgeBuff = skill.value;
-    targetCreature.buffs.dodgeBuffTurns = skill.duration;
-
     log.push({
       text: `${battleCreature.name} utilise ${skill.name} sur ${targetName} (Dodge +${Math.floor(skill.value * 100)}% pour ${skill.duration} tours)`,
       type: "skill",
     });
   } else if (skill.effect === "attack") {
-    targetCreature.buffs.attackBuff = skill.value;
-    targetCreature.buffs.attackBuffTurns = skill.duration;
-
     const buffedAtk = Math.floor(targetCreature.stats.attack * (1 + skill.value));
     log.push({
       text: `${battleCreature.name} utilise ${skill.name} sur ${targetName} (ATK ${targetCreature.stats.attack} → ${buffedAtk}, +${Math.floor(skill.value * 100)}% pour ${skill.duration} tours)`,
-      type: "skill",
-    });
-  } else {
-    // Fallback for other skill types
-    log.push({
-      text: `${battleCreature.name} utilise ${skill.name} sur ${targetName}!`,
       type: "skill",
     });
   }
@@ -537,37 +724,33 @@ export function useSkill(
 }
 
 /**
- * Tick cooldowns and buff durations
+ * Tick cooldowns and buff durations (NEW system)
  */
 export function tickCooldownsAndBuffs(battleCreature: BattleCreature): void {
+  // Tick skill cooldowns
   for (const [skillName, cd] of Object.entries(battleCreature.skillCooldowns)) {
     if (cd > 0) {
       battleCreature.skillCooldowns[skillName] = cd - 1;
     }
   }
 
-  if (battleCreature.buffs.defenseBuffTurns > 0) {
-    battleCreature.buffs.defenseBuffTurns--;
-    if (battleCreature.buffs.defenseBuffTurns === 0) {
-      battleCreature.buffs.defenseBuff = 0;
-      battleCreature.logBuffExpiration = battleCreature.logBuffExpiration || [];
-      battleCreature.logBuffExpiration.push("DEF");
-    }
-  }
-  if (battleCreature.buffs.dodgeBuffTurns > 0) {
-    battleCreature.buffs.dodgeBuffTurns--;
-    if (battleCreature.buffs.dodgeBuffTurns === 0) {
-      battleCreature.buffs.dodgeBuff = 0;
-      battleCreature.logBuffExpiration = battleCreature.logBuffExpiration || [];
-      battleCreature.logBuffExpiration.push("Dodge");
-    }
-  }
-  if (battleCreature.buffs.attackBuffTurns > 0) {
-    battleCreature.buffs.attackBuffTurns--;
-    if (battleCreature.buffs.attackBuffTurns === 0) {
-      battleCreature.buffs.attackBuff = 0;
-      battleCreature.logBuffExpiration = battleCreature.logBuffExpiration || [];
-      battleCreature.logBuffExpiration.push("ATK");
+  // Tickbuffs using new system
+  const expiredBuffs = tickBuffs(battleCreature);
+
+  // Log expired buff types for UI compatibility
+  if (expiredBuffs.length > 0) {
+    battleCreature.logBuffExpiration = battleCreature.logBuffExpiration || [];
+    const buffTypeNames: Record<BuffType, string> = {
+      [BuffType.ATTACK]: "ATK",
+      [BuffType.DEFENSE]: "DEF",
+      [BuffType.DODGE]: "Dodge",
+      [BuffType.HEAL]: "Heal",
+      [BuffType.POISON]: "Poison",
+      [BuffType.SLOW]: "Slow",
+      [BuffType.STUN]: "Stun",
+    };
+    for (const buffType of expiredBuffs) {
+      battleCreature.logBuffExpiration.push(buffTypeNames[buffType]);
     }
   }
 }
@@ -681,10 +864,12 @@ export function executeAttack(
   // Use effective speed in dodge calculation (accounts for Slow)
   const defenderEffectiveSpeed = getEffectiveSpeed(defender);
 
+  // Use NEW buff system for dodge (backward compatible)
+  const dodgeBuffValue = getDodgeBuff(defender);
   const dodgeChance = calculateDodgeChance(
     attacker.stats.speed,
     defenderEffectiveSpeed,
-    defender.buffs.dodgeBuff + defenderMods.dodgeBonus
+    dodgeBuffValue + defenderMods.dodgeBonus
   );
 
   if (Math.random() < dodgeChance) {
@@ -774,17 +959,10 @@ export function createBattleCreature(
     stats,
     currentHP: stats.hp,
     skillCooldowns: {},
-    buffs: {
-      defenseBuff: 0,
-      dodgeBuff: 0,
-      attackBuff: 0,
-      defenseBuffTurns: 0,
-      dodgeBuffTurns: 0,
-      attackBuffTurns: 0,
-    },
+    buffs: {},  // NEW: Empty dictionary for buffs
     name: name || creature.name,
     traits: traits || [],
-    statusEffects: [],
+    statusEffects: [],  // Kept for backward compatibility during transition
     attackCounter: 0,
     position,
     damageDealt: 0,

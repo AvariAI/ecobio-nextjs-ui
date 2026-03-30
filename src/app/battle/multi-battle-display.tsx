@@ -3,7 +3,13 @@
 // =============================================================================
 
 import { useMemo } from "react";
-import { BattleCreature, BattleElement } from "@/lib/battle";
+import {
+  BattleCreature,
+  BattleElement,
+  getBuffValueByType,
+  getBuffsByType,
+  BuffType
+} from "@/lib/battle";
 import { BattleTeam, TeamSize, countAliveCreatures, isFrontRow, getFrontRowPositions, getBackRowPositions } from "@/lib/battle-multi";
 
 /**
@@ -30,14 +36,22 @@ interface BuffedStats {
 }
 
 /**
- * Calculate stats with active buffs applied
+ * Calculate stats with active buffs applied (NEW buff system)
  * This is a pure calculation function - NO state updates
  * Used with useMemo to prevent re-renders
  */
 function getBuffedStats(creature: BattleCreature): BuffedStats {
-  const attackBonus = creature.buffs.attackBuff;
-  const defenseBonus = creature.buffs.defenseBuff;
-  const dodgeBonus = creature.buffs.dodgeBuff;
+  // Use NEW buff system
+  const attackBonus = getBuffValueByType(creature, BuffType.ATTACK);
+  const defenseBonus = getBuffValueByType(creature, BuffType.DEFENSE);
+  const dodgeBonus = getBuffValueByType(creature, BuffType.DODGE);
+
+  // Get active buffs for display (with min turns remaining)
+  const attackBuffs = getBuffsByType(creature, BuffType.ATTACK);
+  const defenseBuffs = getBuffsByType(creature, BuffType.DEFENSE);
+  const dodgeBuffs = getBuffsByType(creature, BuffType.DODGE);
+
+  const getMinTurns = (buffs: any[]) => buffs.length > 0 ? Math.min(...buffs.map(b => b.turnsRemaining)) : 0;
 
   // Calculate effective stats with buff bonuses
   // buffs are percentages (e.g., 0.5 = +50%)
@@ -63,9 +77,9 @@ function getBuffedStats(creature: BattleCreature): BuffedStats {
       crit: 0, // Crit not buffed by skills
     },
     activeBuffs: {
-      defenseBuff: defenseBonus > 0 ? { value: defenseBonus, turns: creature.buffs.defenseBuffTurns } : null,
-      attackBuff: attackBonus > 0 ? { value: attackBonus, turns: creature.buffs.attackBuffTurns } : null,
-      dodgeBuff: dodgeBonus > 0 ? { value: dodgeBonus, turns: creature.buffs.dodgeBuffTurns } : null,
+      defenseBuff: defenseBonus > 0 ? { value: defenseBonus, turns: getMinTurns(defenseBuffs) } : null,
+      attackBuff: attackBonus > 0 ? { value: attackBonus, turns: getMinTurns(attackBuffs) } : null,
+      dodgeBuff: dodgeBonus > 0 ? { value: dodgeBonus, turns: getMinTurns(dodgeBuffs) } : null,
     },
   };
 }

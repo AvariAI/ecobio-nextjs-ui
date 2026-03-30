@@ -33,7 +33,7 @@ export interface Creature {
   skill?: {
     name: string;
     description: string;
-    effect: "defense" | "dodge" | "attack";
+    effect: "defense" | "dodge" | "attack" | "heal" | "special" | "debuff";
     value: number;
     duration: number;
     cooldown: number;
