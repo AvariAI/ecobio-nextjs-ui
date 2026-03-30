@@ -449,6 +449,39 @@ export default function HuntingPage() {
           if (!migrated.personality) {
             migrated.personality = generateRandomPersonality(); // Assign random personality
           }
+          if (!migrated.personalityType) {
+            migrated.personalityType = migrated.personality; // Set personalityType for reference
+          }
+
+          // DUAL SKILLS migration - restore specimenSkill and personalitySkill
+          if (!migrated.specimenSkill) {
+            const specimenSkill = getSpecimenSkill(c.creatureId || c.id);
+            if (specimenSkill) {
+              migrated.specimenSkill = {
+                name: specimenSkill.name,
+                description: specimenSkill.description,
+                effect: specimenSkill.effect,
+                value: specimenSkill.value,
+                duration: specimenSkill.duration,
+                cooldown: specimenSkill.cooldown,
+                target: specimenSkill.target,
+              };
+            }
+          }
+          if (!migrated.personalitySkill) {
+            const personalitySkill = getBaseSkill(migrated.personality);
+            if (personalitySkill) {
+              migrated.personalitySkill = {
+                name: personalitySkill.name,
+                description: personalitySkill.description,
+                effect: personalitySkill.effect,
+                value: personalitySkill.value,
+                duration: personalitySkill.duration,
+                cooldown: personalitySkill.cooldown,
+                target: personalitySkill.target,
+              };
+            }
+          }
 
           return migrated;
         });

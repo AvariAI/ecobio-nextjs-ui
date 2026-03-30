@@ -629,14 +629,23 @@ export function calculateDamage(attacker: BattleCreature, defender: BattleCreatu
 
 /**
  * Check if a skill can be used (not on cooldown)
+ * @param skillType - "specimen" or "personality" or undefined (defaults to specimen)
  */
-export function canUseSkill(battleCreature: BattleCreature): boolean {
-  if (!battleCreature.creature.skill) {
+export function canUseSkill(battleCreature: BattleCreature, skillType?: "specimen" | "personality"): boolean {
+  const skill = battleCreature.creature.specimenSkill || battleCreature.creature.personalitySkill;
+  if (!skill) {
     return false;
   }
 
-  const skillName = battleCreature.creature.skill.name;
-  const cooldownKey = `${skillName}_${battleCreature.name}`;
+  // Use specified skill type, default to specimen
+  const st = skillType || "specimen";
+  const skillToUse = st === "specimen" ? battleCreature.creature.specimenSkill : battleCreature.creature.personalitySkill;
+  if (!skillToUse) {
+    return false;
+  }
+
+  const skillName = skillToUse.name;
+  const cooldownKey = `${skillName}_${st}_${battleCreature.name}`;
   const currentCooldown = battleCreature.skillCooldowns[cooldownKey];
 
   if (currentCooldown !== undefined && currentCooldown > 0) {
@@ -646,23 +655,36 @@ export function canUseSkill(battleCreature: BattleCreature): boolean {
   return true;
 }
 
+export function getCooldownRemaining(battleCreature: BattleCreature, skillType: "specimen" | "personality"): number {
+  const skill = skillType === "specimen" ? battleCreature.creature.specimenSkill : battleCreature.creature.personalitySkill;
+  if (!skill) return 999;
+
+  const skillName = skill.name;
+  const cooldownKey = `${skillName}_${skillType}_${battleCreature.name}`;
+  return battleCreature.skillCooldowns[cooldownKey] || 0;
+}
+
 /**
  * Apply skill effect with target information
+ * @param skillType - "specimen" or "personality" or undefined (defaults to specimen)
  */
 export function useSkill(
   battleCreature: BattleCreature,
   log: BattleLogEntry[],
-  target?: BattleCreature | null
+  target?: BattleCreature | null,
+  skillType?: "specimen" | "personality"
 ): boolean {
-  if (!battleCreature.creature.skill) {
+  // Use specified skill type, default to specimen
+  const st = skillType || "specimen";
+  const skill = st === "specimen" ? battleCreature.creature.specimenSkill : battleCreature.creature.personalitySkill;
+  if (!skill) {
     return false;
   }
 
-  const skill = battleCreature.creature.skill;
   const skillName = skill.name;
-  const cooldownKey = `${skillName}_${battleCreature.name}`;
+  const cooldownKey = `${skillName}_${st}_${battleCreature.name}`;
 
-  if (!canUseSkill(battleCreature)) {
+  if (!canUseSkill(battleCreature, st)) {
     return false;
   }
 
@@ -679,10 +701,12 @@ export function useSkill(
     buffType = BuffType.DODGE;
   } else if (skill.effect === "attack") {
     buffType = BuffType.ATTACK;
+  } else if (skill.effect === "heal") {
+    buffType = BuffType.HEAL;
   } else {
     // Fallback for other skill types - log without creating buff
     log.push({
-      text: `${battleCreature.name} utilise ${skill.name} sur ${targetName}!`,
+      text: `${battleCreature.name} utilise ${skill.name} (${st === "specimen" ? "spécimen" : "personnalité"}) sur ${targetName}!`,
       type: "skill",
     });
     battleCreature.skillCooldowns[cooldownKey] = skill.cooldown;

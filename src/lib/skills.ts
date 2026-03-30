@@ -203,11 +203,11 @@ export const SPECIMEN_SKILLS: Record<string, Skill> = {
     }
   },
 
-  fly: {
+  housefly: {
     id: "fly_infiltration",
     name: "Attaque Sournoise",
     description: "Infiltre et contourne les tanks de la rangée avant: frappe une cible de l'arrière pour des dégâts normaux (casse leur protection)",
-    creatureId: "fly",
+    creatureId: "housefly",
     source: "specimen",
     type: "offensive",
     effect: "attack",
@@ -256,6 +256,25 @@ export const SPECIMEN_SKILLS: Record<string, Skill> = {
     effects: {
       enemyDebuffPercent: -0.15,
       effectDuration: 2,
+    }
+  },
+
+  // Legacy "fly" entry for backward compatibility (maps to housefly)
+  fly: {
+    id: "fly_infiltration",
+    name: "Attaque Sournoise",
+    description: "Infiltre et contourne les tanks de la rangée avant: frappe une cible de l'arrière pour des dégâts normaux (casse leur protection)",
+    creatureId: "housefly",
+    source: "specimen",
+    type: "offensive",
+    effect: "attack",
+    value: 1.0,
+    duration: 0,
+    cooldown: 3,
+    target: "back",
+    level: 1,
+    effects: {
+      effectDuration: 0,
     }
   },
 };
