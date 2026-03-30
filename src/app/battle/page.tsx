@@ -1251,15 +1251,24 @@ export default function BattlePage() {
           return;
         }
 
-        // Find the current creature in the new teams
-        const isPlayerCreature = playerTeam.creatures.includes(currentActingCreature);
-        const teamWithCurrent = isPlayerCreature ? newPlayerTeam : newEnemyTeam;
-        const newCurrentCreature = teamWithCurrent.creatures.find(
-          c => c.name === currentActingCreature.name
-        ) || currentActingCreature;
+        // Find current turn index - use name + position + team as unique key (not object reference)
+        let currentIndex = -1;
+        for (let i = 0; i < newTurnOrder.length; i++) {
+          const el = newTurnOrder[i];
+          if (el.creature.name === currentActingCreature.name &&
+              el.team === (playerTeam.creatures.includes(currentActingCreature) ? "player" : "enemy") &&
+              el.creature.position === currentActingCreature.position) {
+            currentIndex = i;
+            break;
+          }
+        }
+
+        if (currentIndex === -1) {
+          currentIndex = 0;  // Fallback to start if not found
+          console.warn("Could not find current creature in turn order, starting from beginning");
+        }
 
         // Move to next creature
-        const currentIndex = newTurnOrder.findIndex(el => el.creature === newCurrentCreature);
         let nextIndex = (currentIndex + 1) % newTurnOrder.length;
         let nextCreature = newTurnOrder[nextIndex];
 
