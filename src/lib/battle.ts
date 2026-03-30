@@ -778,14 +778,17 @@ function convertToSkillFormat(
       }
       break;
     case "special":
-      // Ravage has recoil
+      // Ravage: AOE (special case - converts to AOE logic)
       if (oldSkill.name === "Ravage") {
-        effects.offenseMultiplier = 0.5;
+        effects.offenseMultiplier = 1.0;  // 100% per target
         effects.recoilPercent = 0.20;
+        // Note: no ignoreDodge - Ravage can be dodged
+        // Handled in conversion: will return aoe_damage effect and "all" target
       }
-      // Tir Critique has bonus crit damage
+      // Tir Critique: COUP GARANTI
       if (oldSkill.name === "Tir Critique") {
         effects.critDamageBonus = 1.5;
+        effects.ignoreDodge = true;  // COUP GARANTI !
       }
       // Roue du Destin handled in executeSkill
       break;
@@ -1351,6 +1354,9 @@ function applyDamageEffect(ctx: SkillExecutionContext, targets: BattleCreature[]
 
   // Check if skill ignores dodge (Ravage, Tir Critique)
   const ignoreDodge = effects.ignoreDodge || false;
+  
+  // For recoil skills (Ravage), accumulate total damage first
+  let totalDamageDealt = 0;
 
   targets.forEach(target => {
     // If ignoreDodge is true, check dodge anyway but override
@@ -1412,6 +1418,7 @@ function applyDamageEffect(ctx: SkillExecutionContext, targets: BattleCreature[]
     // Apply damage
     target.currentHP = Math.max(0, target.currentHP - finalDamage);
     attacker.damageDealt += finalDamage;
+    totalDamageDealt += finalDamage;  // Accumulate for recoil calculation
 
     log.push({
       text: `${attacker.name} utilise ${skill.name} sur ${target.name}: ${finalDamage} dégâts${ignoreDodge ? " (COUP GARANTI - ignore esquive)" : ""}`,
@@ -1426,17 +1433,17 @@ function applyDamageEffect(ctx: SkillExecutionContext, targets: BattleCreature[]
         type: "critical",
       });
     }
-
-    // Apply recoil damage (if any)
-    if (effects.recoilPercent) {
-      const recoilDamage = Math.floor(finalDamage * effects.recoilPercent);
-      attacker.currentHP = Math.max(0, attacker.currentHP - recoilDamage);
-      log.push({
-        text: `${attacker.name} subit ${recoilDamage} dégâts de recul`,
-        type: "damage",
-      });
-    }
   });
+  
+  // Apply recoil damage AFTER all targets processed (for AOE recoil calculation)
+  if (effects.recoilPercent && totalDamageDealt > 0) {
+    const recoilDamage = Math.floor(totalDamageDealt * effects.recoilPercent);
+    attacker.currentHP = Math.max(0, attacker.currentHP - recoilDamage);
+    log.push({
+      text: `${attacker.name} subit ${recoilDamage} dégâts de recul (${totalDamageDealt} dégâts infligés)`,
+      type: "damage",
+    });
+  }
 }
 
 // ============================================================================

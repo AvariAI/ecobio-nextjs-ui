@@ -49,20 +49,19 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
   agressive: {
     id: "agressive_base",
     name: "Ravage",
-    description: "Coup puissant: 150% dégâts ATK instantanés, mais vous prenez 20% des dégâts infligés comme recul",
+    description: "Attaque tous les ennemis avec 100% dégâts ATK, mais vous prenez 20% des dégâts totaux comme recul",
     archetype: "agressive",
     source: "personality",
     type: "offensive",
-    effect: "attack",
-    value: 0.5,  // 50% bonus (150% total)
-    duration: 0,  // Instant damage, not a buff
+    effect: "aoe_damage",  // Changed to AOE
+    value: 1.0,  // 100% damage per target (down from 150% for AOE balance)
+    duration: 0,  // Instant
     cooldown: 4,
-    target: "random",
+    target: "all",  // ALL enemies
     level: 1,
     effects: {
-      offenseMultiplier: 1.5,
+      offenseMultiplier: 1.0,  // 100% per target (was 1.5)
       recoilPercent: 0.20,
-      ignoreDodge: true,  // Switch to attack: guaranteed hit, bypasses normal dodge checks
       effectDuration: 0,
     }
   },
