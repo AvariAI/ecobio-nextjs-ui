@@ -83,7 +83,10 @@ function getCreatureImage(creatureId: string, rank: Rank): string {
     const rankSuffix = rank === "S+" ? "S+" : rank;
     return `/creatures/bee-rank-${rankSuffix}.png`;
   }
-  return "/images/giant_fly.png";
+  if (creatureId === "spider_mutant") {
+    return `/images/creatures/spider_mutant_e.png`;
+  }
+  return `/images/creatures/spider_mutant_e.png`; // Fallback
 }
 
 type BattlePhase = "setup" | "battle" | "complete";

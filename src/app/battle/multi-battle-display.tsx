@@ -541,7 +541,10 @@ function getCreatureImagePath(creatureId: string, rank: string): string {
     const rankSuffix = rank === "S+" ? "S+" : rank;
     return `/creatures/bee-rank-${rankSuffix}.png`;
   }
-  return "/ecobio-nextjs-ui/images/giant_fly.png"; // Fallback
+  if (creatureId === "spider_mutant") {
+    return `/images/creatures/spider_mutant_e.png`;
+  }
+  return `/images/creatures/spider_mutant_e.png`; // Fallback
 }
 
 function CompactCreatureDisplay({ creature }: CompactCreatureDisplayProps) {
