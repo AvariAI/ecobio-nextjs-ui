@@ -678,6 +678,19 @@ export default function BattlePage() {
       const pTeam = createBattleTeam(playerCreatures, "player");
       const eTeam = createBattleTeam(enemyCreatures, "enemy");
 
+      // DEBUG: Check specimenSkill values immediately after team creation
+      pTeam.creatures.forEach((creature, idx) => {
+        if (creature.creature.specimenSkill) {
+          console.log(`PLAYER CREATURE ${idx}: ${creature.name}, specimenSkill.effect=${creature.creature.specimenSkill.effect}, specimenSkill.name=${creature.creature.specimenSkill.name}`);
+        }
+      });
+
+      eTeam.creatures.forEach((creature, idx) => {
+        if (creature.creature.specimenSkill) {
+          console.log(`ENEMY CREATURE ${idx}: ${creature.name}, specimenSkill.effect=${creature.creature.specimenSkill.effect}, specimenSkill.name=${creature.creature.specimenSkill.name}`);
+        }
+      });
+
       // Set team reference on each creature (needed for turn logic)
       pTeam.creatures.forEach(c => (c as any).team = "player");
       eTeam.creatures.forEach(c => (c as any).team = "enemy");
