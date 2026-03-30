@@ -771,7 +771,21 @@ export function useSkill(
       const rawDamage = battleCreature.stats.attack * skill.value;
       const damage = Math.floor(rawDamage);
       const defenseReduction = Math.floor(target.stats.defense / 2);
-      const finalDamage = Math.max(1, damage - defenseReduction);
+      let finalDamage = Math.max(1, damage - defenseReduction);
+
+      // Check for crit on EACH target (independent crit for AOE)
+      const critChance = Math.min((battleCreature.stats.crit / 100), 0.40);  // Cap at 40%
+      const isCrit = Math.random() < critChance;
+
+      if (isCrit) {
+        // Crit multiplier: 1.5x to 2.0x based on crit stat
+        const critMult = 1.5 + (battleCreature.stats.crit / 100) * 0.25;
+        finalDamage = Math.floor(finalDamage * critMult);
+        log.push({
+          text: `💥 CRITICAL HIT on ${target.name}! Dégâts: ${finalDamage} (${critMult.toFixed(2)}x)`,
+          type: "critical",
+        });
+      }
 
       log.push({
         text: `${battleCreature.name} utilise ${skill.name} sur ${target.name}: ATK=${battleCreature.stats.attack}, skill.value=${skill.value}, rawDamage=${rawDamage.toFixed(2)}, damage=${damage}, DEF=${target.stats.defense}, defenseReduction=${defenseReduction}, finalDamage=${finalDamage} dégâts`,
