@@ -15,7 +15,7 @@ export interface Skill {
   level: number;  // 1-5, scales effects
 
   // Original battle.ts fields (for compatibility)
-  effect: "defense" | "dodge" | "attack" | "heal" | "debuff" | "special";
+  effect: "defense" | "dodge" | "attack" | "heal" | "debuff" | "special" | "aoe_damage";
   value: number;
   duration: number;
   cooldown: number;
@@ -191,8 +191,8 @@ export const SPECIMEN_SKILLS: Record<string, Skill> = {
     creatureId: "ant",
     source: "specimen",
     type: "offensive",
-    effect: "attack",
-    value: 0.5,  // 50% damage to each front row target
+    effect: "aoe_damage",  // Changed from "attack" to "aoe_damage"
+    value: 0.5,  // 50% of base ATK damage to each front row target
     duration: 0,  // Instant
     cooldown: 4,
     target: "front",  // Front row (1-2 targets depending on team size)
@@ -210,8 +210,8 @@ export const SPECIMEN_SKILLS: Record<string, Skill> = {
     creatureId: "housefly",
     source: "specimen",
     type: "offensive",
-    effect: "attack",
-    value: 1.0,  // Normal damage, no bonus
+    effect: "aoe_damage",  // Changed to aoe_damage
+    value: 1.0,  // Normal damage to back row target
     duration: 0,
     cooldown: 3,
     target: "back",  // Attack back row directly, bypassing front row protection
@@ -267,7 +267,7 @@ export const SPECIMEN_SKILLS: Record<string, Skill> = {
     creatureId: "housefly",
     source: "specimen",
     type: "offensive",
-    effect: "attack",
+    effect: "aoe_damage",
     value: 1.0,
     duration: 0,
     cooldown: 3,

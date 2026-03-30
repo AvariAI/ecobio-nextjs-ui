@@ -1156,7 +1156,10 @@ export default function BattlePage() {
         target = selectTargetByPosition(currentActingCreature, enemyTeamForTarget, teamSize, "front");
       }
 
-      const success = useSkill(currentActingCreature, logCopy, target, skillType);
+      // Target enemies for AOE damage skills
+      const targetTeamForAOE = isPlayerCreature ? enemyTeam : playerTeam;
+
+      const success = useSkill(currentActingCreature, logCopy, target, skillType, targetTeamForAOE);
 
       if (success) {
         // Create new team references for React

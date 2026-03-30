@@ -33,7 +33,7 @@ export interface Creature {
   specimenSkill?: {
     name: string;
     description: string;
-    effect: "defense" | "dodge" | "attack" | "heal" | "special" | "debuff";
+    effect: "defense" | "dodge" | "attack" | "heal" | "special" | "debuff" | "aoe_damage";
     value: number;
     duration: number;
     cooldown: number;
@@ -42,7 +42,7 @@ export interface Creature {
   personalitySkill?: {
     name: string;
     description: string;
-    effect: "defense" | "dodge" | "attack" | "heal" | "special" | "debuff";
+    effect: "defense" | "dodge" | "attack" | "heal" | "special" | "debuff" | "aoe_damage";
     value: number;
     duration: number;
     cooldown: number;
@@ -52,7 +52,7 @@ export interface Creature {
   skill?: {
     name: string;
     description: string;
-    effect: "defense" | "dodge" | "attack" | "heal" | "special" | "debuff";
+    effect: "defense" | "dodge" | "attack" | "heal" | "special" | "debuff" | "aoe_damage";
     value: number;
     duration: number;
     cooldown: number;

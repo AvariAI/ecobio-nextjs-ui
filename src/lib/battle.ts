@@ -667,12 +667,14 @@ export function getCooldownRemaining(battleCreature: BattleCreature, skillType: 
 /**
  * Apply skill effect with target information
  * @param skillType - "specimen" or "personality" or undefined (defaults to specimen)
+ * @param targetTeam - Optional enemy team for AOE skills
  */
 export function useSkill(
   battleCreature: BattleCreature,
   log: BattleLogEntry[],
   target?: BattleCreature | null,
-  skillType?: "specimen" | "personality"
+  skillType?: "specimen" | "personality",
+  targetTeam?: BattleTeam | null
 ): boolean {
   // Use specified skill type, default to specimen
   const st = skillType || "specimen";
@@ -693,7 +695,7 @@ export function useSkill(
   const targetCreature = isSelfBuff ? battleCreature : target!;
   const targetName = isSelfBuff ? "soi-même" : target!.name;
 
-  // Map skill effect to BuffType (NEW system)
+  // Map skill effect to BuffType
   let buffType: BuffType;
   if (skill.effect === "defense") {
     buffType = BuffType.DEFENSE;
@@ -703,6 +705,95 @@ export function useSkill(
     buffType = BuffType.ATTACK;
   } else if (skill.effect === "heal") {
     buffType = BuffType.HEAL;
+  } else if (skill.effect === "aoe_damage") {
+    // Handle AOE skills actually dealing damage (ant's mandibles, fly's infiltration)
+    if (!targetTeam) {
+      log.push({
+        text: `${battleCreature.name} utilise ${skill.name} (aucune cible disponible)`,
+        type: "info",
+      });
+      return false;
+    }
+
+    // Determine targets based on skill.target
+    let targets: BattleCreature[] = [];
+    if (skill.target === "front") {
+      // Front row targets
+      targets = targetTeam.creatures.filter(c => c.currentHP > 0 && (c.position || 0) < Math.ceil(targetTeam.creatures.length / 2));
+    } else if (skill.target === "back") {
+      // Back row targets
+      targets = targetTeam.creatures.filter(c => c.currentHP > 0 && (c.position || 0) >= Math.ceil(targetTeam.creatures.length / 2));
+    } else if (skill.target === "all") {
+      // All targets
+      targets = targetTeam.creatures.filter(c => c.currentHP > 0);
+    } else {
+      // Random target
+      const aliveTargets = targetTeam.creatures.filter(c => c.currentHP > 0);
+      if (aliveTargets.length > 0) {
+        targets = [aliveTargets[Math.floor(Math.random() * aliveTargets.length)]];
+      }
+    }
+
+    // Deal damage to all targets
+    if (targets.length > 0) {
+      const damageMultiplier = skill.value || 1.0;  // 0.5 for ant, 1.0 for fly
+      let totalDamage = 0;
+
+      targets.forEach(target => {
+        const baseDamage = battleCreature.stats.attack;
+        const damage = Math.floor(baseDamage * damageMultiplier);
+        const finalDamage = Math.max(1, damage - Math.floor(target.stats.defense / 2));
+        target.currentHP = Math.max(0, target.currentHP - finalDamage);
+        totalDamage += finalDamage;
+
+        log.push({
+          text: `${battleCreature.name} ${skill.name} sur ${target.name}: ${finalDamage} dégâts (ATK ${baseDamage} × ${damageMultiplier} - DEF/2 ${Math.floor(target.stats.defense / 2)})`,
+          type: "damage",
+        });
+
+        if (target.currentHP <= 0) {
+          battleCreature.kills++;
+          log.push({
+            text: `💀 ${target.name} est KO!`,
+            type: "critical",
+          });
+        }
+      });
+
+      battleCreature.damageDealt += totalDamage;
+    }
+
+    battleCreature.skillCooldowns[cooldownKey] = skill.cooldown;
+    return true;
+  } else if (skill.effect === "debuff") {
+    // For debuffs (slow), directly apply status effect
+    if (!targetTeam) {
+      log.push({
+        text: `${battleCreature.name} utilise ${skill.name} (aucune cible disponible)`,
+        type: "info",
+      });
+      return false;
+    }
+
+    // Apply to all alive enemies
+    const allEnemies = targetTeam.creatures.filter(c => c.currentHP > 0);
+    if (allEnemies.length > 0) {
+      // Apply slow status to each enemy
+      allEnemies.forEach(enemy => {
+        enemy.statusEffects.push({
+          type: "slow",
+          duration: skill.duration || 2,
+          value: skill.value || 0.15, // 15% slow
+        });
+      });
+      log.push({
+        text: `${battleCreature.name} utilise ${skill.name} sur toute l'équipe ennemie (VIT -${Math.floor((skill.value || 0.15) * 100)}% pour ${skill.duration} tours)`,
+        type: "skill",
+      });
+    }
+
+    battleCreature.skillCooldowns[cooldownKey] = skill.cooldown;
+    return true;
   } else {
     // Fallback for other skill types - log without creating buff
     log.push({
