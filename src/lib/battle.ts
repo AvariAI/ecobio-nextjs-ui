@@ -1355,6 +1355,10 @@ function applyDamageEffect(ctx: SkillExecutionContext, targets: BattleCreature[]
   // Check if skill ignores dodge (Ravage, Tir Critique)
   const ignoreDodge = effects.ignoreDodge || false;
   
+  // Check if skill is cascade (Esquive Aérienne)
+  const isCascade = effects.cascade || false;
+  const cascadeChances = effects.cascadeChances || [1.0];  // [1.0] = single attack default
+  
   // For recoil skills (Ravage), accumulate total damage first
   let totalDamageDealt = 0;
 
@@ -1380,57 +1384,92 @@ function applyDamageEffect(ctx: SkillExecutionContext, targets: BattleCreature[]
       return; // Exit early for this target
     }
 
-    // Damage calculation
+    // Calculate base damage ONCE (same for all cascade attacks)
     let rawDamage = attacker.stats.attack * offenseMult;
 
     // Ignore defense percentage
     const ignoreDefPercent = effects.ignoreDefPercent || 0;
     const effectiveDefense = target.stats.defense * (1 - ignoreDefPercent);
     const defenseReduction = Math.floor(effectiveDefense / 2);
-    let finalDamage = Math.max(1, Math.floor(rawDamage - defenseReduction));
+    let baseDamage = Math.max(1, Math.floor(rawDamage - defenseReduction));
 
-    // Critical hit
-    const critChance = Math.min((attacker.stats.crit / 100), 0.40);
-    const isCrit = Math.random() < critChance;
+    // Cascade attacks: apply damage multiple times with decreasing probability
+    let attackNum = 0;
+    let cascadeTotal = 0;
 
-    if (isCrit) {
-      let critMult = 1.5 + (attacker.stats.crit / 100) * 0.25;
-
-      // Bonus crit multiplier from skill (e.g., Tir Critique)
-      if (effects.critDamageBonus) {
-        critMult += effects.critDamageBonus;
+    for (const chance of cascadeChances) {
+      attackNum++;
+      
+      // Skip if this attack's chance fails
+      if (Math.random() > chance) {
+        break; // Cascade stops
       }
 
-      finalDamage = Math.floor(finalDamage * critMult);
-      if (ignoreDodge) {
+      // Calculate damage for this attack
+      let finalDamage = baseDamage;
+
+      // Critical hit (independent for each attack)
+      const critChance = Math.min((attacker.stats.crit / 100), 0.40);
+      const isCrit = Math.random() < critChance;
+
+      if (isCrit) {
+        let critMult = 1.5 + (attacker.stats.crit / 100) * 0.25;
+
+        // Bonus crit multiplier from skill (e.g., Tir Critique)
+        if (effects.critDamageBonus) {
+          critMult += effects.critDamageBonus;
+        }
+
+        finalDamage = Math.floor(finalDamage * critMult);
+        if (ignoreDodge) {
+          log.push({
+            text: `💥 COUP GARANTI CRITICAL HIT [attack ${attackNum}] sur ${target.name}! Dégâts: ${finalDamage} (${critMult.toFixed(2)}x)`,
+            type: "critical",
+          });
+        } else {
+          log.push({
+            text: `💥 CRITICAL HIT [attack ${attackNum}] sur ${target.name}! Dégâts: ${finalDamage} (${critMult.toFixed(2)}x)`,
+            type: "critical",
+          });
+        }
+      }
+
+      // Apply damage
+      target.currentHP = Math.max(0, target.currentHP - finalDamage);
+      attacker.damageDealt += finalDamage;
+      totalDamageDealt += finalDamage;
+      cascadeTotal += finalDamage;
+
+      // Check for KO
+      if (target.currentHP <= 0) {
+        attacker.kills++;
         log.push({
-          text: `💥 COUP GARANTI CRITICAL HIT sur ${target.name}! Dégâts: ${finalDamage} (${critMult.toFixed(2)}x)`,
+          text: `💀 ${target.name} est KO!`,
           type: "critical",
         });
-      } else {
+        break; // Stop cascade if target dead
+      }
+
+      // Log each attack in cascade
+      if (isCascade && cascadeChances.length > 1) {
         log.push({
-          text: `💥 CRITICAL HIT sur ${target.name}! Dégâts: ${finalDamage} (${critMult.toFixed(2)}x)`,
-          type: "critical",
+          text: `${attacker.name} utilise ${skill.name} [attack ${attackNum}] sur ${target.name}: ${finalDamage} dégâts${ignoreDodge ? " (COUP GARANTI)" : ""}`,
+          type: "damage",
         });
       }
     }
 
-    // Apply damage
-    target.currentHP = Math.max(0, target.currentHP - finalDamage);
-    attacker.damageDealt += finalDamage;
-    totalDamageDealt += finalDamage;  // Accumulate for recoil calculation
-
-    log.push({
-      text: `${attacker.name} utilise ${skill.name} sur ${target.name}: ${finalDamage} dégâts${ignoreDodge ? " (COUP GARANTI - ignore esquive)" : ""}`,
-      type: "damage",
-    });
-
-    // Check for KO
-    if (target.currentHP <= 0) {
-      attacker.kills++;
+    // Summary log for cascade
+    if (isCascade && cascadeChances.length > 1) {
       log.push({
-        text: `💀 ${target.name} est KO!`,
-        type: "critical",
+        text: `🔁 ${skill.name}: ${attackNum} attack(s) pour un total de ${cascadeTotal} dégâts sur ${target.name}`,
+        type: "damage",
+      });
+    } else {
+      // Normal single attack log
+      log.push({
+        text: `${attacker.name} utilise ${skill.name} sur ${target.name}: ${baseDamage} dégâts${ignoreDodge ? " (COUP GARANTI - ignore esquive)" : ""}`,
+        type: "damage",
       });
     }
   });

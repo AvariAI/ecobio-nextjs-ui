@@ -41,6 +41,8 @@ export interface Skill {
     effectDuration?: number;
     taunt?: boolean;  // Forces enemies to target this creature
     ignoreDodge?: boolean;  // Switch to attack: guaranteed hit, bypasses normal dodge checks
+    cascade?: boolean;  // Multi-attack cascade style attacks (Esquive Aérienne)
+    cascadeChances?: number[];  // Probabilities for each attack in cascade [1.0, 0.70, 0.50, 0.25]
   };
 }
 
@@ -89,20 +91,21 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
   rapide: {
     id: "rapide_base",
     name: "Esquive Aérienne",
-    description: "+40% vitesse pour soi-même + allié menacé (2 tours)",
+    description: "Attaques en cascade: 100% (garanti), 70% 2ème, 50% 3ème, 25% 4ème - ~240% dégâts moyenne",
     archetype: "rapide",
     source: "personality",
-    type: "utility",
-    effect: "speed",  // Changed from "dodge" to "speed" - speed-based dodge formula
-    value: 0.40,  // 40% speed boost
-    duration: 2,
+    type: "offensive",
+    effect: "attack",  // Attack with cascade mechanic
+    value: 1.0,  // 100% damage per attack
+    duration: 0,  // Instant cascade
     cooldown: 4,
-    target: "self",
+    target: "random",
     level: 1,
     effects: {
-      speedBonus: 0.40,
-      allyBoostSelf: true,
-      effectDuration: 2,
+      offenseMultiplier: 1.0,  // 100% per attack
+      cascade: true,  // NEW: Multi-attack cascade
+      cascadeChances: [1.0, 0.70, 0.50, 0.25],  // Probabilities for each attack
+      effectDuration: 0,
     }
   },
 
