@@ -46,7 +46,7 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
   agressive: {
     id: "agressive_base",
     name: "Ravage",
-    description: "150% ATK damage, self takes 20% as recoil",
+    description: "150% dégâts ATK, soi-même reçoit 20% comme recul",
     archetype: "agressive",
     source: "personality",
     type: "offensive",
@@ -62,11 +62,11 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
       effectDuration: 1,
     }
   },
-  
+
   protective: {
     id: "protective_base",
     name: "Forteresse",
-    description: "Redirect 50% team damage to self for 2 turns",
+    description: "Redirige 50% des dégâts d'équipe vers soi-même pendant 2 tours",
     archetype: "protective",
     source: "personality",
     type: "defensive",
@@ -81,11 +81,11 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
       effectDuration: 2,
     }
   },
-  
+
   rapide: {
     id: "rapide_base",
     name: "Esquive Aérienne",
-    description: "+40% dodge for self + threatened ally (2 turns)",
+    description: "+40% esquive pour soi + allié menacé (2 tours)",
     archetype: "rapide",
     source: "personality",
     type: "utility",
@@ -101,11 +101,11 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
       effectDuration: 2,
     }
   },
-  
+
   soin_leurre: {
     id: "soin_leurre_base",
     name: "Piquer Soignant",
-    description: "Heal 15% maxHP, poison 10% DOT (2 turns)",
+    description: "Soigne 15% du PV maximum, poison 10% DOT (2 tours)",
     archetype: "soin_leurre",
     source: "personality",
     type: "heal",
@@ -121,11 +121,11 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
       effectDuration: 2,
     }
   },
-  
+
   precise: {
     id: "precise_base",
     name: "Tir Critique",
-    description: "Guaranteed hit, +150% crit damage multiplier",
+    description: "Coup garanti, multiplicateur de dégâts critiques +150%",
     archetype: "precise",
     source: "personality",
     type: "offensive",
@@ -140,11 +140,11 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
       effectDuration: 1,
     }
   },
-  
+
   balancee: {
     id: "balancee_base",
     name: "Échange Solaire",
-    description: "+10% all stats (self), -10% all stats (enemy) (1 turn)",
+    description: "+10% toutes les stats (soi), -10% toutes les stats (ennemi) (1 tour)",
     archetype: "balancee",
     source: "personality",
     type: "special",
@@ -160,11 +160,11 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
       effectDuration: 1,
     }
   },
-  
+
   mysterieuse: {
     id: "mysterieuse_base",
     name: "Roue du Destin",
-    description: "Random effect based on current HP (ATK+40%, dodge+60%, heal 40% maxHP)",
+    description: "Effet aléatoire basé sur PV actuels (ATK+40%, esquive+60%, soigne 40% PV max)",
     archetype: "mysterieuse",
     source: "personality",
     type: "special",
