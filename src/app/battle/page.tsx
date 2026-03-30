@@ -1146,26 +1146,41 @@ export default function BattlePage() {
 
       let target: BattleCreature | null = null;
       const targetType = skill.target || "self";
+      const isOffensive = skill.effect === "aoe_damage";
+      const targetTeamForAOE = isPlayerCreature ? enemyTeam : playerTeam;
 
       if (targetType === "self") {
         target = currentActingCreature;
-      } else if (targetType === "front" || targetType === "back" || targetType === "random") {
+      } else if (targetType === "ally") {
         // Support buff - target allies using position-aware selection
         target = selectTargetByPosition(currentActingCreature, allyTeam, teamSize, targetType);
         if (!target || !allyTeam.creatures.includes(target)) {
           // Fallback to self if no valid ally target found
           target = currentActingCreature;
         }
+      } else if (targetType === "front" || targetType === "back" || targetType === "random") {
+        // Offensive AOE skills target enemies, support skills target allies
+        const teamToTarget = isOffensive ? enemyTeamForTarget : allyTeam;
+        target = selectTargetByPosition(currentActingCreature, teamToTarget, teamSize, targetType);
+        if (!target) {
+          // Fallback to any alive target from target team
+          const aliveTargets = teamToTarget.creatures.filter(c => c.currentHP > 0);
+          if (aliveTargets.length > 0) {
+            target = aliveTargets[0];
+          } else if (isOffensive) {
+            // If all enemies dead, fallback to self
+            target = currentActingCreature;
+          }
+        }
       } else if (targetType === "all") {
-        // AOE skills - for now, fallback to self as a single target
-        target = currentActingCreature;
-      } else {
-        // Target enemies for damage skills (future)
-        target = selectTargetByPosition(currentActingCreature, enemyTeamForTarget, teamSize, "front");
+        // AOE skills - select first alive enemy for targeting (useSkill will handle all targets with targetTeamForAOE)
+        const aliveEnemies = targetTeamForAOE.creatures.filter(c => c.currentHP > 0);
+        if (aliveEnemies.length > 0) {
+          target = aliveEnemies[0];
+        } else {
+          target = currentActingCreature;
+        }
       }
-
-      // Target enemies for AOE damage skills
-      const targetTeamForAOE = isPlayerCreature ? enemyTeam : playerTeam;
 
       const success = useSkill(currentActingCreature, logCopy, target, skillType, targetTeamForAOE);
 

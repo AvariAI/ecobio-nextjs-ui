@@ -295,7 +295,7 @@ export function executeCreatureTurn(
           // Support buff skill - target allies
           const targetAlly = selectTargetByPosition(activeCreature, allyTeam, teamSize, targetType);
           if (targetAlly) {
-            useSkill(activeCreature, log, targetAlly);
+            useSkill(activeCreature, log, targetAlly, undefined, allyTeam);
             usedSkill = true;
           } else {
             // Fallback to self if no allies available
@@ -303,10 +303,10 @@ export function executeCreatureTurn(
             usedSkill = true;
           }
         } else {
-          // Use skill on single target based on targeting rules
+          // Offensive AOE skill (like mandibles) needs targetTeam to find all targets
           const target = selectTargetByPosition(activeCreature, targetTeam, teamSize, targetType);
           if (target) {
-            useSkill(activeCreature, log, target);
+            useSkill(activeCreature, log, target, undefined, targetTeam);
             usedSkill = true;
           }
         }
