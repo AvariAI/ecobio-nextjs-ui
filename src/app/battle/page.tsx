@@ -1710,8 +1710,19 @@ function BattleCreatureDisplay({
   const slowEffect = creature.statusEffects.find(e => e.type === "slow");
   const poisonEffect = creature.statusEffects.find(e => e.type === "poison");
 
+  const creatureImage = `/creatures/${creature.creature.id}_rank_${creature.stats.rank}.png`;
+
   return (
     <div className="space-y-4">
+      {/* Creature Image */}
+      <div className="mb-4">
+        <img
+          src={creatureImage}
+          alt={creature.name}
+          className="w-full h-32 object-cover rounded-lg border-2 border-gray-300 dark:border-gray-600"
+        />
+      </div>
+
       {/* Status Effects Indicator */}
       {creature.statusEffects.length > 0 && (
         <div className="flex flex-wrap gap-1">
