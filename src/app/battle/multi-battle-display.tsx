@@ -12,6 +12,15 @@ import {
 } from "@/lib/battle";
 import { BattleTeam, TeamSize, countAliveCreatures, isFrontRow, getFrontRowPositions, getBackRowPositions } from "@/lib/battle-multi";
 
+// Get front/back row positions
+function getRowPositions(teamSize: TeamSize, rowType: "front" | "back"): number[] {
+  if (rowType === "front") {
+    return getFrontRowPositions(teamSize);
+  } else {
+    return getBackRowPositions(teamSize);
+  }
+}
+
 /**
  * Interface for buffed stats with breakdown
  */
@@ -449,9 +458,9 @@ export function MultiCreatureBattleDisplay({
                   {playerTeam ? countAliveCreatures(playerTeam) : 0} / {turnOrder.filter(el => el.team === "player").length}
                 </span>
               </div>
-              <div className="flex gap-2 justify-start">
+              <div className="flex gap-2 justify-start flex-wrap">
                 {playerTeam && playerTeam.creatures
-                  .filter(c => (c.position || 0) < Math.ceil(teamSize / 2))
+                  .filter(c => getRowPositions(teamSize, "front").includes(c.position || 0))
                   .sort((a, b) => (a.position || 0) - (b.position || 0))
                   .map((creature, i) => (
                     <MiniCreatureCard
@@ -484,9 +493,9 @@ export function MultiCreatureBattleDisplay({
                   {enemyTeam ? countAliveCreatures(enemyTeam) : 0} / {turnOrder.filter(el => el.team === "enemy").length}
                 </span>
               </div>
-              <div className="flex gap-2 justify-end">
+              <div className="flex gap-2 justify-end flex-wrap">
                 {enemyTeam && enemyTeam.creatures
-                  .filter(c => (c.position || 0) < Math.ceil(teamSize / 2))
+                  .filter(c => getRowPositions(teamSize, "front").includes(c.position || 0))
                   .sort((a, b) => (a.position || 0) - (b.position || 0))
                   .map((creature, i) => (
                     <MiniCreatureCard
@@ -512,9 +521,9 @@ export function MultiCreatureBattleDisplay({
               <h3 className="mb-2 text-sm font-bold text-blue-600 dark:text-blue-400">
                 ➡️ ARRIÈRE
               </h3>
-              <div className="flex gap-2 justify-start">
+              <div className="flex gap-2 justify-start flex-wrap">
                 {playerTeam && playerTeam.creatures
-                  .filter(c => (c.position || 0) >= Math.ceil(teamSize / 2))
+                  .filter(c => getRowPositions(teamSize, "back").includes(c.position || 0))
                   .sort((a, b) => (a.position || 0) - (b.position || 0))
                   .map((creature, i) => (
                     <MiniCreatureCard
@@ -538,9 +547,9 @@ export function MultiCreatureBattleDisplay({
               <h3 className="mb-2 text-sm font-bold text-red-600 dark:text-red-400">
                 ⬅️ ARRIÈRE
               </h3>
-              <div className="flex gap-2 justify-end">
+              <div className="flex gap-2 justify-end flex-wrap">
                 {enemyTeam && enemyTeam.creatures
-                  .filter(c => (c.position || 0) >= Math.ceil(teamSize / 2))
+                  .filter(c => getRowPositions(teamSize, "back").includes(c.position || 0))
                   .sort((a, b) => (a.position || 0) - (b.position || 0))
                   .map((creature, i) => (
                     <MiniCreatureCard
@@ -1065,25 +1074,25 @@ function MiniCreatureCard({ creature, isCurrent, isPlayer, canSwitch, onOpenSwap
 
   return (
     <div
-      className={`relative bg-white dark:bg-gray-700 rounded-lg shadow-md border-2 transition-all cursor-pointer ${
+      className={`relative bg-white dark:bg-gray-700 rounded-lg shadow-md border-2 transition-all cursor-pointer w-28 min-w-[112px] flex flex-col ${
         isCurrent
           ? "border-yellow-400 ring-2 ring-yellow-400 scale-105"
           : "border-gray-200 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500"
       } ${isDead ? "opacity-40 grayscale" : ""}`}
       onClick={() => onViewDetails && onViewDetails(creature)}
     >
-      {/* Creature Image - Small & Compact */}
-      <div className="mb-1">
+      {/* Creature Image - Fixed Size & Uniform */}
+      <div className="mb-1 p-1">
         <img
           src={creatureImage}
           alt={creature.name}
-          className="w-20 h-20 object-cover rounded"
+          className="w-full h-16 object-cover rounded"
         />
       </div>
 
-      {/* Name */}
-      <div className="px-1 mb-1">
-        <h4 className="font-bold text-xs truncate text-center">{creature.name}</h4>
+      {/* Name - Fixed Height, Truncated */}
+      <div className="px-1 mb-1 h-4">
+        <h4 className="font-bold text-xs truncate text-center leading-4">{creature.name}</h4>
       </div>
 
       {/* HP Bar - Compact */}
@@ -1105,27 +1114,27 @@ function MiniCreatureCard({ creature, isCurrent, isPlayer, canSwitch, onOpenSwap
       </div>
 
       {/* Status/Buff Badges - Micro */}
-      <div className="px-1 flex justify-center gap-1 flex-wrap text-xs">
-        {hasStun && <span className="w-5 h-5 flex items-center justify-center rounded bg-yellow-100 dark:bg-yellow-900 text-yellow-700">💫</span>}
-        {hasPoison && <span className="w-5 h-5 flex items-center justify-center rounded bg-purple-100 dark:bg-purple-900 text-purple-700">☠️</span>}
-        {hasSlow && <span className="w-5 h-5 flex items-center justify-center rounded bg-blue-100 dark:bg-blue-900 text-blue-700">🐌</span>}
+      <div className="px-1 flex justify-center gap-1 flex-wrap text-xs h-6 items-center">
+        {hasStun && <span className="w-5 h-5 flex items-center justify-center rounded bg-yellow-100 dark:bg-yellow-900 text-yellow-700 text-lg">💫</span>}
+        {hasPoison && <span className="w-5 h-5 flex items-center justify-center rounded bg-purple-100 dark:bg-purple-900 text-purple-700 text-lg">☠️</span>}
+        {hasSlow && <span className="w-5 h-5 flex items-center justify-center rounded bg-blue-100 dark:bg-blue-900 text-blue-700 text-lg">🐌</span>}
         {attackBuffActive && buffedStats.activeBuffs.attackBuff && (
-          <span className="px-1 rounded bg-red-100 dark:bg-red-900 text-red-700 font-bold text-xs">⚔️</span>
+          <span className="px-1 rounded bg-red-100 dark:bg-red-900 text-red-700 font-bold text-sm">⚔️</span>
         )}
         {defenseBuffActive && buffedStats.activeBuffs.defenseBuff && (
-          <span className="px-1 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 font-bold text-xs">🛡️</span>
+          <span className="px-1 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 font-bold text-sm">🛡️</span>
         )}
         {dodgeBuffActive && buffedStats.activeBuffs.dodgeBuff && (
-          <span className="px-1 rounded bg-green-100 dark:bg-green-900 text-green-700 font-bold text-xs">💨</span>
+          <span className="px-1 rounded bg-green-100 dark:bg-green-900 text-green-700 font-bold text-sm">💨</span>
         )}
       </div>
 
-      {/* Position Indicator - Tiny */}
-      <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-[10px] font-bold text-gray-600 dark:text-gray-300">
+      {/* Position Indicator - Absolute, Top Right */}
+      <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-[11px] font-bold text-gray-600 dark:text-gray-300 shadow">
         {(creature.position || 0) + 1}
       </div>
 
-      {/* Swap Button - Tiny */}
+      {/* Swap Button - Absolute, Bottom Right */}
       {canSwitch && isPlayer && creature.currentHP > 0 && (
         <button
           onClick={(e) => {
@@ -1134,7 +1143,7 @@ function MiniCreatureCard({ creature, isCurrent, isPlayer, canSwitch, onOpenSwap
               onOpenSwapSelector(creature);
             }
           }}
-          className="absolute bottom-1 right-1 w-5 h-5 flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white rounded-full text-xs"
+          className="absolute bottom-1 right-1 w-5 h-5 flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm shadow"
           title="Change position"
         >
           🔄
