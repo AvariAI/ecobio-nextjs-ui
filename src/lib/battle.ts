@@ -13,6 +13,12 @@ export interface BattleElement {
   name: string;
 }
 
+// Battle team interface (used by both battle.ts and battle-multi.ts)
+export interface BattleTeam {
+  creatures: BattleCreature[];
+  teamId: "player" | "enemy";
+}
+
 /**
  * Get round order for multiple creatures based on speed
  * Higher speed = attacks FIRST (turn-based order)
@@ -781,7 +787,7 @@ export function useSkill(
       // Apply slow status to each enemy
       allEnemies.forEach(enemy => {
         enemy.statusEffects.push({
-          type: "slow",
+          type: StatusEffectType.SLOW,
           duration: skill.duration || 2,
           value: skill.value || 0.15, // 15% slow
         });

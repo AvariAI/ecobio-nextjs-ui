@@ -16,14 +16,13 @@ import {
   getEffectiveSpeed,
   createBattleCreature,
   getBuffExpirationMessages,
+  BattleTeam,  // Import BattleTeam from battle.ts
 } from "./battle";
 
 export type TeamSize = 1 | 3 | 5;
 
-export interface BattleTeam {
-  creatures: BattleCreature[];
-  teamId: "player" | "enemy";
-}
+// Re-export BattleTeam for backward compatibility
+export type { BattleTeam };
 
 /**
  * Position Structure:
