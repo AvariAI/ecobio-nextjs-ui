@@ -899,12 +899,26 @@ export default function HuntingPage() {
                     <p className="text-yellow-300 text-sm mt-2">Affichage: rang {selectedRank} (créature rang {selectedCreature.finalStats.rank})</p>
                   )}
                 </div>
-                {selectedCreature.skill && (
+                {selectedCreature.specimenSkill && selectedCreature.personalitySkill && (
                   <div className="bg-green-700 bg-opacity-50 rounded-lg p-3 mb-4">
-                    <h3 className="font-bold text-green-100">🎯 Compétence</h3>
-                    <div className="text-sm text-green-200">
-                      <p><strong>{selectedCreature.skill.name}</strong>: {selectedCreature.skill.description}</p>
-                      <p className="text-xs text-green-300 mt-1">CD: {selectedCreature.skill.cooldown}t | Durée: {selectedCreature.skill.duration}t</p>
+                    <h3 className="font-bold text-green-100 mb-3">🎯 Compétences</h3>
+                    <div className="space-y-3">
+                      <div className="bg-green-600 bg-opacity-50 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold text-green-300 px-2 py-1 rounded-full border border-green-400">SPECIMEN</span>
+                          <span className="font-semibold text-green-100">{selectedCreature.specimenSkill.name}</span>
+                        </div>
+                        <p className="text-sm text-green-200">{selectedCreature.specimenSkill.description}</p>
+                        <p className="text-xs text-green-300 mt-1">CD: {selectedCreature.specimenSkill.cooldown}t | Durée: {selectedCreature.specimenSkill.duration}t</p>
+                      </div>
+                      <div className="bg-blue-600 bg-opacity-50 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold text-blue-300 px-2 py-1 rounded-full border border-blue-400">PERSONNALITÉ</span>
+                          <span className="font-semibold text-blue-100">{selectedCreature.personalitySkill.name}</span>
+                        </div>
+                        <p className="text-sm text-blue-200">{selectedCreature.personalitySkill.description}</p>
+                        <p className="text-xs text-blue-300 mt-1">CD: {selectedCreature.personalitySkill.cooldown}t | Durée: {selectedCreature.personalitySkill.duration}t</p>
+                      </div>
                     </div>
                   </div>
                 )}
