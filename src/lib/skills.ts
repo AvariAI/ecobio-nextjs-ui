@@ -205,41 +205,39 @@ export const SPECIMEN_SKILLS: Record<string, Skill> = {
 
   fly: {
     id: "fly_dive",
-    name: "Plongeon Rapide",
-    description: "High-risk high-reward: ATK +100% for 1 turn, but take 20% self damage",
+    name: "Vol Acrobatics",
+    description: "Dodge response: When dodging an attack, instantly strike for 50% of your ATK (instant counter)",
     creatureId: "fly",
     source: "specimen",
     type: "offensive",
     effect: "attack",
-    value: 1.0,  // 100% ATK boost
-    duration: 1,
-    cooldown: 3,
-    target: "self",
+    value: 0.5,  // 50% of ATK when countering
+    duration: 0,  // Instant response, no duration
+    cooldown: 3,  // Can only counter dodges once every 3 turns
+    target: "random",
     level: 1,
     effects: {
-      selfBoostPercent: 1.0,
-      recoilPercent: 0.20,
-      effectDuration: 1,
+      offenseMultiplier: 0.5,
+      effectDuration: 0,
     }
   },
 
   honeybee: {
     id: "honeybee_sting",
-    name: "Piqure Envenimée",
-    description: "Inject venom: 10% HP DOT poison on enemy (2 turns), 5% self poison damage",
+    name: "Pollisation Soignante",
+    description: "Heal 10% maxHP to ALL allies instantly (biological GFP-based healing)",
     creatureId: "honeybee",
     source: "specimen",
-    type: "debuff",
-    effect: "debuff",
-    value: 0.10,  // 10% poison
-    duration: 2,
-    cooldown: 3,
-    target: "random",
+    type: "heal",
+    effect: "heal",
+    value: 0.10,  // 10% heal
+    duration: 0,  // Instant
+    cooldown: 4,
+    target: "all",  // ALL allies
     level: 1,
     effects: {
-      poisonPercent: 0.10,
-      poisonSelfDamage: 0.05,
-      effectDuration: 2,
+      healPercent: 0.10,
+      effectDuration: 0,
     }
   },
 
