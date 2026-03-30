@@ -454,8 +454,21 @@ export default function BattlePage() {
           selectedEnemy.traits || []
         );
 
+        // Create creature templates with dual skills for 1v1 collection mode
+        const playerCreatureWithSkills = {
+          ...CREATURES[selectedPlayer.creatureId],
+          specimenSkill: selectedPlayer.specimenSkill,
+          personalitySkill: selectedPlayer.personalitySkill,
+        };
+
+        const enemyCreatureWithSkills = {
+          ...CREATURES[selectedEnemy.creatureId],
+          specimenSkill: selectedEnemy.specimenSkill,
+          personalitySkill: selectedEnemy.personalitySkill,
+        };
+
         p = createBattleCreature(
-          CREATURES[selectedPlayer.creatureId],
+          playerCreatureWithSkills,
           {
             hp: playerStatMods.modifiedStats.hp,
             attack: playerStatMods.modifiedStats.attack,
@@ -478,7 +491,7 @@ export default function BattlePage() {
         p.statModifiers = playerStatMods.breakdown;
 
         e = createBattleCreature(
-          CREATURES[selectedEnemy.creatureId],
+          enemyCreatureWithSkills,
           {
             hp: enemyStatMods.modifiedStats.hp,
             attack: enemyStatMods.modifiedStats.attack,
@@ -559,8 +572,15 @@ export default function BattlePage() {
             collected.traits || []
           );
 
+          // Create creature template with dual skills from collected creature
+          const creatureTemplateWithSkills = {
+            ...CREATURES[collected.creatureId],
+            specimenSkill: collected.specimenSkill,
+            personalitySkill: collected.personalitySkill,
+          };
+
           playerCreatures.push({
-            creatureTemplate: CREATURES[collected.creatureId],
+            creatureTemplate: creatureTemplateWithSkills,
             stats: {
               hp: statMods.modifiedStats.hp,
               attack: statMods.modifiedStats.attack,
@@ -609,8 +629,15 @@ export default function BattlePage() {
             collected.traits || []
           );
 
+          // Create creature template with dual skills from collected creature
+          const creatureTemplateWithSkills = {
+            ...CREATURES[collected.creatureId],
+            specimenSkill: collected.specimenSkill,
+            personalitySkill: collected.personalitySkill,
+          };
+
           enemyCreatures.push({
-            creatureTemplate: CREATURES[collected.creatureId],
+            creatureTemplate: creatureTemplateWithSkills,
             stats: {
               hp: statMods.modifiedStats.hp,
               attack: statMods.modifiedStats.attack,
