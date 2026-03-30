@@ -6,29 +6,12 @@
 import { Creature, BaseStats, Rank, RANK_MULTIPLIERS } from "./database";
 import { applyTraits as applyTraitEffects, getTraitsByIds } from "./traits";
 import { calculateCombatXP } from "./combat-xp";
+import { Skill } from "./skills";
 
 export interface BattleElement {
   creature: BattleCreature;
   team: "player" | "enemy" | "attacker" | "defender";
   name: string;
-}
-
-// Battle team interface (used by both battle.ts and battle-multi.ts)
-export interface BattleTeam {
-  creatures: BattleCreature[];
-  teamId: "player" | "enemy";
-}
-
-/**
- * Get round order for multiple creatures based on speed
- * Higher speed = attacks FIRST (turn-based order)
- * Uses effective speed (accounts for Slow status effect)
- * @returns BattleElement[] sorted by speed DESCENDING (fastest to slowest)
- */
-export function getRoundOrder(creatures: BattleElement[]): BattleElement[] {
-  return [...creatures].sort(
-    (a, b) => getEffectiveSpeed(b.creature) - getEffectiveSpeed(a.creature)
-  );
 }
 
 export interface BattleStats extends BaseStats {
@@ -87,6 +70,11 @@ export interface BuffsCompatibility {
   attackBuffTurns: number;
   defenseBuffTurns: number;
   dodgeBuffTurns: number;
+}
+
+export interface BattleTeam {
+  creatures: BattleCreature[];
+  teamId: "player" | "enemy";
 }
 
 export interface BattleCreature {
@@ -704,190 +692,110 @@ export function useSkill(
     return false;
   }
 
-  // Determine target for logging
-  const isSelfBuff = skill.target === "self" || (!target && skill.target !== "ally");
-  const targetCreature = isSelfBuff ? battleCreature : target!;
-  const targetName = isSelfBuff ? "soi-même" : target!.name;
-
-  // Map skill effect to BuffType
-  let buffType: BuffType;
-  if (skill.effect === "defense") {
-    buffType = BuffType.DEFENSE;
-  } else if (skill.effect === "dodge") {
-    buffType = BuffType.DODGE;
-  } else if (skill.effect === "speed") {  // NEW
-    buffType = BuffType.SPEED;
-  } else if (skill.effect === "attack") {
-    buffType = BuffType.ATTACK;
-  } else if (skill.effect === "heal") {
-    buffType = BuffType.HEAL;
-  } else if (skill.effect === "aoe_damage") {
-    // Handle AOE skills actually dealing damage (ant's mandibles, fly's infiltration)
-
-    // Select targets (use direct target for 1v1, position logic for 3v3/5v5)
-    let targets: BattleCreature[] = [];
-    if (targetTeam) {
-      // Multi-battle mode: front row, back row, or all
-      const teamSize = targetTeam.creatures.length;
-      if (skill.target === "front") {
-        // Front row: positions 0 (1v1/3v3) or 0-1 (5v5)
-        const frontPositions = teamSize === 5 ? [0, 1] : teamSize === 3 ? [0] : [0];
-        targets = targetTeam.creatures.filter(c => c.currentHP > 0 && c.position !== undefined && frontPositions.includes(c.position));
-
-        // Fallback: if front row is empty, target all enemies
-        if (targets.length === 0) {
-          targets = targetTeam.creatures.filter(c => c.currentHP > 0);
-          log.push({
-            text: `${battleCreature.name} s'adapte: rangée avant vide, cible tous les ennemis`,
-            type: "info",
-          });
-        }
-      } else if (skill.target === "back") {
-        // Back row: positions 1-2 (3v3) or 2-3-4 (5v5)
-        const backPositions = teamSize === 5 ? [2, 3, 4] : teamSize === 3 ? [1, 2] : [];
-        targets = targetTeam.creatures.filter(c => c.currentHP > 0 && c.position !== undefined && backPositions.includes(c.position));
-
-        // Fallback: if back row is empty, target random enemy
-        if (targets.length === 0) {
-          const aliveTargets = targetTeam.creatures.filter(c => c.currentHP > 0);
-          targets = aliveTargets.length > 0 ? [aliveTargets[Math.floor(Math.random() * aliveTargets.length)]] : [];
-          log.push({
-            text: `${battleCreature.name} s'adapte: rangée arrière vide, cible aléatoire`,
-            type: "info",
-          });
-        }
-      } else if (skill.target === "all") {
-        targets = targetTeam.creatures.filter(c => c.currentHP > 0);
-      } else {
-        const aliveTargets = targetTeam.creatures.filter(c => c.currentHP > 0);
-        targets = aliveTargets.length > 0 ? [aliveTargets[Math.floor(Math.random() * aliveTargets.length)]] : [];
-      }
-    } else {
-      // 1v1 mode: use the direct target
-      if (target && target.currentHP > 0) {
-        targets = [target];
-      } else {
-        log.push({
-          text: `${battleCreature.name} utilise ${skill.name} (aucune cible)`,
-          type: "info",
-        });
-        battleCreature.skillCooldowns[cooldownKey] = skill.cooldown;
-        return false;
-      }
-    }
-
-    // Deal damage
-    targets.forEach(target => {
-      const rawDamage = battleCreature.stats.attack * skill.value;
-      const damage = Math.floor(rawDamage);
-      const defenseReduction = Math.floor(target.stats.defense / 2);
-      let finalDamage = Math.max(1, damage - defenseReduction);
-
-      // Check for crit on EACH target (independent crit for AOE)
-      const critChance = Math.min((battleCreature.stats.crit / 100), 0.40);  // Cap at 40%
-      const isCrit = Math.random() < critChance;
-
-      if (isCrit) {
-        // Crit multiplier: 1.5x to 2.0x based on crit stat
-        const critMult = 1.5 + (battleCreature.stats.crit / 100) * 0.25;
-        finalDamage = Math.floor(finalDamage * critMult);
-        log.push({
-          text: `💥 CRITICAL HIT on ${target.name}! Dégâts: ${finalDamage} (${critMult.toFixed(2)}x)`,
-          type: "critical",
-        });
-      }
-
-      log.push({
-        text: `${battleCreature.name} utilise ${skill.name} sur ${target.name}: ATK=${battleCreature.stats.attack}, skill.value=${skill.value}, rawDamage=${rawDamage.toFixed(2)}, damage=${damage}, DEF=${target.stats.defense}, defenseReduction=${defenseReduction}, finalDamage=${finalDamage} dégâts`,
-        type: "damage",
-      });
-
-      target.currentHP = Math.max(0, target.currentHP - finalDamage);
-
-      battleCreature.damageDealt += finalDamage;
-
-      if (target.currentHP <= 0) {
-        battleCreature.kills++;
-        log.push({
-          text: `💀 ${target.name} est KO!`,
-          type: "critical",
-        });
-      }
-    });
-
-    battleCreature.skillCooldowns[cooldownKey] = skill.cooldown;
-    return true;
-  } else if (skill.effect === "debuff") {
-    // For debuffs (slow), directly apply status effect
-    if (!targetTeam) {
-      log.push({
-        text: `${battleCreature.name} utilise ${skill.name} (aucune cible disponible)`,
-        type: "info",
-      });
-      return false;
-    }
-
-    // Apply to all alive enemies
-    const allEnemies = targetTeam.creatures.filter(c => c.currentHP > 0);
-    if (allEnemies.length > 0) {
-      // Apply slow status to each enemy
-      allEnemies.forEach(enemy => {
-        enemy.statusEffects.push({
-          type: StatusEffectType.SLOW,
-          duration: skill.duration || 2,
-          value: skill.value || 0.15, // 15% slow
-        });
-      });
-      log.push({
-        text: `${battleCreature.name} utilise ${skill.name} sur toute l'équipe ennemie (VIT -${Math.floor((skill.value || 0.15) * 100)}% pour ${skill.duration} tours)`,
-        type: "skill",
-      });
-    }
-
-    battleCreature.skillCooldowns[cooldownKey] = skill.cooldown;
-    return true;
+  // Determine what to pass as target (creature or team)
+  let executionTarget: BattleCreature | BattleTeam | null;
+  if (skill.target === "self" || (!target && skill.target !== "ally" && skill.target !== "all")) {
+    // Self-buff: pass the creature itself as target
+    executionTarget = battleCreature;
+  } else if (skill.target === "ally" && targetTeam) {
+    // Heal all allies: pass the player's own team
+    executionTarget = targetTeam;
+  } else if (skill.effect === "aoe_damage" || skill.target === "all" || skill.effect === "debuff") {
+    // AOE damage or debuffs: pass enemy team (or null)
+    executionTarget = targetTeam || null;
   } else {
-    // Fallback for other skill types - log without creating buff
-    log.push({
-      text: `${battleCreature.name} utilise ${skill.name} (${st === "specimen" ? "spécimen" : "personnalité"}) sur ${targetName}!`,
-      type: "skill",
-    });
-    battleCreature.skillCooldowns[cooldownKey] = skill.cooldown;
-    return true;
+    // Single target: pass the targeted creature (or null if undefined)
+    executionTarget = target || null;
   }
 
-  // Apply skill effect using addBuff (NEW system)
-  addBuff(
-    targetCreature,
-    buffType,
-    skill.value,
-    skill.duration,
-    skillName,  // Use skill.name as sourceSkillId since interface doesn't have id field
-    battleCreature.id
-  );
-
-  // Detailed logging
-  if (skill.effect === "defense") {
-    const buffedDef = Math.floor(targetCreature.stats.defense * (1 + skill.value));
-    log.push({
-      text: `${battleCreature.name} utilise ${skill.name} sur ${targetName} (DEF ${targetCreature.stats.defense} → ${buffedDef}, +${Math.floor(skill.value * 100)}% pour ${skill.duration} tours)`,
-      type: "skill",
-    });
-  } else if (skill.effect === "dodge") {
-    log.push({
-      text: `${battleCreature.name} utilise ${skill.name} sur ${targetName} (Dodge +${Math.floor(skill.value * 100)}% pour ${skill.duration} tours)`,
-      type: "skill",
-    });
-  } else if (skill.effect === "attack") {
-    const buffedAtk = Math.floor(targetCreature.stats.attack * (1 + skill.value));
-    log.push({
-      text: `${battleCreature.name} utilise ${skill.name} sur ${targetName} (ATK ${targetCreature.stats.attack} → ${buffedAtk}, +${Math.floor(skill.value * 100)}% pour ${skill.duration} tours)`,
-      type: "skill",
-    });
+  // Convert old skill format to new Skill format for executeSkill
+  const newSkill = convertToSkillFormat(skill, st);
+  if (!newSkill) {
+    return false;
   }
 
-  battleCreature.skillCooldowns[cooldownKey] = skill.cooldown;
-  return true;
+  // Execute skill using the new executor
+  return executeSkill(battleCreature, executionTarget, newSkill, log);
+}
+
+/**
+ * Convert old skill format from database.ts to new Skill format for executeSkill
+ */
+function convertToSkillFormat(
+  oldSkill: Creature["specimenSkill"] | Creature["personalitySkill"],
+  source: "specimen" | "personality"
+): Skill | null {
+  if (!oldSkill) {
+    return null;
+  }
+
+  // Build effects object based on old skill properties
+  const effects: Skill["effects"] = {};
+
+  switch (oldSkill.effect) {
+    case "attack":
+    case "aoe_damage":
+      effects.offenseMultiplier = oldSkill.value;
+      break;
+    case "heal":
+      effects.healPercent = oldSkill.value;
+      // Piquer Soignant has poison
+      if (source === "personality" && oldSkill.name === "Piquer Soignant") {
+        effects.poisonPercent = 0.10;
+      }
+      break;
+    case "speed":
+      effects.speedBonus = oldSkill.value;
+      // Esquive Aérienne buff allies too
+      if (oldSkill.name === "Esquive Aérienne") {
+        effects.allyBoostSelf = true;
+      }
+      break;
+    case "defense":
+      // Forteresse redirects damage
+      if (oldSkill.name === "Forteresse") {
+        effects.defenseRedirect = oldSkill.value;
+      } else {
+        effects.damageReduction = oldSkill.value;
+      }
+      break;
+    case "debuff":
+      effects.enemyDebuffPercent = oldSkill.value;
+      // Échange Solaire also boosts self
+      if (oldSkill.name === "Échange Solaire") {
+        effects.selfBoostPercent = oldSkill.value;
+      }
+      break;
+    case "special":
+      // Ravage has recoil
+      if (oldSkill.name === "Ravage") {
+        effects.offenseMultiplier = 0.5;
+        effects.recoilPercent = 0.20;
+      }
+      // Tir Critique has bonus crit damage
+      if (oldSkill.name === "Tir Critique") {
+        effects.critDamageBonus = 1.5;
+      }
+      // Roue du Destin handled in executeSkill
+      break;
+  }
+
+  return {
+    id: `${source}_${oldSkill.name}`,
+    name: oldSkill.name,
+    description: oldSkill.description,
+    source,
+    type: oldSkill.effect === "heal" ? "heal" : oldSkill.effect === "defense" ? "defensive" : "offensive",
+    effect: oldSkill.effect,
+    value: oldSkill.value,
+    duration: oldSkill.duration,
+    cooldown: oldSkill.cooldown,
+    target: oldSkill.target,
+    level: 1, // Default level 1 for now
+    effects,
+    archetype: "agressive" as any, // Not available in old format, use placeholder
+    creatureId: undefined,
+  };
 }
 
 /**
@@ -1252,4 +1160,482 @@ export function calculateFinalStats(
     crit: Math.floor(varianceStats.crit * statScale),
     rank,
   };
+}
+
+// ============================================================================
+// NEW SKILL EXECUTION SYSTEM (Refactored)
+// ============================================================================
+
+interface SkillExecutionContext {
+  attacker: BattleCreature;
+  target: BattleCreature | BattleTeam | null;
+  skill: Skill;
+  log: BattleLogEntry[];
+}
+
+export function executeSkill(
+  attacker: BattleCreature,
+  target: BattleCreature | BattleTeam | null,
+  skill: Skill,
+  log: BattleLogEntry[]
+): boolean {
+  const ctx: SkillExecutionContext = { attacker, target, skill, log };
+
+  // Determine targets based on skill.target
+  const targets = determineTargetCreatures(ctx);
+
+  if (targets.length === 0 && skill.effect !== "aoe_damage" && skill.effect !== "debuff") {
+    log.push({
+      text: `${attacker.name} tente d'utiliser ${skill.name} mais n'a pas de cible`,
+      type: "info",
+    });
+    return false;
+  }
+
+  // Execute each effect in order
+  const effects = skill.effects;
+
+  // 1. Damage effects (offenseMultiplier, aoe_damage)
+  if (effects.offenseMultiplier || skill.effect === "aoe_damage") {
+    applyDamageEffect(ctx, targets);
+  }
+
+  // 2. Heal effects
+  if (effects.healPercent) {
+    applyHealEffect(ctx, targets);
+  }
+
+  // 3. Buff effects (speed, dodge, attack, defense)
+  if (effects.speedBonus) {
+    applySpeedBuffEffect(ctx, targets);
+  }
+  if (effects.defenseRedirect) {
+    applyDefenseRedirectEffect(ctx, target as BattleTeam);
+  }
+  if (effects.damageReduction || skill.effect === "defense") {
+    applyDefenseBuffEffect(ctx, targets);
+  }
+  if (skill.effect === "attack" || effects.selfBoostPercent) {
+    applyAttackBuffEffect(ctx, targets);
+  }
+
+  // 4. Debuff effects (slow, poison)
+  if (effects.enemyDebuffPercent || skill.effect === "debuff") {
+    applyDebuffEffect(ctx, targets);
+  }
+  if (effects.poisonPercent) {
+    applyPoisonEffect(ctx, targets);
+  }
+
+  // 5. Special effects (Roue du Destin RNG)
+  if (skill.archetype === "mysterieuse") {
+    applyRoueDuDestinEffect(ctx, targets);
+  }
+
+  // Set cooldown
+  const cooldownKey = `${skill.name}_${skill.source}_${attacker.name}`;
+  attacker.skillCooldowns[cooldownKey] = skill.cooldown;
+
+  return true;
+}
+
+// ============================================================================
+// TARGET DETERMINATION
+// ============================================================================
+
+function determineTargetCreatures(ctx: SkillExecutionContext): BattleCreature[] {
+  const { attacker, target, skill } = ctx;
+
+  // Self-targeting skills
+  if (skill.target === "self" || (!target && skill.target !== "ally" && skill.target !== "all")) {
+    return [attacker];
+  }
+
+  // Single target
+  if (skill.target === "random" && target && "stats" in target) {
+    return [target as BattleCreature];
+  }
+
+  // Team targeting for AOE/debuffs
+  if (target && "creatures" in target && "teamId" in target) {
+    const team = target as BattleTeam;
+    const teamSize = team.creatures.length;
+
+    switch (skill.target) {
+      case "front": {
+        // Front row: positions 0 (1v1/3v3) or 0-1 (5v5)
+        const frontPositions = teamSize === 5 ? [0, 1] : teamSize === 3 ? [0] : [0];
+        let frontTargets = team.creatures.filter(c =>
+          c.currentHP > 0 &&
+          c.position !== undefined &&
+          frontPositions.includes(c.position)
+        );
+        // Fallback: target all if front row empty
+        if (frontTargets.length === 0) {
+          frontTargets = team.creatures.filter(c => c.currentHP > 0);
+          logFallbackMessage(ctx, "rangée avant vide, cible tous les ennemis");
+        }
+        return frontTargets;
+      }
+
+      case "back": {
+        // Back row: positions 1-2 (3v3) or 2-3-4 (5v5)
+        const backPositions = teamSize === 5 ? [2, 3, 4] : teamSize === 3 ? [1, 2] : [];
+        let backTargets = team.creatures.filter(c =>
+          c.currentHP > 0 &&
+          c.position !== undefined &&
+          backPositions.includes(c.position)
+        );
+        // Fallback: target random if back row empty
+        if (backTargets.length === 0) {
+          const alive = team.creatures.filter(c => c.currentHP > 0);
+          backTargets = alive.length > 0 ? [alive[Math.floor(Math.random() * alive.length)]] : [];
+          logFallbackMessage(ctx, "rangée arrière vide, cible aléatoire");
+        }
+        return backTargets;
+      }
+
+      case "all":
+        return team.creatures.filter(c => c.currentHP > 0);
+
+      case "ally":
+        // Heal all allies (including self)
+        return target.creatures.filter(c => c.currentHP > 0);
+
+      default: {
+        // Random target
+        const alive = team.creatures.filter(c => c.currentHP > 0);
+        return alive.length > 0 ? [alive[Math.floor(Math.random() * alive.length)]] : [];
+      }
+    }
+  }
+
+  // Single creature target
+  if (target && "stats" in target) {
+    const creature = target as BattleCreature;
+    return creature.currentHP > 0 ? [creature] : [];
+  }
+
+  return [];
+}
+
+function logFallbackMessage(ctx: SkillExecutionContext, message: string): void {
+  ctx.log.push({
+    text: `${ctx.attacker.name} s'adapte: ${message}`,
+    type: "info",
+  });
+}
+
+// ============================================================================
+// DAMAGE EFFECTS
+// ============================================================================
+
+function applyDamageEffect(ctx: SkillExecutionContext, targets: BattleCreature[]): void {
+  const { attacker, skill, log } = ctx;
+  const effects = skill.effects;
+
+  const offenseMult = effects.offenseMultiplier || skill.value || 1.0;
+
+  targets.forEach(target => {
+    let rawDamage = attacker.stats.attack * offenseMult;
+
+    // Ignore defense percentage
+    const ignoreDefPercent = effects.ignoreDefPercent || 0;
+    const effectiveDefense = target.stats.defense * (1 - ignoreDefPercent);
+    const defenseReduction = Math.floor(effectiveDefense / 2);
+    let finalDamage = Math.max(1, Math.floor(rawDamage - defenseReduction));
+
+    // Critical hit
+    const critChance = Math.min((attacker.stats.crit / 100), 0.40);
+    const isCrit = Math.random() < critChance;
+
+    if (isCrit) {
+      let critMult = 1.5 + (attacker.stats.crit / 100) * 0.25;
+
+      // Bonus crit multiplier from skill (e.g., Tir Critique)
+      if (effects.critDamageBonus) {
+        critMult += effects.critDamageBonus;
+      }
+
+      finalDamage = Math.floor(finalDamage * critMult);
+      log.push({
+        text: `💥 CRITICAL HIT sur ${target.name}! Dégâts: ${finalDamage} (${critMult.toFixed(2)}x)`,
+        type: "critical",
+      });
+    }
+
+    // Apply damage
+    target.currentHP = Math.max(0, target.currentHP - finalDamage);
+    attacker.damageDealt += finalDamage;
+
+    log.push({
+      text: `${attacker.name} utilise ${skill.name} sur ${target.name}: ${finalDamage} dégâts`,
+      type: "damage",
+    });
+
+    // Check for KO
+    if (target.currentHP <= 0) {
+      attacker.kills++;
+      log.push({
+        text: `💀 ${target.name} est KO!`,
+        type: "critical",
+      });
+    }
+
+    // Apply recoil damage (if any)
+    if (effects.recoilPercent) {
+      const recoilDamage = Math.floor(finalDamage * effects.recoilPercent);
+      attacker.currentHP = Math.max(0, attacker.currentHP - recoilDamage);
+      log.push({
+        text: `${attacker.name} subit ${recoilDamage} dégâts de recul`,
+        type: "damage",
+      });
+    }
+  });
+}
+
+// ============================================================================
+// HEAL EFFECTS
+// ============================================================================
+
+function applyHealEffect(ctx: SkillExecutionContext, targets: BattleCreature[]): void {
+  const { attacker, skill, log } = ctx;
+  const effects = skill.effects;
+
+  const healPercent = effects.healPercent || skill.value || 0;
+
+  targets.forEach(target => {
+    const maxHP = Math.floor(target.stats.hp);
+    const healAmount = Math.floor(maxHP * healPercent);
+    const oldHP = target.currentHP;
+    target.currentHP = Math.min(maxHP, target.currentHP + healAmount);
+    const actualHealed = target.currentHP - oldHP;
+
+    log.push({
+      text: `${attacker.name} utilise ${skill.name} sur ${target.name}: +${actualHealed}/${healAmount} HP (${Math.floor(healPercent * 100)}% du max)`,
+      type: "skill",
+    });
+  });
+}
+
+// ============================================================================
+// BUFF EFFECTS
+// ============================================================================
+
+function applySpeedBuffEffect(ctx: SkillExecutionContext, targets: BattleCreature[]): void {
+  const { attacker, skill, log } = ctx;
+  const effects = skill.effects;
+
+  const speedBonus = effects.speedBonus || skill.value || 0;
+  const duration = effects.effectDuration || skill.duration || 2;
+
+  targets.forEach(target => {
+    addBuff(
+      target,
+      BuffType.SPEED,
+      speedBonus,
+      duration,
+      skill.name,
+      attacker.id
+    );
+
+    const newSpeed = getEffectiveSpeed(target);
+    log.push({
+      text: `${attacker.name} utilise ${skill.name} sur ${target.name}: VIT +${Math.floor(speedBonus * 100)}% (nouvelle VIT: ${newSpeed}, ${duration} tours)`,
+      type: "skill",
+    });
+  });
+}
+
+function applyDefenseBuffEffect(ctx: SkillExecutionContext, targets: BattleCreature[]): void {
+  const { attacker, skill, log } = ctx;
+  const effects = skill.effects;
+  const isForteresseLvl5 = skill.archetype === "protective" && skill.level === 5;
+
+  const damageReduction = effects.damageReduction || effects.defenseRedirect || 0;
+  const duration = effects.effectDuration || skill.duration || 2;
+
+  targets.forEach(target => {
+    const finalReduction = isForteresseLvl5 ? 0.30 : damageReduction;
+
+    addBuff(
+      target,
+      BuffType.DEFENSE,
+      finalReduction,
+      duration,
+      skill.name,
+      attacker.id
+    );
+
+    const bonusHP = Math.floor(target.stats.defense * finalReduction);
+    log.push({
+      text: `${attacker.name} utilise ${skill.name} sur ${target.name}: DEF +${Math.floor(finalReduction * 100)}% (${bonusHP} effective DEF, ${duration} tours)`,
+      type: "skill",
+    });
+  });
+}
+
+function applyAttackBuffEffect(ctx: SkillExecutionContext, targets: BattleCreature[]): void {
+  const { attacker, skill, log } = ctx;
+  const effects = skill.effects;
+
+  const attackBonus = effects.offenseMultiplier || effects.selfBoostPercent || skill.value || 0;
+  const duration = effects.effectDuration || skill.duration || 1;
+
+  targets.forEach(target => {
+    addBuff(
+      target,
+      BuffType.ATTACK,
+      attackBonus,
+      duration,
+      skill.name,
+      attacker.id
+    );
+
+    const bonusAtk = Math.floor(target.stats.attack * attackBonus);
+    log.push({
+      text: `${attacker.name} utilise ${skill.name} sur ${target.name}: ATK +${Math.floor(attackBonus * 100)}% (+${bonusAtk}, ${duration} tours)`,
+      type: "skill",
+    });
+  });
+}
+
+function applyDefenseRedirectEffect(ctx: SkillExecutionContext, team: BattleTeam): void {
+  const { attacker, skill, log } = ctx;
+  const effects = skill.effects;
+
+  const redirectPercent = effects.defenseRedirect || skill.value || 0;
+  const duration = effects.effectDuration || skill.duration || 2;
+
+  // Apply to self only (the tank)
+  addBuff(
+    attacker,
+    BuffType.DEFENSE,
+    redirectPercent,
+    duration,
+    skill.name,
+    attacker.id
+  );
+
+  log.push({
+    text: `${attacker.name} utilise ${skill.name}: Redirige ${Math.floor(redirectPercent * 100)}% des dégâts d'équipe vers soi-même (${duration} tours)`,
+    type: "skill",
+  });
+}
+
+// ============================================================================
+// DEBUFF EFFECTS
+// ============================================================================
+
+function applyDebuffEffect(ctx: SkillExecutionContext, targets: BattleCreature[]): void {
+  const { attacker, skill, log } = ctx;
+  const effects = skill.effects;
+
+  const debuffPercent = effects.enemyDebuffPercent || skill.value || 0;
+  const duration = effects.effectDuration || skill.duration || 1;
+
+  targets.forEach(target => {
+    addBuff(target, BuffType.ATTACK, debuffPercent, duration, skill.name, attacker.id);
+    addBuff(target, BuffType.DEFENSE, debuffPercent, duration, skill.name, attacker.id);
+    addBuff(target, BuffType.SPEED, debuffPercent, duration, skill.name, attacker.id);
+
+    log.push({
+      text: `${attacker.name} utilise ${skill.name} sur ${target.name}: Toutes stats ${Math.floor(debuffPercent * 100)}% (${duration} tours)`,
+      type: "skill",
+    });
+  });
+}
+
+function applyPoisonEffect(ctx: SkillExecutionContext, targets: BattleCreature[]): void {
+  const { attacker, skill, log } = ctx;
+  const effects = skill.effects;
+
+  const poisonPercent = effects.poisonPercent || 0;
+  const poisonSelfDamage = effects.poisonSelfDamage || 0;
+  const duration = effects.effectDuration || skill.duration || 2;
+
+  targets.forEach(target => {
+    addBuff(
+      target,
+      BuffType.POISON,
+      poisonPercent,
+      duration,
+      skill.name,
+      attacker.id
+    );
+
+    const maxHP = Math.floor(target.stats.hp);
+    const poisonDamage = Math.floor(maxHP * poisonPercent);
+    log.push({
+      text: `${attacker.name} utilise ${skill.name} sur ${target.name}: Poison ${Math.floor(poisonPercent * 100)}% (${poisonDamage} dégâts/tour, ${duration} tours)`,
+      type: "skill",
+    });
+  });
+
+  // Self poison (Piquer Soignant level 5)
+  if (poisonSelfDamage > 0) {
+    const selfPoisonDamage = Math.floor(attacker.stats.hp * poisonSelfDamage);
+    addBuff(
+      attacker,
+      BuffType.POISON,
+      poisonSelfDamage,
+      duration,
+      skill.name,
+      attacker.id
+    );
+
+    log.push({
+      text: `${attacker.name} s'empoisonne aussi: ${Math.floor(poisonSelfDamage * 100)}% propres dégâts/tour`,
+      type: "skill",
+    });
+  }
+}
+
+// ============================================================================
+// SPECIAL EFFECTS (Roue du Destin)
+// ============================================================================
+
+function applyRoueDuDestinEffect(ctx: SkillExecutionContext, targets: BattleCreature[]): void {
+  const { attacker, skill, log } = ctx;
+  const hpPercent = attacker.currentHP / attacker.stats.hp;
+  const duration = skill.effects.effectDuration || skill.duration || 2;
+
+  const effects = ["atk", "dodge", "heal"];
+  const chosenEffect = effects[Math.floor(Math.random() * effects.length)];
+
+  switch (chosenEffect) {
+    case "atk":
+      addBuff(attacker, BuffType.ATTACK, 0.40, duration, skill.name, attacker.id);
+      log.push({
+        text: `🎰 Roue du Destin: ${attacker.name} gagne ATK +40%!`,
+        type: "skill",
+      });
+      break;
+
+    case "dodge":
+      addBuff(attacker, BuffType.DODGE, 0.60, duration, skill.name, attacker.id);
+      log.push({
+        text: `🎰 Roue du Destin: ${attacker.name} gagne Esquive +60%!`,
+        type: "skill",
+      });
+      break;
+
+    case "heal":
+      const healAmount = Math.floor(attacker.stats.hp * 0.40);
+      const oldHP = attacker.currentHP;
+      attacker.currentHP = Math.min(attacker.stats.hp, attacker.currentHP + healAmount);
+      const actualHealed = attacker.currentHP - oldHP;
+      log.push({
+        text: `🎰 Roue du Destin: ${attacker.name} se soigne de +${actualHealed} HP!`,
+        type: "skill",
+      });
+      break;
+  }
+
+  if (skill.level === 5) {
+    log.push({
+      text: `🎰🎰 BONUS NIVEAU 5: ${attacker.name} gagne un deuxième effet aléatoire!`,
+      type: "skill",
+    });
+  }
 }
