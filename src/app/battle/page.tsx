@@ -349,19 +349,26 @@ export default function BattlePage() {
             return;
           }
 
-          // Move to next creature
+          // Move to next creature - skip dead AND stunned creatures
+          const isStunned = (creature: BattleCreature) =>
+            creature.statusEffects.some(e => e.type === "stun");
+
           const currentIndex = newTurnOrder.findIndex(el => el.creature === newCurrentCreature);
           let nextIndex = (currentIndex + 1) % newTurnOrder.length;
           let nextCreature = newTurnOrder[nextIndex];
 
-          // Find next alive creature
+          // Find next alive AND not-stunned creature
           let attempts = 0;
-          while (nextCreature.creature.currentHP <= 0 && attempts < newTurnOrder.length) {
+          while (
+            (nextCreature.creature.currentHP <= 0 || isStunned(nextCreature.creature)) &&
+            attempts < newTurnOrder.length
+          ) {
             nextIndex = (nextIndex + 1) % newTurnOrder.length;
             nextCreature = newTurnOrder[nextIndex];
             attempts++;
           }
 
+          // If all creatures are dead or stunned, battle is over
           if (attempts >= newTurnOrder.length) {
             const winner = getTeamBattleWinner(newPlayerTeam, newEnemyTeam);
             newLog.push({
