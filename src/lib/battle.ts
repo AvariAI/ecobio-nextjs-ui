@@ -723,15 +723,34 @@ export function useSkill(
         // Front row: positions 0 (1v1/3v3) or 0-1 (5v5)
         const frontPositions = teamSize === 5 ? [0, 1] : teamSize === 3 ? [0] : [0];
         targets = targetTeam.creatures.filter(c => c.currentHP > 0 && c.position !== undefined && frontPositions.includes(c.position));
+
+        // Fallback: if front row is empty, target all enemies
+        if (targets.length === 0) {
+          targets = targetTeam.creatures.filter(c => c.currentHP > 0);
+          log.push({
+            text: `${battleCreature.name} s'adapte: rangée avant vide, cible tous les ennemis`,
+            type: "info",
+          });
+        }
       } else if (skill.target === "back") {
         // Back row: positions 1-2 (3v3) or 2-3-4 (5v5)
         const backPositions = teamSize === 5 ? [2, 3, 4] : teamSize === 3 ? [1, 2] : [];
         targets = targetTeam.creatures.filter(c => c.currentHP > 0 && c.position !== undefined && backPositions.includes(c.position));
+
+        // Fallback: if back row is empty, target random enemy
+        if (targets.length === 0) {
+          const aliveTargets = targetTeam.creatures.filter(c => c.currentHP > 0);
+          targets = aliveTargets.length > 0 ? [aliveTargets[Math.floor(Math.random() * aliveTargets.length)]] : [];
+          log.push({
+            text: `${battleCreature.name} s'adapte: rangée arrière vide, cible aléatoire`,
+            type: "info",
+          });
+        }
       } else if (skill.target === "all") {
         targets = targetTeam.creatures.filter(c => c.currentHP > 0);
       } else {
         const aliveTargets = targetTeam.creatures.filter(c => c.currentHP > 0);
-        targets = [aliveTargets[Math.floor(Math.random() * aliveTargets.length)]];
+        targets = aliveTargets.length > 0 ? [aliveTargets[Math.floor(Math.random() * aliveTargets.length)]] : [];
       }
     } else {
       // 1v1 mode: use the direct target
