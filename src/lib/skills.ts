@@ -204,20 +204,20 @@ export const SPECIMEN_SKILLS: Record<string, Skill> = {
   },
 
   fly: {
-    id: "fly_dive",
-    name: "Vol Acrobatics",
-    description: "Dodge response: When dodging an attack, instantly strike for 50% of your ATK (instant counter)",
+    id: "fly_infiltration",
+    name: "Attaque Sournoise",
+    description: "Infiltrate and bypass front row: strike a back-row target for +40% damage (breaks their protection)",
     creatureId: "fly",
     source: "specimen",
     type: "offensive",
     effect: "attack",
-    value: 0.5,  // 50% of ATK when countering
-    duration: 0,  // Instant response, no duration
-    cooldown: 3,  // Can only counter dodges once every 3 turns
-    target: "random",
+    value: 0.40,  // +40% bonus damage
+    duration: 0,
+    cooldown: 3,
+    target: "back",  // Attack back row directly, bypassing front row tanks
     level: 1,
     effects: {
-      offenseMultiplier: 0.5,
+      offenseMultiplier: 1.40,  // 140% total damage
       effectDuration: 0,
     }
   },
