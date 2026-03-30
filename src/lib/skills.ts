@@ -46,20 +46,20 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
   agressive: {
     id: "agressive_base",
     name: "Ravage",
-    description: "150% dégâts ATK, soi-même reçoit 20% comme recul",
+    description: "150% dégâts ATK, soi-même reçoit 20% comme recul (prochaine attaque)",
     archetype: "agressive",
     source: "personality",
     type: "offensive",
     effect: "attack",  // Battle.ts compat
     value: 0.5,  // 50% bonus (150% total)
-    duration: 1,  // Instant, no duration
+    duration: 2,  // Buff lasts 2 turns so it applies to next attack (was 1)
     cooldown: 4,
     target: "random",  // Will be specialized in battle system
     level: 1,
     effects: {
       offenseMultiplier: 1.5,
       recoilPercent: 0.20,
-      effectDuration: 1,
+      effectDuration: 2,  // Was 1
     }
   },
 
