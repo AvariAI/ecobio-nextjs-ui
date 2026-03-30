@@ -527,6 +527,23 @@ interface CompactCreatureDisplayProps {
   creature: BattleCreature;
 }
 
+function getCreatureImagePath(creatureId: string, rank: string): string {
+  // Try different naming conventions
+  if (creatureId === "housefly") {
+    const rankSuffix = rank === "S+" ? "S+" : rank;
+    return `/creatures/fly-rank-${rankSuffix}.png`;
+  }
+  if (creatureId === "ant") {
+    const rankSuffix = rank === "S+" ? "S+" : rank;
+    return `/creatures/ant_rank_${rankSuffix}.png`;
+  }
+  if (creatureId === "honeybee") {
+    const rankSuffix = rank === "S+" ? "S+" : rank;
+    return `/creatures/bee-rank-${rankSuffix}.png`;
+  }
+  return "/ecobio-nextjs-ui/images/giant_fly.png"; // Fallback
+}
+
 function CompactCreatureDisplay({ creature }: CompactCreatureDisplayProps) {
   const hpPercent = (creature.currentHP / creature.stats.hp) * 100;
   const isDead = creature.currentHP <= 0;
@@ -534,6 +551,9 @@ function CompactCreatureDisplay({ creature }: CompactCreatureDisplayProps) {
   // Use useMemo to calculate buffed stats without triggering re-renders
   // This is the key fix to prevent infinite re-render loops
   const buffedStats = useMemo(() => getBuffedStats(creature), [creature]);
+
+  // Get creature image path
+  const creatureImage = getCreatureImagePath(creature.creature.id, creature.stats.rank);
 
   // Status effect indicators
   const hasStun = creature.statusEffects.some(e => e.type === "stun");
@@ -554,6 +574,15 @@ function CompactCreatureDisplay({ creature }: CompactCreatureDisplayProps) {
 
   return (
     <div className={isDead ? "grayscale" : ""}>
+      {/* Creature Image */}
+      <div className="mb-2">
+        <img
+          src={creatureImage}
+          alt={creature.name}
+          className="w-full h-16 object-cover rounded-lg border border-gray-300 dark:border-gray-600"
+        />
+      </div>
+
       <div className="flex items-center justify-between mb-2 pr-8">
         <h4 className="font-bold text-lg">{creature.name}</h4>
         <div className="flex gap-1 flex-wrap">

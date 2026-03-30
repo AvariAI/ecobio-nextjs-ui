@@ -73,17 +73,17 @@ interface HuntedCreature extends Creature {
 function getCreatureImage(creatureId: string, rank: Rank): string {
   if (creatureId === "housefly") {
     const rankSuffix = rank === "S+" ? "S+" : rank;
-    return `/ecobio-nextjs-ui/creatures/fly-rank-${rankSuffix}.png`;
+    return `/creatures/fly-rank-${rankSuffix}.png`;
   }
   if (creatureId === "ant") {
     const rankSuffix = rank === "S+" ? "S+" : rank;
-    return `/ecobio-nextjs-ui/creatures/ant_rank_${rankSuffix}.png`;
+    return `/creatures/ant_rank_${rankSuffix}.png`;
   }
   if (creatureId === "honeybee") {
     const rankSuffix = rank === "S+" ? "S+" : rank;
-    return `/ecobio-nextjs-ui/creatures/bee-rank-${rankSuffix}.png`;
+    return `/creatures/bee-rank-${rankSuffix}.png`;
   }
-  return "/ecobio-nextjs-ui/images/giant_fly.png";
+  return "/images/giant_fly.png";
 }
 
 type BattlePhase = "setup" | "battle" | "complete";
@@ -1710,7 +1710,7 @@ function BattleCreatureDisplay({
   const slowEffect = creature.statusEffects.find(e => e.type === "slow");
   const poisonEffect = creature.statusEffects.find(e => e.type === "poison");
 
-  const creatureImage = `/creatures/${creature.creature.id}_rank_${creature.stats.rank}.png`;
+  const creatureImage = getCreatureImage(creature.creature.id, creature.stats.rank);
 
   return (
     <div className="space-y-4">
