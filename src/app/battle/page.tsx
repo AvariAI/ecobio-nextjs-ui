@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { CREATURES, Rank, RANKS, Creature } from "@/lib/database";
+import { getSpecimenSkill } from "@/lib/skills";
 import {
   BattleCreature,
   calculateFinalStats,
@@ -558,8 +559,15 @@ export default function BattlePage() {
 
           const testCreature = CREATURES[slotConfig.creatureId];
           const testStats = calculateScaledStats(testCreature, slotConfig.level, slotConfig.rank);
+
+          // Get specimen skill from skills.ts database
+          const creatureWithSpecimenSkill = {
+            ...testCreature,
+            specimenSkill: getSpecimenSkill(slotConfig.creatureId),
+          };
+
           playerCreatures.push({
-            creatureTemplate: testCreature,
+            creatureTemplate: creatureWithSpecimenSkill,
             stats: testStats,
             name: `${testCreature.name} ${i + 1} (R${slotConfig.rank} L${slotConfig.level})`,
             traits: [],
@@ -615,8 +623,15 @@ export default function BattlePage() {
 
           const testCreature = CREATURES[slotConfig.creatureId];
           const testStats = calculateScaledStats(testCreature, slotConfig.level, slotConfig.rank);
+
+          // Get specimen skill from skills.ts database
+          const creatureWithSpecimenSkill = {
+            ...testCreature,
+            specimenSkill: getSpecimenSkill(slotConfig.creatureId),
+          };
+
           enemyCreatures.push({
-            creatureTemplate: testCreature,
+            creatureTemplate: creatureWithSpecimenSkill,
             stats: testStats,
             name: `${testCreature.name} ${i + 1} (R${slotConfig.rank} L${slotConfig.level})`,
             traits: [],
