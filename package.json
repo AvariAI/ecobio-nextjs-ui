@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "set -e; mkdir -p out; next build; mkdir -p out/_next/static/chunks/pages out/_next/static/chunks/app out/_next/server/app out/_next/server/pages out/creatures; cp -r .next/server/app/*.html out/ 2>/dev/null || true; cp -r .next/server/app/*.rsc out/_next/server/app/ 2>/dev/null || true; cp -r .next/static/* out/_next/static/ 2>/dev/null || true; cp -r public/creatures/* out/creatures/ 2>/dev/null || true; touch out/.nojekyll",
+    "build": "set -e; mkdir -p out; next build; mkdir -p out/_next/static/chunks/pages out/_next/static/chunks/app out/_next/server/app out/_next/server/pages out/creatures out/images out/images/creatures; cp -r .next/server/app/*.html out/ 2>/dev/null || true; cp -r .next/server/app/*.rsc out/_next/server/app/ 2>/dev/null || true; cp -r .next/static/* out/_next/static/ 2>/dev/null || true; cp -r public/creatures/* out/creatures/ 2>/dev/null || true; cp -r public/images/* out/images/ 2>/dev/null || true; touch out/.nojekyll",
     "start": "next start",
     "lint": "next lint"
   },
