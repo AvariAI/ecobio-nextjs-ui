@@ -29,7 +29,8 @@ export interface Skill {
     damageReduction?: number;
     defenseRedirect?: number;
     healPercent?: number;
-    poisonPercent?: number;
+    selfSacrificePercent?: number;  // Sacrifice % of own HP for ally heal
+    poisonPercent?: number;  // Poison DOT damage
     poisonSelfDamage?: number;
     allyBoostSelf?: boolean;
     critDamageBonus?: number;
@@ -90,7 +91,7 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
 
   rapide: {
     id: "rapide_base",
-    name: "Esquive Aérienne",
+    name: "Assaut Rapide",
     description: "Attaques en cascade: 100% (garanti), 70% 2ème, 50% 3ème, 25% 4ème - ~240% dégâts moyenne",
     archetype: "rapide",
     source: "personality",
@@ -111,21 +112,22 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
 
   soin_leurre: {
     id: "soin_leurre_base",
-    name: "Piquer Soignant",
-    description: "Soigne 15% du PV maximum, poison 10% DOT (2 tours)",
+    name: "Sacrifice Vital",
+    description: "Sacrifie 15% de votre PV pour soigner 30% du PV max du premier allié avant + poison 10% sur ennemi",
     archetype: "soin_leurre",
     source: "personality",
     type: "heal",
     effect: "heal",
-    value: 0.15,  // 15% heal
-    duration: 2,
+    value: 0.30,  // 30% heal (up from 15%)
+    duration: 0,  // Instant
     cooldown: 4,
-    target: "ally",
+    target: "front",  // NEW: Heals front-most ally (position 1, then 2, then 3)
     level: 1,
     effects: {
-      healPercent: 0.15,
-      poisonPercent: 0.10,
-      effectDuration: 2,
+      healPercent: 0.30,  // 30% heal for ally
+      selfSacrificePercent: 0.15,  // Sacrifice 15% of own HP
+      poisonPercent: 0.10,  // Poison 10% DOT on enemy
+      effectDuration: 0,
     }
   },
 

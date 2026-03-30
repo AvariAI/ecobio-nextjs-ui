@@ -749,9 +749,10 @@ function convertToSkillFormat(
       break;
     case "heal":
       effects.healPercent = oldSkill.value;
-      // Piquer Soignant has poison
-      if (source === "personality" && oldSkill.name === "Piquer Soignant") {
-        effects.poisonPercent = 0.10;
+      // Piquer Soignant: self sacrifice + poison
+      if (source === "personality" && oldSkill.name === "Sacrifice Vital") {
+        effects.selfSacrificePercent = 0.15;  // Sacrifice 15% own HP
+        effects.poisonPercent = 0.10;  // Poison 10% DOT
       }
       break;
     case "speed":
@@ -1276,22 +1277,34 @@ function determineTargetCreatures(ctx: SkillExecutionContext): BattleCreature[] 
   if (target && "creatures" in target && "teamId" in target) {
     const team = target as BattleTeam;
     const teamSize = team.creatures.length;
+    const isEnemyTeam = team.teamId === "enemy";
 
     switch (skill.target) {
       case "front": {
-        // Front row: positions 0 (1v1/3v3) or 0-1 (5v5)
-        const frontPositions = teamSize === 5 ? [0, 1] : teamSize === 3 ? [0] : [0];
-        let frontTargets = team.creatures.filter(c =>
-          c.currentHP > 0 &&
-          c.position !== undefined &&
-          frontPositions.includes(c.position)
-        );
-        // Fallback: target all if front row empty
-        if (frontTargets.length === 0) {
-          frontTargets = team.creatures.filter(c => c.currentHP > 0);
-          logFallbackMessage(ctx, "rangée avant vide, cible tous les ennemis");
+        // For ally healing: select FIRST ally in front row (position 1 → 2 → 3)
+        // For enemy AOE: select ALL front row targets
+        
+        if (isEnemyTeam && skill.type === "offensive") {
+          // Enemy team + offensive skill (AOE damage) = target all front row
+          const frontPositions = teamSize === 5 ? [0, 1] : teamSize === 3 ? [0] : [0];
+          let frontTargets = team.creatures.filter(c =>
+            c.currentHP > 0 &&
+            c.position !== undefined &&
+            frontPositions.includes(c.position)
+          );
+          // Fallback: target all if front row empty
+          if (frontTargets.length === 0) {
+            frontTargets = team.creatures.filter(c => c.currentHP > 0);
+            logFallbackMessage(ctx, "rangée avant vide, cible tous les ennemis");
+          }
+          return frontTargets;
+        } else {
+          // Ally team = select FIRST ally (priority: position 0 → 1 → 2 → ...)
+          const sortedAllies = team.creatures
+            .filter(c => c.currentHP > 0)
+            .sort((a, b) => (a.position || 0) - (b.position || 0));
+          return sortedAllies.length > 0 ? [sortedAllies[0]] : [];
         }
-        return frontTargets;
       }
 
       case "back": {
@@ -1494,18 +1507,42 @@ function applyHealEffect(ctx: SkillExecutionContext, targets: BattleCreature[]):
   const effects = skill.effects;
 
   const healPercent = effects.healPercent || skill.value || 0;
+  const selfSacrifice = effects.selfSacrificePercent || 0;
 
   targets.forEach(target => {
+    // Calculate heal amount
     const maxHP = Math.floor(target.stats.hp);
     const healAmount = Math.floor(maxHP * healPercent);
+    
+    // Calculate self sacrifice (if any)
+    let selfDamage = 0;
+    if (selfSacrifice > 0) {
+      selfDamage = Math.floor(attacker.stats.hp * selfSacrifice);
+      // Apply self damage
+      attacker.currentHP = Math.max(0, attacker.currentHP - selfDamage);
+      
+      log.push({
+        text: `${attacker.name} sacrifie ${selfDamage} HP (${Math.floor(selfSacrifice * 100)}%)`,
+        type: "damage",
+      });
+    }
+
+    // Apply heal
     const oldHP = target.currentHP;
     target.currentHP = Math.min(maxHP, target.currentHP + healAmount);
     const actualHealed = target.currentHP - oldHP;
 
-    log.push({
-      text: `${attacker.name} utilise ${skill.name} sur ${target.name}: +${actualHealed}/${healAmount} HP (${Math.floor(healPercent * 100)}% du max)`,
-      type: "skill",
-    });
+    if (actualHealed > 0) {
+      log.push({
+        text: `${attacker.name} utilise ${skill.name} sur ${target.name}: +${actualHealed}/${healAmount} HP (${Math.floor(healPercent * 100)}% du max)`,
+        type: "skill",
+      });
+    } else {
+      log.push({
+        text: `${attacker.name} utilise ${skill.name} sur ${target.name} (HP deja full)`,
+        type: "info",
+      });
+    }
   });
 }
 
