@@ -162,6 +162,10 @@ export default function BattlePage() {
   const [showCreatureDetail, setShowCreatureDetail] = useState(false);
   const [detailCreature, setDetailCreature] = useState<BattleCreature | null>(null);
 
+  // Skill selector state (for dual skills: specimen + personality)
+  const [selectedSkillType, setSelectedSkillType] = useState<"specimen" | "personality">("specimen");
+  const [showSkillSelector, setShowSkillSelector] = useState(false);
+
   // Load collection from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("ecobio-collection");
@@ -1077,13 +1081,22 @@ export default function BattlePage() {
     setDetailCreature(null);
   };
 
-  const handleSkill = () => {
+  const handleSkill = (skillType: "specimen" | "personality" = "specimen") => {
     if (isActionProcessing) return; // Prevent multiple actions in same turn
 
     // Multi-creature mode: use skill for current creature
-    if (teamSize > 1 && currentActingCreature && currentActingCreature.creature.skill) {
-      const skill = currentActingCreature.creature.skill;
-      const cooldownKey = `${skill.name}_${currentActingCreature.name}`;
+    if (teamSize > 1 && currentActingCreature) {
+      const skill = skillType === "specimen" 
+        ? currentActingCreature.creature.specimenSkill 
+        : currentActingCreature.creature.personalitySkill;
+
+      if (!skill) {
+        console.log(`No ${skillType} skill found`);
+        return;
+      }
+
+      const skillName = skill.name;
+      const cooldownKey = `${skillName}_${skillType}_${currentActingCreature.name}`;
       const currentCooldown = currentActingCreature.skillCooldowns[cooldownKey] || 0;
 
       if (currentCooldown > 0 || !playerTeam || !enemyTeam) return;
@@ -1116,7 +1129,7 @@ export default function BattlePage() {
         target = selectTargetByPosition(currentActingCreature, enemyTeamForTarget, teamSize, "front");
       }
 
-      const success = useSkill(currentActingCreature, logCopy, target);
+      const success = useSkill(currentActingCreature, logCopy, target, skillType);
 
       if (success) {
         // Create new team references for React
@@ -1663,6 +1676,8 @@ export default function BattlePage() {
             detailCreature={detailCreature}
             onCloseCreatureDetail={handleCloseCreatureDetail}
             onViewCreatureDetails={handleViewCreatureDetails}
+            onFirstSkill={() => handleSkill("specimen")}
+            onSecondSkill={() => handleSkill("personality")}
           />
         )}
 

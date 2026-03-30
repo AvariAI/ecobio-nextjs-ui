@@ -8,7 +8,8 @@ import {
   BattleElement,
   getBuffValueByType,
   getBuffsByType,
-  BuffType
+  BuffType,
+  getCooldownRemaining,
 } from "@/lib/battle";
 import { BattleTeam, TeamSize, countAliveCreatures, isFrontRow, getFrontRowPositions, getBackRowPositions } from "@/lib/battle-multi";
 
@@ -357,6 +358,9 @@ interface MultiCreatureBattleDisplayProps {
   detailCreature?: BattleCreature | null;
   onCloseCreatureDetail?: () => void;
   onViewCreatureDetails?: (creature: BattleCreature) => void;
+  // Skill props - now supports skill type parameter
+  onFirstSkill?: () => void;  //Specimen skill
+  onSecondSkill?: () => void;  // Personality skill
 }
 
 export function MultiCreatureBattleDisplay({
@@ -380,10 +384,18 @@ export function MultiCreatureBattleDisplay({
   detailCreature = null,
   onCloseCreatureDetail,
   onViewCreatureDetails,
+  onFirstSkill,
+  onSecondSkill,
 }: MultiCreatureBattleDisplayProps) {
   const isPlayerTurn = turn === "player";
   const currentCreature = currentActingCreature;
-  const canUseSkill = currentCreature && currentCreature.creature.skill !== undefined && currentCreature.creature.skill !== null;
+  const canUseSkill = currentCreature && (currentCreature.creature.specimenSkill !== undefined || currentCreature.creature.personalitySkill !== undefined);
+
+  // Get skill cooldowns
+  const specimenCooldown = currentCreature ? getCooldownRemaining(currentCreature, "specimen") : 999;
+  const personalityCooldown = currentCreature ? getCooldownRemaining(currentCreature, "personality") : 999;
+  const hasSpecimenSkill = currentCreature?.creature.specimenSkill !== undefined;
+  const hasPersonalitySkill = currentCreature?.creature.personalitySkill !== undefined;
 
   // Sort creatures into front/back rows
   const sortCreaturesByPosition = (creatures: BattleCreature[]) => {
@@ -582,21 +594,34 @@ export function MultiCreatureBattleDisplay({
           >
             🗡️ ATTAQUER
           </button>
-          {canUseSkill && currentCreature.creature.skill && (
+          {/* Specimen Skill Button */}
+          {hasSpecimenSkill && currentCreature.creature.specimenSkill && (
             <button
-              onClick={onSkill}
-              disabled={
-                isActionProcessing ||
-                (currentCreature.skillCooldowns[currentCreature.creature.skill.name] || 0) > 0
-              }
-              className={`px-12 py-4 text-white text-xl font-bold rounded-xl shadow-lg transition-all ${
-                isActionProcessing ||
-                (currentCreature.skillCooldowns[currentCreature.creature.skill.name] || 0) > 0
+              onClick={() => onFirstSkill && onFirstSkill()}
+              disabled={isActionProcessing || specimenCooldown > 0}
+              className={`px-8 py-4 text-white text-lg font-bold rounded-xl shadow-lg transition-all ${
+                isActionProcessing || specimenCooldown > 0
                   ? "from-gray-400 to-gray-500 cursor-not-allowed opacity-50"
-                  : "bg-gradient-to-r from-purple-500 to-purple-600 hover:shadow-xl transform hover:scale-105"
+                  : "bg-gradient-to-r from-orange-500 to-orange-600 hover:shadow-xl transform hover:scale-105"
               }`}
+              title={currentCreature.creature.specimenSkill.name}
             >
-              ✨ SKILL: {currentCreature.creature.skill.name}
+              {specimenCooldown > 0 ? `🎯 SPÉCIMEN (${specimenCooldown})` : "🎯 SPÉCIMEN"}
+            </button>
+          )}
+          {/* Personality Skill Button */}
+          {hasPersonalitySkill && currentCreature.creature.personalitySkill && (
+            <button
+              onClick={() => onSecondSkill && onSecondSkill()}
+              disabled={isActionProcessing || personalityCooldown > 0}
+              className={`px-8 py-4 text-white text-lg font-bold rounded-xl shadow-lg transition-all ${
+                isActionProcessing || personalityCooldown > 0
+                  ? "from-gray-400 to-gray-500 cursor-not-allowed opacity-50"
+                  : "bg-gradient-to-r from-purple-500 to-purple-600 hover:shadow-lg transform hover:scale-105"
+              }`}
+              title={currentCreature.creature.personalitySkill.name}
+            >
+              {personalityCooldown > 0 ? `✨ PERSONNALITÉ (${personalityCooldown})` : "✨ PERSONNALITÉ"}
             </button>
           )}
           {/* No global switch button - switch is handled per-creature */}
