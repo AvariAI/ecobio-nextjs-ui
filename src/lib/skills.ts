@@ -206,18 +206,17 @@ export const SPECIMEN_SKILLS: Record<string, Skill> = {
   fly: {
     id: "fly_infiltration",
     name: "Attaque Sournoise",
-    description: "Infiltrate and bypass front row: strike a back-row target for +40% damage (breaks their protection)",
+    description: "Infiltrate and bypass front row tanks: strike a back-row target for normal damage (breaks their protection)",
     creatureId: "fly",
     source: "specimen",
     type: "offensive",
     effect: "attack",
-    value: 0.40,  // +40% bonus damage
+    value: 1.0,  // Normal damage, no bonus
     duration: 0,
     cooldown: 3,
-    target: "back",  // Attack back row directly, bypassing front row tanks
+    target: "back",  // Attack back row directly, bypassing front row protection
     level: 1,
     effects: {
-      offenseMultiplier: 1.40,  // 140% total damage
       effectDuration: 0,
     }
   },
