@@ -90,6 +90,210 @@ export interface BattleLogEntry {
   type?: "info" | "critical" | "damage" | "victory" | "defeat" | "skill" | "dodge" | "miss";
 }
 
+interface CreatureDetailModalProps {
+  creature: BattleCreature;
+  show: boolean;
+  onClose: () => void;
+}
+
+function CreatureDetailModal({ creature, show, onClose }: CreatureDetailModalProps) {
+  if (!show) return null;
+
+  const hpPercent = (creature.currentHP / creature.stats.hp) * 100;
+  const isDead = creature.currentHP <= 0;
+
+  // Calculate buffed stats
+  const buffedStats = getBuffedStats(creature);
+
+  // Status effects
+  const hasStun = creature.statusEffects.some(e => e.type === "stun");
+  const hasPoison = creature.statusEffects.some(e => e.type === "poison");
+  const hasSlow = creature.statusEffects.some(e => e.type === "slow");
+  const slowEffect = creature.statusEffects.find(e => e.type === "slow");
+  const poisonEffect = creature.statusEffects.find(e => e.type === "poison");
+
+  // Buffs
+  const defenseBuffActive = buffedStats.activeBuffs.defenseBuff !== null;
+  const dodgeBuffActive = buffedStats.activeBuffs.dodgeBuff !== null;
+  const attackBuffActive = buffedStats.activeBuffs.attackBuff !== null;
+
+  // Skill cooldown
+  const skillOnCooldown = creature.creature.skill
+    ? Object.entries(creature.skillCooldowns).some(([k, v]) => k.startsWith(creature.creature.skill!.name) && v > 0)
+    : false;
+
+  const creatureImage = getCreatureImagePath(creature.creature.id, creature.stats.rank);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div
+        className={`bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-md w-full ${isDead ? "grayscale" : ""}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold">{creature.name}</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-2xl"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Creature Image */}
+        <div className="mb-4">
+          <img
+            src={creatureImage}
+            alt={creature.name}
+            className="w-full h-48 object-cover rounded-xl border-2 border-gray-300 dark:border-gray-600"
+          />
+        </div>
+
+        {/* Status Badges */}
+        <div className="flex gap-2 flex-wrap mb-4">
+          <span className="px-3 py-1 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 dark:from-emerald-900 dark:to-teal-900 text-emerald-700 dark:text-emerald-300 font-semibold">
+            Pos {(creature.position || 0) + 1}
+          </span>
+          <span className="px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 font-semibold">
+            R{creature.stats.rank}
+          </span>
+          {hasStun && <span className="px-3 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-200 font-semibold">💫 Étourdi</span>}
+          {hasPoison && <span className="px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-200 font-semibold">☠️ Poison ({poisonEffect?.duration}t)</span>}
+          {hasSlow && <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 font-semibold">🐌 Lent ({slowEffect?.duration}t)</span>}
+        </div>
+
+        {/* HP Bar */}
+        <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+          <div className="flex justify-between text-sm mb-2">
+            <span className="font-semibold">HP</span>
+            <span className="font-bold text-lg">{creature.currentHP} / {creature.stats.hp}</span>
+          </div>
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
+            <div
+              className={`h-full rounded-full transition-all ${
+                isDead
+                  ? "bg-gray-400"
+                  : hpPercent > 50
+                  ? "bg-gradient-to-r from-green-400 to-green-600"
+                  : hpPercent > 25
+                  ? "bg-gradient-to-r from-yellow-400 to-yellow-600"
+                  : "bg-gradient-to-r from-red-400 to-red-600"
+              }`}
+              style={{ width: `${hpPercent}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="mb-4">
+          <h3 className="font-bold mb-2 text-sm uppercase tracking-wide text-gray-500">Stats</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-gray-50 dark:bg-gray-700 rounded p-3">
+              <p className="text-xs text-gray-500 uppercase">ATK</p>
+              {attackBuffActive ? (
+                <div>
+                  <p className="font-bold text-red-600 text-lg">{buffedStats.attack}</p>
+                  <p className="text-xs text-red-500">+{buffedStats.bonuses.attack} (buff)</p>
+                </div>
+              ) : (
+                <p className="font-bold text-lg">{creature.stats.attack}</p>
+              )}
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-700 rounded p-3">
+              <p className="text-xs text-gray-500 uppercase">DEF</p>
+              {defenseBuffActive ? (
+                <div>
+                  <p className="font-bold text-blue-600 text-lg">{buffedStats.defense}</p>
+                  <p className="text-xs text-blue-500">+{buffedStats.bonuses.defense} (buff)</p>
+                </div>
+              ) : (
+                <p className="font-bold text-lg">{creature.stats.defense}</p>
+              )}
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-700 rounded p-3">
+              <p className="text-xs text-gray-500 uppercase">SPD</p>
+              {hasSlow && slowEffect ? (
+                <div>
+                  <p className="font-bold text-blue-600 text-lg">{Math.floor(creature.stats.speed * (1 - (slowEffect.value || 0)))}</p>
+                  <p className="text-xs text-blue-500">-{Math.floor((slowEffect.value || 0) * 100)}% (slow)</p>
+                </div>
+              ) : (
+                <p className="font-bold text-lg">{creature.stats.speed}</p>
+              )}
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-700 rounded p-3">
+              <p className="text-xs text-gray-500 uppercase">CRIT</p>
+              <p className="font-bold text-lg">{creature.stats.crit}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Skill */}
+        {creature.creature.skill && (
+          <div className="mb-4 p-3 bg-purple-50 dark:bg-purple-900 rounded-lg">
+            <h3 className="font-bold mb-2 text-sm uppercase tracking-wide text-purple-700 dark:text-purple-300">Skill</h3>
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <p className="font-bold text-lg">{creature.creature.skill.name}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">{creature.creature.skill.description}</p>
+                <p className="text-xs text-gray-500 mt-1">Cooldown: {creature.creature.skill.cooldown} tours</p>
+              </div>
+              <div className="ml-4 text-right">
+                {skillOnCooldown ? (
+                  <span className="px-3 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-full font-semibold text-sm">
+                    CD: {Object.entries(creature.skillCooldowns)
+                      .filter(([k, v]) => k.startsWith(creature.creature.skill!.name) && v > 0)
+                      .map(([, v]) => v)
+                      .join(',')}t
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full font-semibold text-sm">
+                    ✓ Ready
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Active Buffs */}
+        {(defenseBuffActive || dodgeBuffActive || attackBuffActive) && (
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
+            <h3 className="font-bold mb-2 text-sm uppercase tracking-wide text-blue-700 dark:text-blue-300">Buffs Actifs</h3>
+            <div className="space-y-1 text-sm">
+              {attackBuffActive && buffedStats.activeBuffs.attackBuff && (
+                <div className="text-red-600 dark:text-red-400 font-semibold">
+                  ⚔️ ATK +{Math.floor(buffedStats.activeBuffs.attackBuff.value * 100)}% ({buffedStats.activeBuffs.attackBuff.turns}t restants)
+                </div>
+              )}
+              {defenseBuffActive && buffedStats.activeBuffs.defenseBuff && (
+                <div className="text-blue-600 dark:text-blue-400 font-semibold">
+                  🛡️ DEF +{Math.floor(buffedStats.activeBuffs.defenseBuff.value * 100)}% ({buffedStats.activeBuffs.defenseBuff.turns}t restants)
+                </div>
+              )}
+              {dodgeBuffActive && buffedStats.activeBuffs.dodgeBuff && (
+                <div className="text-green-600 dark:text-green-400 font-semibold">
+                  💨 Dodge +{Math.floor(buffedStats.activeBuffs.dodgeBuff.value * 100)}% ({buffedStats.activeBuffs.dodgeBuff.turns}t restants)
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="w-full px-4 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg font-semibold transition-colors"
+        >
+          Fermer
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
 export function BattleLogDisplay({ log }: { log: BattleLogEntry[] }) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
@@ -139,6 +343,11 @@ interface MultiCreatureBattleDisplayProps {
   onCloseSwapSelector?: () => void;
   onOpenSwapSelector?: (creature: BattleCreature) => void;
   onConfirmSwap?: (targetCreature: BattleCreature) => void;
+  // Creature detail modal props
+  showCreatureDetail?: boolean;
+  detailCreature?: BattleCreature | null;
+  onCloseCreatureDetail?: () => void;
+  onViewCreatureDetails?: (creature: BattleCreature) => void;
 }
 
 export function MultiCreatureBattleDisplay({
@@ -158,6 +367,10 @@ export function MultiCreatureBattleDisplay({
   onCloseSwapSelector,
   onOpenSwapSelector,
   onConfirmSwap,
+  showCreatureDetail = false,
+  detailCreature = null,
+  onCloseCreatureDetail,
+  onViewCreatureDetails,
 }: MultiCreatureBattleDisplayProps) {
   const isPlayerTurn = turn === "player";
   const currentCreature = currentActingCreature;
@@ -239,6 +452,7 @@ export function MultiCreatureBattleDisplay({
               canSwitch={(isPlayerTurn && currentCreature && currentCreature.currentHP > 0 && onSwitchPosition !== undefined) ?? false}
               onSwitchPosition={onSwitchPosition}
               onOpenSwapSelector={onOpenSwapSelector}
+              onViewCreatureDetails={onViewCreatureDetails}
             />
 
             {/* Back Row */}
@@ -250,6 +464,7 @@ export function MultiCreatureBattleDisplay({
               canSwitch={(isPlayerTurn && currentCreature && currentCreature.currentHP > 0 && onSwitchPosition !== undefined) ?? false}
               onSwitchPosition={onSwitchPosition}
               onOpenSwapSelector={onOpenSwapSelector}
+              onViewCreatureDetails={onViewCreatureDetails}
             />
           </div>
         )}
@@ -270,6 +485,7 @@ export function MultiCreatureBattleDisplay({
               canSwitch={false}
               onSwitchPosition={undefined}
               onOpenSwapSelector={undefined}
+              onViewCreatureDetails={onViewCreatureDetails}
             />
 
             {/* Back Row */}
@@ -281,6 +497,7 @@ export function MultiCreatureBattleDisplay({
               canSwitch={false}
               onSwitchPosition={undefined}
               onOpenSwapSelector={undefined}
+              onViewCreatureDetails={onViewCreatureDetails}
             />
           </div>
         )}
@@ -331,6 +548,15 @@ export function MultiCreatureBattleDisplay({
           onClose={onCloseSwapSelector || (() => {})}
         />
       )}
+
+      {/* Creature Detail Modal */}
+      {showCreatureDetail && detailCreature && (
+        <CreatureDetailModal
+          creature={detailCreature}
+          show={showCreatureDetail}
+          onClose={onCloseCreatureDetail || (() => {})}
+        />
+      )}
       </div>
     </>
   );
@@ -344,6 +570,7 @@ interface TeamRowDisplayProps {
   canSwitch: boolean;
   onSwitchPosition?: (creatureA: BattleCreature, creatureB: BattleCreature) => void;
   onOpenSwapSelector?: (creature: BattleCreature) => void;
+  onViewCreatureDetails?: (creature: BattleCreature) => void;
 }
 
 function TeamRowDisplay({
@@ -354,6 +581,7 @@ function TeamRowDisplay({
   canSwitch,
   onSwitchPosition,
   onOpenSwapSelector,
+  onViewCreatureDetails,
 }: TeamRowDisplayProps) {
   const isFrontRow = rowType === "front";
   const positions = isFrontRow ? getFrontRowPositions(teamSize) : getBackRowPositions(teamSize);
@@ -388,8 +616,9 @@ function TeamRowDisplay({
             className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 border-2 transition-all relative ${
               creature === currentActingCreature
                 ? "border-yellow-400 ring-2 ring-yellow-400"
-                : "border-gray-200 dark:border-gray-700"
+                : "border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600 cursor-pointer"
             } ${isFrontRow ? "" : "opacity-90"} ${creature.currentHP <= 0 ? "opacity-50" : ""}`}
+            onClick={() => onViewCreatureDetails && onViewCreatureDetails(creature)}
           >
             <CompactCreatureDisplay creature={creature} />
 
@@ -401,7 +630,8 @@ function TeamRowDisplay({
             {/* Switch button (only on player team) */}
             {canSwitch && team.teamId === "player" && creature.currentHP > 0 && (
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   if (onOpenSwapSelector) {
                     onOpenSwapSelector(creature);
                   }
@@ -577,17 +807,18 @@ function CompactCreatureDisplay({ creature }: CompactCreatureDisplayProps) {
 
   return (
     <div className={isDead ? "grayscale" : ""}>
-      {/* Creature Image */}
-      <div className="mb-2">
+      {/* Creature Image - Full height, not banner */}
+      <div className="mb-3">
         <img
           src={creatureImage}
           alt={creature.name}
-          className="w-full h-16 object-cover rounded-lg border border-gray-300 dark:border-gray-600"
+          className="w-full h-28 object-cover rounded-lg border-2 border-gray-300 dark:border-gray-600"
         />
       </div>
 
+      {/* Name + Badges row */}
       <div className="flex items-center justify-between mb-2 pr-8">
-        <h4 className="font-bold text-lg">{creature.name}</h4>
+        <h4 className="font-bold text-base">{creature.name}</h4>
         <div className="flex gap-1 flex-wrap">
           {/* Status Effects */}
           {hasStun && <span className="px-2 py-0.5 bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 text-xs rounded-full">💫</span>}
@@ -612,20 +843,20 @@ function CompactCreatureDisplay({ creature }: CompactCreatureDisplayProps) {
         </div>
       </div>
 
-      {/* Position Badge */}
-      <div className="mb-1">
+      {/* Position Badge (small) */}
+      <div className="mb-2 flex items-center gap-2">
         <span className="text-xs font-semibold px-2 py-0.5 rounded bg-gradient-to-r from-emerald-100 to-teal-100 dark:from-emerald-900 dark:to-teal-900 text-emerald-700 dark:text-emerald-300">
           Pos {(creature.position || 0) + 1}
         </span>
       </div>
 
-      {/* HP Bar */}
+      {/* HP Bar Only */}
       <div className="mb-2">
-        <div className="flex justify-between text-sm mb-1">
-          <span>HP</span>
-          <span className="font-bold">{creature.currentHP} / {creature.stats.hp}</span>
+        <div className="flex justify-between text-xs mb-1">
+          <span className="font-semibold">HP</span>
+          <span className="font-bold text-sm">{creature.currentHP} / {creature.stats.hp}</span>
         </div>
-        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
           <div
             className={`h-full rounded-full transition-all ${
               isDead
@@ -641,88 +872,29 @@ function CompactCreatureDisplay({ creature }: CompactCreatureDisplayProps) {
         </div>
       </div>
 
-      {/* Stats with Buff Bonuses */}
-      <div className="grid grid-cols-4 gap-1 text-xs text-center">
-        <div className="bg-gray-100 dark:bg-gray-700 rounded p-1">
-          <p className="text-gray-500">ATK</p>
-          {attackBuffActive ? (
-            <div>
-              <p className="font-bold text-red-600">{buffedStats.attack}</p>
-              <p className="text-xs text-red-500">+{buffedStats.bonuses.attack}</p>
-            </div>
-          ) : (
-            <p className="font-bold">{creature.stats.attack}</p>
-          )}
-        </div>
-        <div className="bg-gray-100 dark:bg-gray-700 rounded p-1">
-          <p className="text-gray-500">DEF</p>
-          {defenseBuffActive ? (
-            <div>
-              <p className="font-bold text-blue-600">{buffedStats.defense}</p>
-              <p className="text-xs text-blue-500">+{buffedStats.bonuses.defense}</p>
-            </div>
-          ) : (
-            <p className="font-bold">{creature.stats.defense}</p>
-          )}
-        </div>
-        <div className="bg-gray-100 dark:bg-gray-700 rounded p-1">
-          <p className="text-gray-500">SPD</p>
-          {hasSlow && slowEffect ? (
-            <div>
-              <p className="font-bold text-blue-600">{Math.floor(creature.stats.speed * (1 - (slowEffect.value || 0)))}</p>
-              <p className="text-xs text-blue-500">-{Math.floor((slowEffect.value || 0) * 100)}%</p>
-            </div>
-          ) : (
-            <p className="font-bold">{creature.stats.speed}</p>
-          )}
-        </div>
-        <div className="bg-gray-100 dark:bg-gray-700 rounded p-1">
-          <p className="text-gray-500">CRIT</p>
-          <p className="font-bold">{creature.stats.crit}</p>
-        </div>
+      {/* Active Status/Buff Summary */}
+      <div className="flex gap-1 flex-wrap text-xs">
+        {/* Status Effects */}
+        {hasStun && <span className="px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-200 rounded">💫</span>}
+        {hasPoison && <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-200 rounded">☠️</span>}
+        {hasSlow && <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 rounded">🐌</span>}
+        {/* Buffs */}
+        {attackBuffActive && buffedStats.activeBuffs.attackBuff && (
+          <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded font-semibold">
+            ⚔️+{Math.floor(buffedStats.activeBuffs.attackBuff.value * 100)}%
+          </span>
+        )}
+        {defenseBuffActive && buffedStats.activeBuffs.defenseBuff && (
+          <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 rounded font-semibold">
+            🛡️+{Math.floor(buffedStats.activeBuffs.defenseBuff.value * 100)}%
+          </span>
+        )}
+        {dodgeBuffActive && buffedStats.activeBuffs.dodgeBuff && (
+          <span className="px-1.5 py-0.5 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 rounded font-semibold">
+            💨+{Math.floor(buffedStats.activeBuffs.dodgeBuff.value * 100)}%
+          </span>
+        )}
       </div>
-
-      {/* Skill Info */}
-      {creature.creature.skill && (
-        <div className="mt-2 pt-2 border-t text-xs">
-          <div className="flex justify-between items-center">
-            <span>✨ {creature.creature.skill.name}</span>
-            {skillOnCooldown ? (
-              <span className="text-red-500 font-semibold">
-                CD: {Object.entries(creature.skillCooldowns)
-                  .filter(([k, v]) => k.startsWith(creature.creature.skill!.name) && v > 0)
-                  .map(([, v]) => v)
-                  .join(',')}t
-              </span>
-            ) : (
-              <span className="text-green-500">✓ Ready</span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Active Buffs with Duration */}
-      {(defenseBuffActive || dodgeBuffActive || attackBuffActive) && (
-        <div className="mt-2 pt-2 border-t text-xs">
-          <div className="space-y-0.5">
-            {defenseBuffActive && buffedStats.activeBuffs.defenseBuff && (
-              <div className="text-blue-600 dark:text-blue-400">
-                🛡️ DEF +{Math.floor(buffedStats.activeBuffs.defenseBuff.value * 100)}% ({buffedStats.activeBuffs.defenseBuff.turns}t)
-              </div>
-            )}
-            {dodgeBuffActive && buffedStats.activeBuffs.dodgeBuff && (
-              <div className="text-green-600 dark:text-green-400">
-                💨 Dodge +{Math.floor(buffedStats.activeBuffs.dodgeBuff.value * 100)}% ({buffedStats.activeBuffs.dodgeBuff.turns}t)
-              </div>
-            )}
-            {attackBuffActive && buffedStats.activeBuffs.attackBuff && (
-              <div className="text-red-600 dark:text-red-400">
-                ⚔️ ATK +{Math.floor(buffedStats.activeBuffs.attackBuff.value * 100)}% ({buffedStats.activeBuffs.attackBuff.turns}t)
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

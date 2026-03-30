@@ -158,6 +158,10 @@ export default function BattlePage() {
   const [showSwapSelector, setShowSwapSelector] = useState(false);
   const [swapSourceCreature, setSwapSourceCreature] = useState<BattleCreature | null>(null);
 
+  // Creature detail modal state
+  const [showCreatureDetail, setShowCreatureDetail] = useState(false);
+  const [detailCreature, setDetailCreature] = useState<BattleCreature | null>(null);
+
   // Load collection from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("ecobio-collection");
@@ -1062,6 +1066,17 @@ export default function BattlePage() {
     }
   };
 
+  // Creature detail handlers
+  const handleViewCreatureDetails = (creature: BattleCreature) => {
+    setDetailCreature(creature);
+    setShowCreatureDetail(true);
+  };
+
+  const handleCloseCreatureDetail = () => {
+    setShowCreatureDetail(false);
+    setDetailCreature(null);
+  };
+
   const handleSkill = () => {
     if (isActionProcessing) return; // Prevent multiple actions in same turn
 
@@ -1644,6 +1659,10 @@ export default function BattlePage() {
               setShowSwapSelector(false);
               setSwapSourceCreature(null);
             }}
+            showCreatureDetail={showCreatureDetail}
+            detailCreature={detailCreature}
+            onCloseCreatureDetail={handleCloseCreatureDetail}
+            onViewCreatureDetails={handleViewCreatureDetails}
           />
         )}
 
