@@ -768,14 +768,17 @@ export function useSkill(
 
     // Deal damage
     targets.forEach(target => {
-      const damage = Math.floor(battleCreature.stats.attack * skill.value);
-      const finalDamage = Math.max(1, damage - Math.floor(target.stats.defense / 2));
-      target.currentHP = Math.max(0, target.currentHP - finalDamage);
+      const rawDamage = battleCreature.stats.attack * skill.value;
+      const damage = Math.floor(rawDamage);
+      const defenseReduction = Math.floor(target.stats.defense / 2);
+      const finalDamage = Math.max(1, damage - defenseReduction);
 
       log.push({
-        text: `${battleCreature.name} utilise ${skill.name} sur ${target.name}: ${finalDamage} dégâts`,
+        text: `${battleCreature.name} utilise ${skill.name} sur ${target.name}: ATK=${battleCreature.stats.attack}, skill.value=${skill.value}, rawDamage=${rawDamage.toFixed(2)}, damage=${damage}, DEF=${target.stats.defense}, defenseReduction=${defenseReduction}, finalDamage=${finalDamage} dégâts`,
         type: "damage",
       });
+
+      target.currentHP = Math.max(0, target.currentHP - finalDamage);
 
       battleCreature.damageDealt += finalDamage;
 
