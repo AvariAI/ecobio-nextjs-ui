@@ -322,6 +322,9 @@ export function getEffectiveSpeed(creature: BattleCreature): number {
   // Check both old statusEffects and new buffs (for transition period)
   let totalSlowReduction = getBuffValueByType(creature, BuffType.SLOW);
 
+  // NEW: Add speed boost support
+  let totalSpeedBoost = getBuffValueByType(creature, BuffType.SPEED);
+
   // Also check legacy statusEffects for backward compatibility
   const slowEffects = getStatusEffects(creature, StatusEffectType.SLOW);
   for (const effect of slowEffects) {
@@ -330,7 +333,11 @@ export function getEffectiveSpeed(creature: BattleCreature): number {
 
   // Cap at 50% reduction
   totalSlowReduction = Math.min(totalSlowReduction, 0.5);
-  return Math.floor(creature.stats.speed * (1 - totalSlowReduction));
+
+  // Cap speed boost at 40% (consistent with dodge chance cap)
+  totalSpeedBoost = Math.min(totalSpeedBoost, 0.40);
+
+  return Math.floor(creature.stats.speed * (1 - totalSlowReduction + totalSpeedBoost));
 }
 
 /**
