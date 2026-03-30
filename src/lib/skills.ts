@@ -15,7 +15,7 @@ export interface Skill {
   level: number;  // 1-5, scales effects
 
   // Original battle.ts fields (for compatibility)
-  effect: "defense" | "dodge" | "attack" | "heal" | "debuff" | "special" | "aoe_damage";
+  effect: "defense" | "dodge" | "speed" | "attack" | "heal" | "debuff" | "special" | "aoe_damage";
   value: number;
   duration: number;
   cooldown: number;
@@ -25,6 +25,7 @@ export interface Skill {
   effects: {
     offenseMultiplier?: number;
     dodgeChance?: number;
+    speedBonus?: number;  // NEW for speed buffs
     damageReduction?: number;
     defenseRedirect?: number;
     healPercent?: number;
@@ -85,18 +86,18 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
   rapide: {
     id: "rapide_base",
     name: "Esquive Aérienne",
-    description: "+40% esquive pour soi + allié menacé (2 tours)",
+    description: "+40% vitesse pour soi-même + allié menacé (2 tours)",
     archetype: "rapide",
     source: "personality",
     type: "utility",
-    effect: "dodge",
-    value: 0.40,  // 40% dodge
+    effect: "speed",  // Changed from "dodge" to "speed" - speed-based dodge formula
+    value: 0.40,  // 40% speed boost
     duration: 2,
     cooldown: 4,
     target: "self",
     level: 1,
     effects: {
-      dodgeChance: 0.40,
+      speedBonus: 0.40,
       allyBoostSelf: true,
       effectDuration: 2,
     }

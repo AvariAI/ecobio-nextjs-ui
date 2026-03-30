@@ -50,11 +50,12 @@ export interface StatModifiers {
 export enum BuffType {
   ATTACK = "attack",
   DEFENSE = "defense",
-  DODGE = "dodge",
+  DODGE = "dodge",  // Kept for backward compatibility
   HEAL = "heal",
   POISON = "poison",
   SLOW = "slow",
   STUN = "stun",
+  SPEED = "speed",  // NEW: Speed buff (increases both turn order and dodge chance)
 }
 
 export interface ActiveBuff {
@@ -707,6 +708,8 @@ export function useSkill(
     buffType = BuffType.DEFENSE;
   } else if (skill.effect === "dodge") {
     buffType = BuffType.DODGE;
+  } else if (skill.effect === "speed") {  // NEW
+    buffType = BuffType.SPEED;
   } else if (skill.effect === "attack") {
     buffType = BuffType.ATTACK;
   } else if (skill.effect === "heal") {
@@ -905,6 +908,7 @@ export function tickCooldownsAndBuffs(battleCreature: BattleCreature): void {
       [BuffType.POISON]: "Poison",
       [BuffType.SLOW]: "Slow",
       [BuffType.STUN]: "Stun",
+      [BuffType.SPEED]: "VIT",  // NEW
     };
     for (const buffType of expiredBuffs) {
       battleCreature.logBuffExpiration.push(buffTypeNames[buffType]);
