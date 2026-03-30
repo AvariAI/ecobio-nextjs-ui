@@ -39,6 +39,7 @@ export interface Skill {
     recoilPercent?: number;
     redirectionDamageReduction?: number;
     effectDuration?: number;
+    taunt?: boolean;  // NEW: Forces enemies to target this creature
   };
 }
 
@@ -67,18 +68,19 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
   protective: {
     id: "protective_base",
     name: "Forteresse",
-    description: "Redirige 50% des dégâts d'équipe vers soi-même pendant 2 tours",
+    description: "+60% DEF + Force les ennemis à cibler cette créature en priorité (2 tours)",
     archetype: "protective",
     source: "personality",
     type: "defensive",
     effect: "defense",
-    value: 0.5,  // 50% redirect
+    value: 0.60,  // 60% DEF boost
     duration: 2,
     cooldown: 4,
     target: "self",
     level: 1,
     effects: {
-      defenseRedirect: 0.50,
+      defenseRedirect: 0.60,  // Now acts as DEF boost
+      taunt: true,  // NEW: Forces enemy targeting
       effectDuration: 2,
     }
   },

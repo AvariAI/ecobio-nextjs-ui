@@ -17,6 +17,7 @@ import {
   createBattleCreature,
   getBuffExpirationMessages,
   BattleTeam,  // Import BattleTeam from battle.ts
+  hasTaunt,
 } from "./battle";
 
 export type TeamSize = 1 | 3 | 5;
@@ -111,6 +112,14 @@ export function selectTargetByPosition(
   // Ally targeting selects a random alive ally
   if (targetType === "ally") {
     return allAlive[Math.floor(Math.random() * allAlive.length)];
+  }
+
+  // TAUNT PRIORITY: If any enemy has taunt, target them first
+  // This overrides normal position-based targeting (including back-row targeting)
+  const tauntedCreatures = allAlive.filter(c => hasTaunt(c));
+  if (tauntedCreatures.length > 0) {
+    // Random taunted creature (if multiple have taunt)
+    return tauntedCreatures[Math.floor(Math.random() * tauntedCreatures.length)];
   }
 
   // If targeting specifically back row, skip front row check

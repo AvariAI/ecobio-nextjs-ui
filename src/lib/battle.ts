@@ -38,7 +38,8 @@ export enum BuffType {
   POISON = "poison",
   SLOW = "slow",
   STUN = "stun",
-  SPEED = "speed",  // NEW: Speed buff (increases both turn order and dodge chance)
+  SPEED = "speed",  // Speed buff (increases both turn order and dodge chance)
+  TAUNT = "taunt",  // NEW: Forces enemies to target this creature first
 }
 
 export interface ActiveBuff {
@@ -132,6 +133,14 @@ export function addBuff(
  */
 export function getBuffsByType(creature: BattleCreature, type: BuffType): ActiveBuff[] {
   return Object.values(creature.buffs).filter(b => b.type === type);
+}
+
+/**
+ * Check if a creature has taunt active
+ */
+export function hasTaunt(creature: BattleCreature): boolean {
+  const tauntBuffs = getBuffsByType(creature, BuffType.TAUNT);
+  return tauntBuffs.length > 0;
 }
 
 /**
@@ -752,9 +761,10 @@ function convertToSkillFormat(
       }
       break;
     case "defense":
-      // Forteresse redirects damage
+      // Forteresse v4: DEF boost + Taunt
       if (oldSkill.name === "Forteresse") {
-        effects.defenseRedirect = oldSkill.value;
+        effects.defenseRedirect = oldSkill.value;  // DEF bonus
+        effects.taunt = true;  // NEW: Forces enemy targeting
       } else {
         effects.damageReduction = oldSkill.value;
       }
@@ -823,7 +833,8 @@ export function tickCooldownsAndBuffs(battleCreature: BattleCreature): void {
       [BuffType.POISON]: "Poison",
       [BuffType.SLOW]: "Slow",
       [BuffType.STUN]: "Stun",
-      [BuffType.SPEED]: "VIT",  // NEW
+      [BuffType.SPEED]: "VIT",
+      [BuffType.TAUNT]: "Taunt",  // NEW
     };
     for (const buffType of expiredBuffs) {
       battleCreature.logBuffExpiration.push(buffTypeNames[buffType]);
@@ -1504,21 +1515,34 @@ function applyDefenseRedirectEffect(ctx: SkillExecutionContext, team: BattleTeam
   const { attacker, skill, log } = ctx;
   const effects = skill.effects;
 
-  const redirectPercent = effects.defenseRedirect || skill.value || 0;
+  const defBoostPercent = effects.defenseRedirect || skill.value || 0;
   const duration = effects.effectDuration || skill.duration || 2;
+  const hasTauntEffect = effects.taunt || false;
 
-  // Apply to self only (the tank)
+  // Apply DEF buff (tank becomes tankier)
   addBuff(
     attacker,
     BuffType.DEFENSE,
-    redirectPercent,
+    defBoostPercent,
     duration,
     skill.name,
     attacker.id
   );
 
+  // Apply taunt buff if Forteresse has taunt effect
+  if (hasTauntEffect) {
+    addBuff(
+      attacker,
+      BuffType.TAUNT,
+      1.0,  // Taunt is binary, value doesn't matter
+      duration,
+      skill.name,
+      attacker.id
+    );
+  }
+
   log.push({
-    text: `${attacker.name} utilise ${skill.name}: Redirige ${Math.floor(redirectPercent * 100)}% des dégâts d'équipe vers soi-même (${duration} tours)`,
+    text: `${attacker.name} utilise ${skill.name}: DEF +${Math.floor(defBoostPercent * 100)}%${hasTauntEffect ? " + TAUNT" : ""} (${duration} tours)`,
     type: "skill",
   });
 }
