@@ -718,10 +718,15 @@ export function useSkill(
     let targets: BattleCreature[] = [];
     if (targetTeam) {
       // Multi-battle mode: front row, back row, or all
+      const teamSize = targetTeam.creatures.length;
       if (skill.target === "front") {
-        targets = targetTeam.creatures.filter(c => c.currentHP > 0 && (c.position || 0) < Math.ceil(targetTeam.creatures.length / 2));
+        // Front row: positions 0 (1v1/3v3) or 0-1 (5v5)
+        const frontPositions = teamSize === 5 ? [0, 1] : teamSize === 3 ? [0] : [0];
+        targets = targetTeam.creatures.filter(c => c.currentHP > 0 && c.position !== undefined && frontPositions.includes(c.position));
       } else if (skill.target === "back") {
-        targets = targetTeam.creatures.filter(c => c.currentHP > 0 && (c.position || 0) >= Math.ceil(targetTeam.creatures.length / 2));
+        // Back row: positions 1-2 (3v3) or 2-3-4 (5v5)
+        const backPositions = teamSize === 5 ? [2, 3, 4] : teamSize === 3 ? [1, 2] : [];
+        targets = targetTeam.creatures.filter(c => c.currentHP > 0 && c.position !== undefined && backPositions.includes(c.position));
       } else if (skill.target === "all") {
         targets = targetTeam.creatures.filter(c => c.currentHP > 0);
       } else {
