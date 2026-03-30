@@ -187,18 +187,18 @@ export const SPECIMEN_SKILLS: Record<string, Skill> = {
   ant: {
     id: "ant_mandibles",
     name: "Morsure de Mandibules",
-    description: "Attaque la rangée avant ennemie avec la force combinée des mandibules (dégâts réduits à tous les ennemis avant)",
+    description: "Attaque la rangée avant ennemie avec la force combinée des mandibules (dégâts à tous les ennemis avant)",
     creatureId: "ant",
     source: "specimen",
     type: "offensive",
     effect: "aoe_damage",  // Changed from "attack" to "aoe_damage"
-    value: 0.5,  // 50% of base ATK damage to each front row target
+    value: 0.75,  // 75% of base ATK damage to each front row target (was 0.5)
     duration: 0,  // Instant
     cooldown: 4,
     target: "front",  // Front row (1-2 targets depending on team size)
     level: 1,
     effects: {
-      offenseMultiplier: 0.5,
+      offenseMultiplier: 0.75,  // Was 0.5
       effectDuration: 0,
     }
   },
