@@ -434,73 +434,129 @@ export function MultiCreatureBattleDisplay({
         </div>
       </div>
 
-      {/* Teams Display with Front/Back Row separation */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Player Team */}
-        {playerTeam && (
-          <div className="space-y-3">
-            <h3 className="text-xl font-bold text-blue-600 dark:text-blue-400">
-              🎮 Équipe Joueur ({countAliveCreatures(playerTeam)}/{turnOrder.filter(el => el.team === "player").length})
-            </h3>
+      {/* Teams Display - Horizontal Layout (Face to Face) */}
+      <div className="space-y-6">
+        {/* Front Row - Face to Face */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+          <div className="flex items-end gap-4">
+            {/* Player Front Row */}
+            <div className="flex-1">
+              <div className="mb-2 flex justify-between items-center">
+                <h3 className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                  🎮 AVANT
+                </h3>
+                <span className="text-xs text-gray-500">
+                  {playerTeam ? countAliveCreatures(playerTeam) : 0} / {turnOrder.filter(el => el.team === "player").length}
+                </span>
+              </div>
+              <div className="flex gap-2 justify-start">
+                {playerTeam && playerTeam.creatures
+                  .filter(c => (c.position || 0) < Math.ceil(teamSize / 2))
+                  .sort((a, b) => (a.position || 0) - (b.position || 0))
+                  .map((creature, i) => (
+                    <MiniCreatureCard
+                      key={i}
+                      creature={creature}
+                      isCurrent={creature === currentActingCreature}
+                      isPlayer={true}
+                      canSwitch={!!(isPlayerTurn && currentCreature && currentCreature.currentHP > 0 && onSwitchPosition !== undefined)}
+                      onOpenSwapSelector={onOpenSwapSelector}
+                      onViewDetails={onViewCreatureDetails}
+                    />
+                  ))}
+              </div>
+            </div>
 
-            {/* Front Row */}
-            <TeamRowDisplay
-              team={playerTeam}
-              rowType="front"
-              teamSize={teamSize}
-              currentActingCreature={currentActingCreature}
-              canSwitch={(isPlayerTurn && currentCreature && currentCreature.currentHP > 0 && onSwitchPosition !== undefined) ?? false}
-              onSwitchPosition={onSwitchPosition}
-              onOpenSwapSelector={onOpenSwapSelector}
-              onViewCreatureDetails={onViewCreatureDetails}
-            />
+            {/* VS Divider */}
+            <div className="px-6 py-4">
+              <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent">
+                VS
+              </div>
+            </div>
 
-            {/* Back Row */}
-            <TeamRowDisplay
-              team={playerTeam}
-              rowType="back"
-              teamSize={teamSize}
-              currentActingCreature={currentActingCreature}
-              canSwitch={(isPlayerTurn && currentCreature && currentCreature.currentHP > 0 && onSwitchPosition !== undefined) ?? false}
-              onSwitchPosition={onSwitchPosition}
-              onOpenSwapSelector={onOpenSwapSelector}
-              onViewCreatureDetails={onViewCreatureDetails}
-            />
+            {/* Enemy Front Row */}
+            <div className="flex-1">
+              <div className="mb-2 flex justify-between items-center">
+                <h3 className="text-sm font-bold text-red-600 dark:text-red-400">
+                  ⚔️ AVANT
+                </h3>
+                <span className="text-xs text-gray-500">
+                  {enemyTeam ? countAliveCreatures(enemyTeam) : 0} / {turnOrder.filter(el => el.team === "enemy").length}
+                </span>
+              </div>
+              <div className="flex gap-2 justify-end">
+                {enemyTeam && enemyTeam.creatures
+                  .filter(c => (c.position || 0) < Math.ceil(teamSize / 2))
+                  .sort((a, b) => (a.position || 0) - (b.position || 0))
+                  .map((creature, i) => (
+                    <MiniCreatureCard
+                      key={i}
+                      creature={creature}
+                      isCurrent={creature === currentActingCreature}
+                      isPlayer={false}
+                      canSwitch={false}
+                      onOpenSwapSelector={undefined}
+                      onViewDetails={onViewCreatureDetails}
+                    />
+                  ))}
+              </div>
+            </div>
           </div>
-        )}
+        </div>
 
-        {/* Enemy Team */}
-        {enemyTeam && (
-          <div className="space-y-3">
-            <h3 className="text-xl font-bold text-red-600 dark:text-red-400">
-              ⚔️ Équipe Ennemi ({countAliveCreatures(enemyTeam)}/{turnOrder.filter(el => el.team === "enemy").length})
-            </h3>
+        {/* Back Row - Face to Face */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+          <div className="flex items-end gap-4">
+            {/* Player Back Row */}
+            <div className="flex-1">
+              <h3 className="mb-2 text-sm font-bold text-blue-600 dark:text-blue-400">
+                ➡️ ARRIÈRE
+              </h3>
+              <div className="flex gap-2 justify-start">
+                {playerTeam && playerTeam.creatures
+                  .filter(c => (c.position || 0) >= Math.ceil(teamSize / 2))
+                  .sort((a, b) => (a.position || 0) - (b.position || 0))
+                  .map((creature, i) => (
+                    <MiniCreatureCard
+                      key={i}
+                      creature={creature}
+                      isCurrent={creature === currentActingCreature}
+                      isPlayer={true}
+                      canSwitch={!!(isPlayerTurn && currentCreature && currentCreature.currentHP > 0 && onSwitchPosition !== undefined)}
+                      onOpenSwapSelector={onOpenSwapSelector}
+                      onViewDetails={onViewCreatureDetails}
+                    />
+                  ))}
+              </div>
+            </div>
 
-            {/* Front Row */}
-            <TeamRowDisplay
-              team={enemyTeam}
-              rowType="front"
-              teamSize={teamSize}
-              currentActingCreature={currentActingCreature}
-              canSwitch={false}
-              onSwitchPosition={undefined}
-              onOpenSwapSelector={undefined}
-              onViewCreatureDetails={onViewCreatureDetails}
-            />
+            {/* Empty space for alignment */}
+            <div className="px-6 py-4"></div>
 
-            {/* Back Row */}
-            <TeamRowDisplay
-              team={enemyTeam}
-              rowType="back"
-              teamSize={teamSize}
-              currentActingCreature={currentActingCreature}
-              canSwitch={false}
-              onSwitchPosition={undefined}
-              onOpenSwapSelector={undefined}
-              onViewCreatureDetails={onViewCreatureDetails}
-            />
+            {/* Enemy Back Row */}
+            <div className="flex-1">
+              <h3 className="mb-2 text-sm font-bold text-red-600 dark:text-red-400">
+                ⬅️ ARRIÈRE
+              </h3>
+              <div className="flex gap-2 justify-end">
+                {enemyTeam && enemyTeam.creatures
+                  .filter(c => (c.position || 0) >= Math.ceil(teamSize / 2))
+                  .sort((a, b) => (a.position || 0) - (b.position || 0))
+                  .map((creature, i) => (
+                    <MiniCreatureCard
+                      key={i}
+                      creature={creature}
+                      isCurrent={creature === currentActingCreature}
+                      isPlayer={false}
+                      canSwitch={false}
+                      onOpenSwapSelector={undefined}
+                      onViewDetails={onViewCreatureDetails}
+                    />
+                  ))}
+              </div>
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Action Buttons (only on player turn) */}
@@ -978,6 +1034,112 @@ export function MultiCreatureBattleCompleteDisplay({
           🔄 COMBAT NOUVEAU
         </button>
       </div>
+    </div>
+  );
+}
+
+interface MiniCreatureCardProps {
+  creature: BattleCreature;
+  isCurrent: boolean;
+  isPlayer: boolean;
+  canSwitch: boolean;
+  onOpenSwapSelector?: (creature: BattleCreature) => void;
+  onViewDetails?: (creature: BattleCreature) => void;
+}
+
+function MiniCreatureCard({ creature, isCurrent, isPlayer, canSwitch, onOpenSwapSelector, onViewDetails }: MiniCreatureCardProps) {
+  const hpPercent = (creature.currentHP / creature.stats.hp) * 100;
+  const isDead = creature.currentHP <= 0;
+
+  const buffedStats = getBuffedStats(creature);
+
+  const hasStun = creature.statusEffects.some(e => e.type === "stun");
+  const hasPoison = creature.statusEffects.some(e => e.type === "poison");
+  const hasSlow = creature.statusEffects.some(e => e.type === "slow");
+
+  const defenseBuffActive = buffedStats.activeBuffs.defenseBuff !== null;
+  const dodgeBuffActive = buffedStats.activeBuffs.dodgeBuff !== null;
+  const attackBuffActive = buffedStats.activeBuffs.attackBuff !== null;
+
+  const creatureImage = getCreatureImagePath(creature.creature.id, creature.stats.rank);
+
+  return (
+    <div
+      className={`relative bg-white dark:bg-gray-700 rounded-lg shadow-md border-2 transition-all cursor-pointer ${
+        isCurrent
+          ? "border-yellow-400 ring-2 ring-yellow-400 scale-105"
+          : "border-gray-200 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500"
+      } ${isDead ? "opacity-40 grayscale" : ""}`}
+      onClick={() => onViewDetails && onViewDetails(creature)}
+    >
+      {/* Creature Image - Small & Compact */}
+      <div className="mb-1">
+        <img
+          src={creatureImage}
+          alt={creature.name}
+          className="w-20 h-20 object-cover rounded"
+        />
+      </div>
+
+      {/* Name */}
+      <div className="px-1 mb-1">
+        <h4 className="font-bold text-xs truncate text-center">{creature.name}</h4>
+      </div>
+
+      {/* HP Bar - Compact */}
+      <div className="px-1 mb-1">
+        <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+          <div
+            className={`h-full rounded-full transition-all ${
+              isDead
+                ? "bg-gray-400"
+                : hpPercent > 50
+                ? "bg-gradient-to-r from-green-400 to-green-600"
+                : hpPercent > 25
+                ? "bg-gradient-to-r from-yellow-400 to-yellow-600"
+                : "bg-gradient-to-r from-red-400 to-red-600"
+            }`}
+            style={{ width: `${hpPercent}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Status/Buff Badges - Micro */}
+      <div className="px-1 flex justify-center gap-1 flex-wrap text-xs">
+        {hasStun && <span className="w-5 h-5 flex items-center justify-center rounded bg-yellow-100 dark:bg-yellow-900 text-yellow-700">💫</span>}
+        {hasPoison && <span className="w-5 h-5 flex items-center justify-center rounded bg-purple-100 dark:bg-purple-900 text-purple-700">☠️</span>}
+        {hasSlow && <span className="w-5 h-5 flex items-center justify-center rounded bg-blue-100 dark:bg-blue-900 text-blue-700">🐌</span>}
+        {attackBuffActive && buffedStats.activeBuffs.attackBuff && (
+          <span className="px-1 rounded bg-red-100 dark:bg-red-900 text-red-700 font-bold text-xs">⚔️</span>
+        )}
+        {defenseBuffActive && buffedStats.activeBuffs.defenseBuff && (
+          <span className="px-1 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 font-bold text-xs">🛡️</span>
+        )}
+        {dodgeBuffActive && buffedStats.activeBuffs.dodgeBuff && (
+          <span className="px-1 rounded bg-green-100 dark:bg-green-900 text-green-700 font-bold text-xs">💨</span>
+        )}
+      </div>
+
+      {/* Position Indicator - Tiny */}
+      <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-[10px] font-bold text-gray-600 dark:text-gray-300">
+        {(creature.position || 0) + 1}
+      </div>
+
+      {/* Swap Button - Tiny */}
+      {canSwitch && isPlayer && creature.currentHP > 0 && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onOpenSwapSelector) {
+              onOpenSwapSelector(creature);
+            }
+          }}
+          className="absolute bottom-1 right-1 w-5 h-5 flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white rounded-full text-xs"
+          title="Change position"
+        >
+          🔄
+        </button>
+      )}
     </div>
   );
 }
