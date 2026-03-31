@@ -1928,7 +1928,19 @@ function applyRoueDuDestinCooldownReset(ctx: SkillExecutionContext, targets: Bat
     }
 
     if (creatureCooldowns.length > 0) {
-      alliesWithCooldowns.push({ creature, cooldowns: creatureCooldowns });
+      // Allow target to be attacker (self-cast) if it's the only surviving ally
+      const isSelf = creature.id === attacker.id;
+      const hasOtherAllies = allyTeam.some(c => c.id !== attacker.id && c.currentHP > 0);
+
+      if (hasOtherAllies) {
+        // Multiple allies: prefer others over self
+        if (!isSelf) {
+          alliesWithCooldowns.push({ creature, cooldowns: creatureCooldowns });
+        }
+      } else {
+        // Only survivor (just attacker alive): allow self-cast
+        alliesWithCooldowns.push({ creature, cooldowns: creatureCooldowns });
+      }
     }
   });
 
@@ -1977,10 +1989,19 @@ function applyRoueDuDestinCooldownReset(ctx: SkillExecutionContext, targets: Bat
     }
   });
 
-  log.push({
-    text: `🎰 Roue du Destin: ${attacker.name} a activé ${targetAlly.name}! (${skillsReset.join(", ")}) sont maintenant disponibles!`,
-    type: "skill",
-  });
+  // Different log message if self-cast vs ally cast
+  const isSelfCast = targetAlly.id === attacker.id;
+  if (isSelfCast) {
+    log.push({
+      text: `🎰 Roue du Destin: ${attacker.name} se régénère mystérieusement! (${skillsReset.join(", ")}) sont maintenant disponibles!`,
+      type: "skill",
+    });
+  } else {
+    log.push({
+      text: `🎰 Roue du Destin: ${attacker.name} a activé ${targetAlly.name}! (${skillsReset.join(", ")}) sont maintenant disponibles!`,
+      type: "skill",
+    });
+  }
 }
 
 function applyMiroirDesAEffect(ctx: SkillExecutionContext, targets: BattleCreature[]): void {
