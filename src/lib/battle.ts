@@ -1292,6 +1292,9 @@ interface SkillExecutionContext {
   skill: Skill;
   log: BattleLogEntry[];
   battleContext?: BattleContext;
+  // Additional properties for cascade mechanics
+  isCascadeActive?: boolean;
+  cascadeEnemyTeam?: BattleCreature[];
 }
 
 export function executeSkill(
@@ -1519,10 +1522,24 @@ function applyDamageEffect(ctx: SkillExecutionContext, targets: BattleCreature[]
     let cascadeTotal = 0;
 
     // For cascade skills, we need to pick a random enemy for each attack
-    // Get enemy team from battle context
-    const isEnemy = ctx.target && !Object.keys(ctx.target).includes("creatures")
-      ? false
-      : true; // Default to enemy targeting if no clear signal
+    // Get enemy team from battle context (the OPPOSITE team, not just enemyTeam)
+    if (isCascade && ctx.battleContext) {
+      const playerTeam = ctx.battleContext.playerTeam?.creatures || [];
+      const enemyTeam = ctx.battleContext.enemyTeam?.creatures || [];
+
+      // Determine if attacker belongs to player or enemy team
+      const attackerInPlayer = playerTeam.some(c => c.id === attacker.id);
+
+      // Enemy team = OPPOSITE of attacker's team
+      const actualEnemyTeam = attackerInPlayer ? enemyTeam : playerTeam;
+
+      const aliveEnemies = actualEnemyTeam.filter(c => c.currentHP > 0);
+      if (aliveEnemies.length > 0) {
+        // Set a flag to use actual enemy team for cascade
+        ctx.isCascadeActive = true;
+        ctx.cascadeEnemyTeam = aliveEnemies;
+      }
+    }
 
     for (const chance of cascadeChances) {
       attackNum++;
@@ -1534,11 +1551,8 @@ function applyDamageEffect(ctx: SkillExecutionContext, targets: BattleCreature[]
 
       // For cascade: pick a random enemy for each attack (different from target)
       let cascadeTarget = target;
-      if (isCascade && ctx.battleContext) {
-        const enemyTeam = ctx.battleContext.enemyTeam?.creatures.filter(c => c.currentHP > 0) || [];
-        if (enemyTeam.length > 0) {
-          cascadeTarget = enemyTeam[Math.floor(Math.random() * enemyTeam.length)];
-        }
+      if (isCascade && ctx.isCascadeActive && ctx.cascadeEnemyTeam && ctx.cascadeEnemyTeam.length > 0) {
+        cascadeTarget = ctx.cascadeEnemyTeam[Math.floor(Math.random() * ctx.cascadeEnemyTeam.length)];
       }
 
       // Calculate damage for this attack
