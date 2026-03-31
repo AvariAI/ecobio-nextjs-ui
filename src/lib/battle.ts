@@ -884,11 +884,14 @@ function convertToSkillFormat(
         // Note: no ignoreDodge - Ravage can be dodged
         // Handled in conversion: will return aoe_damage effect and "all" target
       }
-      // Tir Critique: COUP GARANTI - MUST have offenseMultiplier to deal damage
+      // Tir Critique: COUP GARANTI - MUST be loaded from skills.ts to preserve ALL effects
       if (oldSkill.name === "Tir Critique") {
-        effects.offenseMultiplier = 1.0;  // CRITICAL: Base 100% damage
-        effects.critDamageBonus = 1.5;    // +150% crit bonus
-        effects.ignoreDodge = true;      // COUP GARANTI !
+        const { BASE_SKILLS } = require("./skills");
+        return {
+          ...BASE_SKILLS.precise,
+          id: `${source}_${oldSkill.name}`,
+          level: 1,
+        };
       }
       // Roue du Destin handled in executeSkill
       break;
