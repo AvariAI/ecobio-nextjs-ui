@@ -52,10 +52,10 @@ export function generateRandomEnemyCreature() {
   const creatureId = AVAILABLE_CREATURES[Math.floor(Math.random() * AVAILABLE_CREATURES.length)];
   const traits = getRandomTraits();
 
-  // Get skills for this creature
-  const specimenSkill = getSpecimenSkill(creatureId);
+  // Get skills - simple direct assignment
   const personality = getRandomPersonality();
   const personalitySkill = getBaseSkill(personality);
+  const specimenSkill = getSpecimenSkill(creatureId);
 
   // Base stats (E rank) from database
   const baseStats = {
@@ -94,8 +94,9 @@ export function generateRandomEnemyCreature() {
     },
     rank: "E",
     desc: "Random enemy from easy mode",
-    specimenSkill,
-    personalitySkill,
+    // Simply assign skills directly - battle system handles conversion
+    specimenSkill: specimenSkill,
+    personalitySkill: personalitySkill,
     level: 1,
     currentXP: 0,
     xpToNextLevel: 10,
