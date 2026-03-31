@@ -104,7 +104,7 @@ function formatBuffChange(
 }
 
 export default function BattlePage() {
-  // Mode: "test" (default, brute stats) or "collection" (use hunting creatures)
+  // Mode: "test" (default, brute stats) or "easy" (use hunting creatures)
   const [battleMode, setBattleMode] = useState<"test" | "easy">("test");
 
   // Team size: 1v1, 3v3, or 5v5
@@ -183,7 +183,7 @@ export default function BattlePage() {
 
   // Apply XP rewards when battle ends (in collection mode only)
   useEffect(() => {
-    if (phase === "complete" && battleMode === "collection") {
+    if (phase === "complete" && battleMode === "easy") {
       // Determine winner
       let winner: "player" | "enemy" | "draw" = "draw";
       if (teamSize === 1) {
@@ -1502,9 +1502,9 @@ export default function BattlePage() {
               🎮 Easy Mode
             </button>
             <button
-              onClick={() => setBattleMode("collection")}
+              onClick={() => setBattleMode("easy")}
               className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                battleMode === "collection"
+                battleMode === "easy"
                   ? "bg-purple-600 text-white shadow-lg"
                   : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
@@ -1654,7 +1654,7 @@ export default function BattlePage() {
           </div>
         )}
 
-        {phase === "setup" && battleMode === "collection" && teamSize === 1 && (
+        {phase === "setup" && battleMode === "easy" && teamSize === 1 && (
           <div className="grid md:grid-cols-2 gap-8 mb-8">
             <CollectionSelector
               label="🔵 Your Creature"
@@ -1674,7 +1674,7 @@ export default function BattlePage() {
           </div>
         )}
 
-        {phase === "setup" && battleMode === "collection" && teamSize > 1 && (
+        {phase === "setup" && battleMode === "easy" && teamSize > 1 && (
           <div className="grid md:grid-cols-2 gap-8 mb-8">
             <MultiCreatureCollectionSelector
               label={`🔵 Équipe Joueur (${teamSize} créatures)`}
@@ -1701,9 +1701,9 @@ export default function BattlePage() {
             <button
               onClick={startBattle}
               disabled={
-                (teamSize === 1 && battleMode === "collection" && (!selectedPlayerId || !selectedEnemyId)) ||
+                (teamSize === 1 && battleMode === "easy" && (!selectedPlayerId || !selectedEnemyId)) ||
                 (teamSize > 1 && battleMode === "test" && (!validateTestSlotConfigs(playerSlotConfigs, teamSize) || !validateTestSlotConfigs(enemySlotConfigs, teamSize))) ||
-                (teamSize > 1 && battleMode === "collection" && (!validateTeamSize(playerTeamIds, teamSize) || !validateTeamSize(enemyTeamIds, teamSize)))
+                (teamSize > 1 && battleMode === "easy" && (!validateTeamSize(playerTeamIds, teamSize) || !validateTeamSize(enemyTeamIds, teamSize)))
               }
               className="px-12 py-4 bg-gradient-to-r from-red-600 to-purple-600 text-white text-2xl font-bold rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
