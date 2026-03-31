@@ -2003,13 +2003,13 @@ function applyMiroirDesAEffect(ctx: SkillExecutionContext, targets: BattleCreatu
 
   if (enemyTeam.length === 0) {
     log.push({
-      text: `🔄 Miroir des Âmes: ${attacker.name} n'a pas d'ennemis à échanger!`,
+      text: `🔄 Miroir des Âmes: ${attacker.name} n'a pas d'ennemis à voler!`,
       type: "info",
     });
     return;
   }
 
-  // Find the enemy with the most buffs
+  // Find all alive enemies
   const aliveEnemies = enemyTeam.filter(c => c.currentHP > 0);
   if (aliveEnemies.length === 0) {
     log.push({
@@ -2019,55 +2019,117 @@ function applyMiroirDesAEffect(ctx: SkillExecutionContext, targets: BattleCreatu
     return;
   }
 
-  // Sort by number of buffs (most buffs first)
-  aliveEnemies.sort((a, b) => {
-    const aBuffs = Object.keys(a.buffs).length;
-    const bBuffs = Object.keys(b.buffs).length;
-    return bBuffs - aBuffs;
-  });
+  // Calculate MAX_BUFFS among alive enemies
+  const maxBuffCount = Math.max(...aliveEnemies.map(c => Object.keys(c.buffs).length));
 
-  const target = aliveEnemies[0];
-
-  // Get all buffs from both creatures BEFORE deletion
-  const storedAttackerBuffs: ActiveBuff[] = Object.values(attacker.buffs);
-  const storedTargetBuffs: ActiveBuff[] = Object.values(target.buffs);
-
-  if (storedAttackerBuffs.length === 0 && storedTargetBuffs.length === 0) {
+  // Abort if no enemy has any buffs
+  if (maxBuffCount === 0) {
     log.push({
-      text: `🔄 Miroir des Âmes: ${attacker.name} et ${target.name} n'ont pas de buffs à échanger!`,
+      text: `🔄 Miroir des Âmes: Aucun ennemi n'a de buff à voler!`,
       type: "info",
     });
     return;
   }
 
-  // Remove all buffs from both creatures
-  Object.keys(attacker.buffs).forEach(id => delete attacker.buffs[id]);
-  Object.keys(target.buffs).forEach(id => delete target.buffs[id]);
+  // Filter enemies with MAX_BUFFS_COUNT
+  const maxBuffedEnemies = aliveEnemies.filter(c => Object.keys(c.buffs).length === maxBuffCount);
 
-  // Re-add attacker's buffs to target
-  storedAttackerBuffs.forEach(buff => {
-    addBuff(target, buff.type, buff.value, buff.turnsRemaining, buff.sourceSkillId, buff.sourceCreatureId, log);
-  });
+  // If multiple candidates, choose randomly
+  const target = maxBuffedEnemies.length === 1
+    ? maxBuffedEnemies[0]
+    : maxBuffedEnemies[Math.floor(Math.random() * maxBuffedEnemies.length)];
 
-  // Re-add target's buffs to attacker
-  storedTargetBuffs.forEach(buff => {
-    addBuff(attacker, buff.type, buff.value, buff.turnsRemaining, buff.sourceSkillId, buff.sourceCreatureId, log);
+  // Get all buffs from target
+  const targetBuffs: ActiveBuff[] = Object.values(target.buffs);
+
+  if (targetBuffs.length === 0) {
+    // Should not happen due to maxBuffCount > 0 check, but safety fallback
+    log.push({
+      text: `🔄 Miroir des Âmes: ${target.name} n'a pas de buff à voler!`,
+      type: "info",
+    });
+    return;
+  }
+
+  // *** STEAL 1 RANDOM BUFF ***
+
+  // Choose 1 random buff from target
+  const stolenBuff = targetBuffs[Math.floor(Math.random() * targetBuffs.length)];
+
+  // Add the stolen buff to attacker
+  addBuff(
+    attacker,
+    stolenBuff.type,
+    stolenBuff.value,
+    stolenBuff.turnsRemaining,
+    stolenBuff.sourceSkillId,
+    target.id,  // Source = originally from target
+    log
+  );
+
+  // Remove the buff from target
+  Object.keys(target.buffs).forEach(buffId => {
+    const buff = target.buffs[buffId];
+    if (buff.sourceSkillId === stolenBuff.sourceSkillId && buff.sourceCreatureId === target.id) {
+      delete target.buffs[buffId];
+    }
   });
 
   log.push({
-    text: `🔄 Miroir des Âmes: ${attacker.name} et ${target.name} ont échangé leurs âmes (tous les buffs swapés)!`,
+    text: `🔄 Miroir des Âmes: ${attacker.name} vole ${formatBuffName(stolenBuff.type)} de ${target.name}!`,
     type: "skill",
   });
 
-  // Level 5: Steal one additional random buff
-  if (skill.level === 5 && storedTargetBuffs.length > 1) {
-    // Pick a random buff from stored target buffs
-    const stolenBuff = storedTargetBuffs[Math.floor(Math.random() * storedTargetBuffs.length)];
-    addBuff(attacker, stolenBuff.type, stolenBuff.value, stolenBuff.turnsRemaining, stolenBuff.sourceSkillId, stolenBuff.sourceCreatureId, log);
+  // *** LEVEL 5 BONUS: Steal 2nd random buff **\*
 
-    log.push({
-      text: `🔄🔄 Miroir des Âmes NIVEAU 5: ${attacker.name} vole un buff supplémentaire de ${target.name}! (${stolenBuff.type})`,
-      type: "skill",
-    });
+  if (skill.level === 5 && targetBuffs.length > 1) {
+    // Choose another random buff (different from first stolen)
+    const remainingBuffs = targetBuffs.filter(b =>
+      !(b.sourceSkillId === stolenBuff.sourceSkillId && b.sourceCreatureId === target.id)
+    );
+
+    if (remainingBuffs.length > 0) {
+      const secondStolenBuff = remainingBuffs[Math.floor(Math.random() * remainingBuffs.length)];
+
+      // Add the 2nd stolen buff to attacker
+      addBuff(
+        attacker,
+        secondStolenBuff.type,
+        secondStolenBuff.value,
+        secondStolenBuff.turnsRemaining,
+        secondStolenBuff.sourceSkillId,
+        target.id,
+        log
+      );
+
+      // Remove the 2nd buff from target
+      Object.keys(target.buffs).forEach(buffId => {
+        const buff = target.buffs[buffId];
+        if (buff.sourceSkillId === secondStolenBuff.sourceSkillId && buff.sourceCreatureId === target.id) {
+          delete target.buffs[buffId];
+        }
+      });
+
+      log.push({
+        text: `🔄🔄 Miroir des Âmes NIVEAU 5: ${attacker.name} vole ${formatBuffName(secondStolenBuff.type)} supplémentaire de ${target.name}!`,
+        type: "skill",
+      });
+    }
   }
+}
+
+// Helper to format buff type for logging
+function formatBuffName(type: BuffType): string {
+  const names: Record<BuffType, string> = {
+    [BuffType.ATTACK]: "+ATK",
+    [BuffType.DEFENSE]: "+DEF",
+    [BuffType.DODGE]: "+DODGE",
+    [BuffType.HEAL]: "HEAL",
+    [BuffType.SPEED]: "+SPD",
+    [BuffType.POISON]: "POISON",
+    [BuffType.SLOW]: "SLOW",
+    [BuffType.STUN]: "STUN",
+    [BuffType.TAUNT]: "TAUNT",
+  };
+  return names[type] || type;
 }
