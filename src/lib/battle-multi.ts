@@ -283,65 +283,106 @@ export function executeCreatureTurn(
     const targetTeam = isPlayerCreature ? enemyTeam : playerTeam;
     const allyTeam = isPlayerCreature ? playerTeam : enemyTeam;
 
-    // AI uses skill 30% of the time when available
+    // AI uses specimen AND personality skills with dual-skill system
     let usedSkill = false;
-    if (activeCreature.creature.skill && canUseSkill(activeCreature)) {
-      if (Math.random() < 0.3) {
-        const skill = activeCreature.creature.skill;
-        const targetType = skill.target || "front";
+    const specimenSkill = activeCreature.creature.specimenSkill;
+    const personalitySkill = activeCreature.creature.personalitySkill;
 
-        // Handle different skill targeting modes
-        if (targetType === "all") {
-          useSkill(activeCreature, log);
-          usedSkill = true;
-          // Apply skill effect to all enemies if it's a damage skill
-          // (This is a placeholder - actual damage-all logic would need skill effect types)
-        } else if (targetType === "self") {
+    // Function to check cooldown
+    const canUseSkillWithCooldown = (
+      skill: any,
+      skillType: "specimen" | "personality"
+    ): boolean => {
+      if (!skill) return false;
+      const cooldownKey = `${skill.name}_${skillType}_${activeCreature.name}`;
+      const currentCooldown = activeCreature.skillCooldowns[cooldownKey];
+      return currentCooldown === undefined || currentCooldown <= 0;
+    };
+
+    const specimenAvailable = specimenSkill && canUseSkillWithCooldown(specimenSkill, "specimen");
+    const personalityAvailable = personalitySkill && canUseSkillWithCooldown(personalitySkill, "personality");
+
+    // 50% chance to use skill when available
+    if (Math.random() < 0.50) {
+      let skillToUse: { skill: any; type: "specimen" | "personality" } | null = null;
+
+      // Smart skill choice based on HP status
+      const hpPercent = activeCreature.currentHP / activeCreature.stats.hp;
+      const isLowHP = hpPercent < 0.30;
+      const isCriticalHP = hpPercent < 0.15;
+
+      // Decision logic for skill selection
+      if (specimenAvailable && personalityAvailable) {
+        // Both available: choose based on context
+        if (isCriticalHP) {
+          // Critical HP: Any heal/sustain first
+          if (personalitySkill.effect === "heal") {
+            skillToUse = { skill: personalitySkill, type: "personality" };
+          } else if (specimenSkill.effect === "heal") {
+            skillToUse = { skill: specimenSkill, type: "specimen" };
+          } else {
+            // No heal skill, prioritize offensive for quick kills
+            skillToUse = { skill: specimenSkill, type: "specimen" };
+          }
+        } else if (isLowHP) {
+          // Low HP: Prefer support/heal
+          if (personalitySkill.effect === "heal" || personalitySkill.effect === "defense") {
+            skillToUse = { skill: personalitySkill, type: "personality" };
+          } else {
+            skillToUse = { skill: specimenSkill, type: "specimen" };
+          }
+        } else {
+          // Healthy: Prefer offensive
+          if (specimenSkill.effect === "attack" || specimenSkill.effect === "aoe_damage") {
+            skillToUse = { skill: specimenSkill, type: "specimen" };
+          } else {
+            skillToUse = { skill: personalitySkill, type: "personality" };
+          }
+        }
+      } else if (specimenAvailable) {
+        skillToUse = { skill: specimenSkill, type: "specimen" };
+      } else if (personalityAvailable) {
+        skillToUse = { skill: personalitySkill, type: "personality" };
+      }
+
+      // Use selected skill with proper targeting
+      if (skillToUse) {
+        const skill = skillToUse.skill;
+        const targetType = skill.target || "random";
+
+        // Handle targeting
+        if (targetType === "self") {
           // Self-buff skill
-          useSkill(activeCreature, log, activeCreature, undefined, allyTeam, allyTeam, playerTeam, enemyTeam);
+          useSkill(activeCreature, log, activeCreature, skillToUse.type, allyTeam, allyTeam, playerTeam, enemyTeam);
           usedSkill = true;
-        } else if (skill.effect === "special" && skill.name === "Roue du Destin") {
-          // Roue du Destin: target allies randomly or strategically (level 5)
-          useSkill(activeCreature, log, activeCreature, undefined, allyTeam, allyTeam, playerTeam, enemyTeam);
+        } else if (targetType === "all") {
+          // AOE skill
+          useSkill(activeCreature, log, targetTeam.creatures[0], skillToUse.type, targetTeam, enemyTeam, playerTeam, enemyTeam);
           usedSkill = true;
-        } else if (skill.name === "Miroir des Âmes") {
-          // Miroir des Âmes: target enemy team specifically (swap buffs with most buffed enemy)
-          const enemyTarget = selectTargetByPosition(activeCreature, targetTeam, teamSize, "random");
-          if (enemyTarget) {
-            useSkill(activeCreature, log, enemyTarget, undefined, targetTeam, enemyTeam, playerTeam, enemyTeam);
-            usedSkill = true;
-          }
-        } else if (skill.name === "Assaut Rapide") {
-          // Assaut Rapide: target enemy team specifically (never allies)
-          const enemyTarget = selectTargetByPosition(activeCreature, targetTeam, teamSize, "random");
-          if (enemyTarget) {
-            useSkill(activeCreature, log, enemyTarget, undefined, targetTeam, enemyTeam, playerTeam, enemyTeam);
-            usedSkill = true;
-          }
         } else if (skill.effect === "heal" || skill.effect === "defense" || skill.effect === "dodge" || skill.effect === "speed") {
           // Support/heal skill - target allies
           const targetAlly = selectTargetByPosition(activeCreature, allyTeam, teamSize, targetType);
           if (targetAlly) {
-            useSkill(activeCreature, log, targetAlly, undefined, allyTeam, allyTeam, playerTeam, enemyTeam);
+            useSkill(activeCreature, log, targetAlly, skillToUse.type, allyTeam, allyTeam, playerTeam, enemyTeam);
             usedSkill = true;
           } else {
             // Fallback to self if no allies available
-            useSkill(activeCreature, log, activeCreature, undefined, allyTeam, allyTeam, playerTeam, enemyTeam);
+            useSkill(activeCreature, log, activeCreature, skillToUse.type, allyTeam, allyTeam, playerTeam, enemyTeam);
             usedSkill = true;
           }
         } else {
           // Offensive skill (including "random", "front", "back") - target enemies
           const target = selectTargetByPosition(activeCreature, targetTeam, teamSize, targetType);
           if (target) {
-            useSkill(activeCreature, log, target, undefined, targetTeam, enemyTeam, playerTeam, enemyTeam);
+            useSkill(activeCreature, log, target, skillToUse.type, targetTeam, enemyTeam, playerTeam, enemyTeam);
             usedSkill = true;
           }
         }
       }
     }
 
+    // Fallback to normal attack if no skill used
     if (!usedSkill) {
-      // Attack with position-aware targeting (front row priority)
       const target = selectTargetByPosition(activeCreature, targetTeam, teamSize, "front");
       if (target) {
         executeAttack(activeCreature, target, log);
@@ -353,15 +394,16 @@ export function executeCreatureTurn(
 }
 
 /**
- * Check if a skill can be used
+ * Check if a dual skill can be used (deprecated - kept for backward compatibility)
+ * Use inline cooldown checking instead
  */
 export function canUseSkill(creature: BattleCreature): boolean {
   if (!creature.creature.skill) return false;
-  
+
   const skill = creature.creature.skill;
   const cooldownKey = `${skill.name}_${creature.name}`;
   const currentCooldown = creature.skillCooldowns[cooldownKey];
-  
+
   return currentCooldown === undefined || currentCooldown <= 0;
 }
 

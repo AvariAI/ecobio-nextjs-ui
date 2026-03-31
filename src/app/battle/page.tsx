@@ -1555,7 +1555,52 @@ export default function BattlePage() {
     }
 
     logCopy.push({ text: `--- Round ${round}: Enemy Turn ---`, type: "info" });
-    const damage = executeAttack(enemy, player, logCopy);
+
+    // AI: Try to use skill, fallback to attack
+    let damage = 0;
+    const specimenSkill = enemy.creature.specimenSkill;
+    const personalitySkill = enemy.creature.personalitySkill;
+
+    const canUseSpecimen = specimenSkill &&
+      (enemy.skillCooldowns[`${specimenSkill.name}_specimen_${enemy.name}`] || 0) <= 0;
+    const canUsePersonality = personalitySkill &&
+      (enemy.skillCooldowns[`${personalitySkill.name}_personality_${enemy.name}`] || 0) <= 0;
+
+    // 50% chance to use skill when available
+    if (Math.random() < 0.50 && (canUseSpecimen || canUsePersonality)) {
+      let skillToUse: { skill: any; type: "specimen" | "personality" } | null = null;
+
+      // Smart choice based on HP
+      const hpPercent = enemy.currentHP / enemy.stats.hp;
+      const isLowHP = hpPercent < 0.30;
+
+      if (canUseSpecimen && canUsePersonality) {
+        if (isLowHP && personalitySkill.effect === "heal") {
+          skillToUse = { skill: personalitySkill, type: "personality" };
+        } else if (specimenSkill.effect === "attack") {
+          skillToUse = { skill: specimenSkill, type: "specimen" };
+        } else {
+          skillToUse = { skill: personalitySkill, type: "personality" };
+        }
+      } else if (canUseSpecimen) {
+        skillToUse = { skill: specimenSkill, type: "specimen" };
+      } else if (canUsePersonality) {
+        skillToUse = { skill: personalitySkill, type: "personality" };
+      }
+
+      if (skillToUse) {
+        const success = useSkill(enemy, logCopy, player, skillToUse.type);
+        if (!success) {
+          // Skill failed, fallback to attack
+          damage = executeAttack(enemy, player, logCopy);
+        }
+      } else {
+        damage = executeAttack(enemy, player, logCopy);
+      }
+    } else {
+      damage = executeAttack(enemy, player, logCopy);
+    }
+
     setPlayer({ ...player });
 
     if (damage === 0) {
