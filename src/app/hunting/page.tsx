@@ -147,15 +147,9 @@ function spawnCreature(): HuntedCreature {
     target: specimenSkill.target,
   } : undefined;
 
-  const fullPersonalitySkill: Creature["personalitySkill"] = personalitySkill ? {
-    name: personalitySkill.name,
-    description: personalitySkill.description,
-    effect: personalitySkill.effect,
-    value: personalitySkill.value,
-    duration: personalitySkill.duration,
-    cooldown: personalitySkill.cooldown,
-    target: personalitySkill.target,
-  } as any : undefined;
+  const fullPersonalitySkill = personalitySkill ? {
+    ...(personalitySkill as any), // Keep all fields including effects!
+  } : undefined;
 
   return {
     ...creature,
