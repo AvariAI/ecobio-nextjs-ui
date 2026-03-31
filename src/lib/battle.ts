@@ -427,7 +427,7 @@ export function tickPersonalityBuff(
         if (reduction > 0) {
           log.push({
             text: `💊 Bouclier Temporel expire: ${creature.name} récupère ${reduction} HP (${damageTaken} dégâts absorbés → -50%)`,
-            type: "heal",
+            type: "info",
           });
         }
       }
