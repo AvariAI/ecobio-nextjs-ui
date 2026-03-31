@@ -1,5 +1,10 @@
 "use client"
 
+// --- TRAITS DISABLED FOR NOW ---
+const SHOW_TRAITS = false; // Change to true to re-enable trait UI display
+// --------------------------
+
+
 import { useState, useEffect } from "react";
 import { CREATURES, Rank, Creature, generateRandomPersonality, PERSONALITIES, PersonalityType, applyLevelScaling, BaseStats, GambleBonus, applyGambleBonuses, shouldTriggerGamble, generateGambleBonus } from "@/lib/database";
 import { getVarianceRange, BattleStats } from "@/lib/battle";
@@ -863,7 +868,7 @@ export default function HuntingPage() {
                     </div>
                   </div>
                 )}
-                {huntedCreature.traits && huntedCreature.traits.length > 0 && (
+                {SHOW_TRAITS && huntedCreature.traits && huntedCreature.traits.length > 0 && (
                   <div className="bg-purple-700 bg-opacity-50 rounded-lg p-3 mb-4">
                     <h3 className="font-bold text-purple-100">✨ Traits ({huntedCreature.traits.length})</h3>
                     <div className="mt-2 space-y-2">
@@ -1017,7 +1022,7 @@ export default function HuntingPage() {
                   </p>
                 </div>
 
-                {selectedCreature.traits && selectedCreature.traits.length > 0 && (
+                {SHOW_TRAITS && selectedCreature.traits && selectedCreature.traits.length > 0 && (
                   <div className="bg-purple-700 bg-opacity-50 rounded-lg p-3 mb-4">
                     <h3 className="font-bold text-purple-100">✨ Traits ({selectedCreature.traits.length})</h3>
                     <div className="mt-2 space-y-2">
