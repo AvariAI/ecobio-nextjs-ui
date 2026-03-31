@@ -1460,12 +1460,27 @@ function applyDamageEffect(ctx: SkillExecutionContext, targets: BattleCreature[]
     let attackNum = 0;
     let cascadeTotal = 0;
 
+    // For cascade skills, we need to pick a random enemy for each attack
+    // Get enemy team from battle context
+    const isEnemy = ctx.target && !Object.keys(ctx.target).includes("creatures")
+      ? false
+      : true; // Default to enemy targeting if no clear signal
+
     for (const chance of cascadeChances) {
       attackNum++;
-      
+
       // Skip if this attack's chance fails
       if (Math.random() > chance) {
         break; // Cascade stops
+      }
+
+      // For cascade: pick a random enemy for each attack (different from target)
+      let cascadeTarget = target;
+      if (isCascade && ctx.battleContext) {
+        const enemyTeam = ctx.battleContext.enemyTeam?.creatures.filter(c => c.currentHP > 0) || [];
+        if (enemyTeam.length > 0) {
+          cascadeTarget = enemyTeam[Math.floor(Math.random() * enemyTeam.length)];
+        }
       }
 
       // Calculate damage for this attack
@@ -1486,37 +1501,37 @@ function applyDamageEffect(ctx: SkillExecutionContext, targets: BattleCreature[]
         finalDamage = Math.floor(finalDamage * critMult);
         if (ignoreDodge) {
           log.push({
-            text: `💥 COUP GARANTI CRITICAL HIT [attack ${attackNum}] sur ${target.name}! Dégâts: ${finalDamage} (${critMult.toFixed(2)}x)`,
+            text: `💥 COUP GARANTI CRITICAL HIT [#{attackNum}/ cascade] sur ${cascadeTarget.name}! Dégâts: ${finalDamage} (${critMult.toFixed(2)}x)`,
             type: "critical",
           });
         } else {
           log.push({
-            text: `💥 CRITICAL HIT [attack ${attackNum}] sur ${target.name}! Dégâts: ${finalDamage} (${critMult.toFixed(2)}x)`,
+            text: `💥 CRITICAL HIT [#{attackNum}/ cascade] sur ${cascadeTarget.name}! Dégâts: ${finalDamage} (${critMult.toFixed(2)}x)`,
             type: "critical",
           });
         }
       }
 
       // Apply damage
-      target.currentHP = Math.max(0, target.currentHP - finalDamage);
+      cascadeTarget.currentHP = Math.max(0, cascadeTarget.currentHP - finalDamage);
       attacker.damageDealt += finalDamage;
       totalDamageDealt += finalDamage;
       cascadeTotal += finalDamage;
 
       // Check for KO
-      if (target.currentHP <= 0) {
+      if (cascadeTarget.currentHP <= 0) {
         attacker.kills++;
         log.push({
-          text: `💀 ${target.name} est KO!`,
+          text: `💀 ${cascadeTarget.name} est KO!`,
           type: "critical",
         });
-        break; // Stop cascade if target dead
+        // Don't break - continue cascade to next random target
       }
 
       // Log each attack in cascade
       if (isCascade && cascadeChances.length > 1) {
         log.push({
-          text: `${attacker.name} utilise ${skill.name} [attack ${attackNum}] sur ${target.name}: ${finalDamage} dégâts${ignoreDodge ? " (COUP GARANTI)" : ""}`,
+          text: `${attacker.name} 💨 Assaut [#${attackNum}] sur ${cascadeTarget.name}: ${finalDamage} dégâts${ignoreDodge ? " (COUP GARANTI)" : ""}`,
           type: "damage",
         });
       }
