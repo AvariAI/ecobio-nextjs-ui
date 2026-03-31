@@ -1273,7 +1273,7 @@ export default function BattlePage() {
 
       let target: BattleCreature | null = null;
       const targetType = skill.target || "self";
-      const isOffensive = skill.effect === "aoe_damage";
+      const isOffensive = skill.effect === "aoe_damage" || skill.effect === "attack";
       const targetTeamForAOE = isPlayerCreature ? enemyTeam : playerTeam;
 
       if (targetType === "self") {
