@@ -117,7 +117,7 @@ const PERSONALITY_BUFFS: Record<PersonalityType, PersonalityBuff> = {
   },
 
   // Précise: +50% CRIT for 2 turns
-  precise: {
+  précise: {
     id: "buff_visee_laser",
     name: "Visée Laser",
     personality: "précise",
