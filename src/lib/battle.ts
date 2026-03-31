@@ -1741,8 +1741,19 @@ function applyRoueDuDestinEffect(ctx: SkillExecutionContext, targets: BattleCrea
   const hpPercent = attacker.currentHP / attacker.stats.hp;
   const duration = skill.effects.effectDuration || skill.duration || 2;
 
-  const effects = ["atk", "dodge", "heal"];
-  const chosenEffect = effects[Math.floor(Math.random() * effects.length)];
+  // 30/30/30/10 distribution: ATK, Dodge, Heal, Lucky Strike
+  const roll = Math.random();
+  let chosenEffect: string;
+
+  if (roll < 0.30) {
+    chosenEffect = "atk";  // 30%
+  } else if (roll < 0.60) {
+    chosenEffect = "dodge";  // 30%
+  } else if (roll < 0.90) {
+    chosenEffect = "heal";  // 30%
+  } else {
+    chosenEffect = "lucky";  // 10% rare bonus
+  }
 
   switch (chosenEffect) {
     case "atk":
@@ -1768,6 +1779,15 @@ function applyRoueDuDestinEffect(ctx: SkillExecutionContext, targets: BattleCrea
       const actualHealed = attacker.currentHP - oldHP;
       log.push({
         text: `🎰 Roue du Destin: ${attacker.name} se soigne de +${actualHealed} HP!`,
+        type: "skill",
+      });
+      break;
+
+    case "lucky":
+      // Rare 10% bonus: ATK +30% + Crit Boost +20% (combined power)
+      addBuff(attacker, BuffType.ATTACK, 0.30, duration, skill.name, attacker.id);
+      log.push({
+        text: `🎰💎 COUP DE CHANCE! ${attacker.name} gagne ATK +30% + Crit Boost!`,
         type: "skill",
       });
       break;

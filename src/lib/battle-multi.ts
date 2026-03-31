@@ -300,8 +300,8 @@ export function executeCreatureTurn(
           // Self-buff skill
           useSkill(activeCreature, log, activeCreature);
           usedSkill = true;
-        } else if (targetType === "ally" || targetType === "front" || targetType === "back" || targetType === "random") {
-          // Support buff skill - target allies
+        } else if (skill.effect === "heal" || skill.effect === "defense" || skill.effect === "dodge" || skill.effect === "speed") {
+          // Support/heal skill - target allies
           const targetAlly = selectTargetByPosition(activeCreature, allyTeam, teamSize, targetType);
           if (targetAlly) {
             useSkill(activeCreature, log, targetAlly, undefined, allyTeam);
@@ -312,7 +312,7 @@ export function executeCreatureTurn(
             usedSkill = true;
           }
         } else {
-          // Offensive AOE skill (like mandibles) needs targetTeam to find all targets
+          // Offensive skill (including "random", "front", "back") - target enemies
           const target = selectTargetByPosition(activeCreature, targetTeam, teamSize, targetType);
           if (target) {
             useSkill(activeCreature, log, target, undefined, targetTeam);

@@ -154,19 +154,19 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
   balancee: {
     id: "balancee_base",
     name: "Échange Solaire",
-    description: "+10% toutes les stats (soi), -10% toutes les stats (ennemi) (1 tour)",
+    description: "+20% toutes les stats (soi), -20% toutes les stats (ennemi) (1 tour)",
     archetype: "balancee",
     source: "personality",
     type: "special",
     effect: "defense",  // Use defense type for stat manipulations
-    value: 0.10,  // 10%
+    value: 0.20,  // 20% (increased from 10%)
     duration: 1,
     cooldown: 4,
     target: "self",
     level: 1,
     effects: {
-      selfBoostPercent: 0.10,
-      enemyDebuffPercent: -0.10,
+      selfBoostPercent: 0.20,  // +20% (increased from 10%)
+      enemyDebuffPercent: -0.20,  // -20% (increased from -10%)
       effectDuration: 1,
     }
   },
