@@ -304,6 +304,13 @@ export function executeCreatureTurn(
           // Roue du Destin: target allies randomly or strategically (level 5)
           useSkill(activeCreature, log, activeCreature, undefined, allyTeam, allyTeam, playerTeam, enemyTeam);
           usedSkill = true;
+        } else if (skill.name === "Miroir des Âmes") {
+          // Miroir des Âmes: target enemy team specifically (swap buffs with most buffed enemy)
+          const enemyTarget = selectTargetByPosition(activeCreature, targetTeam, teamSize, "random");
+          if (enemyTarget) {
+            useSkill(activeCreature, log, enemyTarget, undefined, targetTeam, enemyTeam, playerTeam, enemyTeam);
+            usedSkill = true;
+          }
         } else if (skill.name === "Assaut Rapide") {
           // Assaut Rapide: target enemy team specifically (never allies)
           const enemyTarget = selectTargetByPosition(activeCreature, targetTeam, teamSize, "random");

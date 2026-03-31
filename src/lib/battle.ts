@@ -1902,17 +1902,49 @@ function applyRoueDuDestinCooldownReset(ctx: SkillExecutionContext, targets: Bat
 }
 
 function applyMiroirDesAEffect(ctx: SkillExecutionContext, targets: BattleCreature[]): void {
-  const { attacker, log, skill } = ctx;
+  const { attacker, log, skill, battleContext } = ctx;
 
-  if (targets.length === 0 || targets[0] === attacker) {
+  // Get enemy team from battle context (find team that doesn't contain attacker)
+  if (!battleContext) {
     log.push({
-      text: `🔄 Miroir des Âmes: ${attacker.name} n'a pas d'ennemi à échanger!`,
+      text: `🔄 Miroir des Âmes: ${attacker.name} ne peut trouver l'équipe ennemie!`,
       type: "info",
     });
     return;
   }
 
-  const target = targets[0];
+  const playerCreatures = battleContext.playerTeam?.creatures || [];
+  const enemyCreatures = battleContext.enemyTeam?.creatures || [];
+
+  const isPlayer = playerCreatures.some(c => c.id === attacker.id);
+  const enemyTeam = isPlayer ? enemyCreatures : playerCreatures;
+
+  if (enemyTeam.length === 0) {
+    log.push({
+      text: `🔄 Miroir des Âmes: ${attacker.name} n'a pas d'ennemis à échanger!`,
+      type: "info",
+    });
+    return;
+  }
+
+  // Find the enemy with the most buffs
+  const aliveEnemies = enemyTeam.filter(c => c.currentHP > 0);
+  if (aliveEnemies.length === 0) {
+    log.push({
+      text: `🔄 Miroir des Âmes: Tous les ennemis sont KO!`,
+      type: "info",
+    });
+    return;
+  }
+
+  // Sort by number of buffs (most buffs first)
+  aliveEnemies.sort((a, b) => {
+    const aBuffs = Object.keys(a.buffs).length;
+    const bBuffs = Object.keys(b.buffs).length;
+    return bBuffs - aBuffs;
+  });
+
+  const target = aliveEnemies[0];
 
   // Get all buffs from both creatures
   const attackerBuffs = Object.values(attacker.buffs);
@@ -1938,6 +1970,7 @@ function applyMiroirDesAEffect(ctx: SkillExecutionContext, targets: BattleCreatu
   attackerBuffIds.forEach(id => {
     const buff = attackerBuffs.find(b => id.includes(b.sourceSkillId || '') && b.sourceCreatureId === attacker.id);
     if (buff) {
+      // Recalculate buff ID to reflect new owner
       addBuff(target, buff.type, buff.value, buff.turnsRemaining, buff.sourceSkillId, attacker.id);
     }
   });
