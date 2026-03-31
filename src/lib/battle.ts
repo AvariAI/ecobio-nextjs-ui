@@ -1344,7 +1344,10 @@ export function executeSkill(
   if (effects.damageReduction || skill.effect === "defense") {
     applyDefenseBuffEffect(ctx, targets);
   }
-  if (skill.effect === "attack" || effects.selfBoostPercent) {
+  // NOTE: Do NOT use skill.effect === "attack" for buff application
+  // skill.effect === "attack" means "deals damage", not "applies ATK buff"
+  // Only apply ATK buff if effect specifically sets selfBoostPercent or attackBuff
+  if (effects.selfBoostPercent) {
     applyAttackBuffEffect(ctx, targets);
   }
 
