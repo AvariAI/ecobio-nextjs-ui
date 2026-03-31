@@ -113,7 +113,7 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
   soin_leurre: {
     id: "soin_leurre_base",
     name: "Sacrifice Vital",
-    description: "Sacrifie 15% de votre PV pour soigner 30% du PV max du premier allié avant + poison 10% sur ennemi",
+    description: "Sacrifie 15% de votre PV pour soigner 30% du PV max du premier allié avant",
     archetype: "soin_leurre",
     source: "personality",
     type: "heal",
@@ -126,7 +126,6 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
     effects: {
       healPercent: 0.30,  // 30% heal for ally
       selfSacrificePercent: 0.15,  // Sacrifice 15% of own HP
-      poisonPercent: 0.10,  // Poison 10% DOT on enemy
       effectDuration: 0,
     }
   },

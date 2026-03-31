@@ -118,9 +118,15 @@ export function addBuff(
   value: number,
   turns: number,
   sourceSkillId: string,
-  sourceCreatureId: string
+  sourceCreatureId: string,
+  log?: BattleLogEntry[] // Optional log for detailed buff explanations
 ): void {
   const buffId = generateBuffId(sourceSkillId, sourceCreatureId, type);
+
+  // Check if buff already exists (refresh duration)
+  const existingBuff = creature.buffs[buffId];
+  const isNew = !existingBuff;
+
   creature.buffs[buffId] = {
     type,
     value,
@@ -128,6 +134,58 @@ export function addBuff(
     sourceSkillId,
     sourceCreatureId,
   };
+
+  // Generate detailed log if log array provided
+  if (log) {
+    const valuePercent = Math.floor(value * 100);
+    const sign = value >= 0 ? "+" : "";
+    const durationText = turns > 0 ? `(${turns} tours)` : "(permanent)";
+
+    let effectDescription = "";
+    switch (type) {
+      case BuffType.ATTACK:
+        effectDescription = `ATK ${sign}${valuePercent}%`;
+        break;
+      case BuffType.DEFENSE:
+        effectDescription = `DEF ${sign}${valuePercent}%`;
+        break;
+      case BuffType.SPEED:
+        effectDescription = `VIT ${sign}${valuePercent}% (+esquive chance)`;
+        break;
+      case BuffType.DODGE:
+        effectDescription = `Esquive +${valuePercent}%`;
+        break;
+      case BuffType.HEAL:
+        effectDescription = `Soin`;
+        break;
+      case BuffType.POISON:
+        effectDescription = `Poison -${valuePercent}% PV/tour`;
+        break;
+      case BuffType.SLOW:
+        effectDescription = `Lent -${valuePercent}% VIT`;
+        break;
+      case BuffType.STUN:
+        effectDescription = `Étourdi ${value} tours`;
+        break;
+      case BuffType.TAUNT:
+        effectDescription = `Taunt (force ciblage)`;
+        break;
+      default:
+        effectDescription = `${type} ${sign}${valuePercent}%`;
+    }
+
+    if (isNew) {
+      log.push({
+        text: `📊 ${creature.name} gagne [${effectDescription}] via ${sourceSkillId} ${durationText}`,
+        type: "info",
+      });
+    } else {
+      log.push({
+        text: `🔄 ${creature.name} rafraîchit [${sourceSkillId} → ${effectDescription}] ${durationText}`,
+        type: "info",
+      });
+    }
+  }
 }
 
 /**
@@ -789,10 +847,10 @@ function convertToSkillFormat(
       break;
     case "heal":
       effects.healPercent = oldSkill.value;
-      // Piquer Soignant: self sacrifice + poison
+      // Sacrifice Vital: self sacrifice (no poison)
       if (source === "personality" && oldSkill.name === "Sacrifice Vital") {
         effects.selfSacrificePercent = 0.15;  // Sacrifice 15% own HP
-        effects.poisonPercent = 0.10;  // Poison 10% DOT
+        // Poison removed - no longer applies
       }
       break;
     case "speed":
@@ -1629,7 +1687,8 @@ function applySpeedBuffEffect(ctx: SkillExecutionContext, targets: BattleCreatur
       speedBonus,
       duration,
       skill.name,
-      attacker.id
+      attacker.id,
+      log
     );
 
     const newSpeed = getEffectiveSpeed(target);
@@ -1657,7 +1716,8 @@ function applyDefenseBuffEffect(ctx: SkillExecutionContext, targets: BattleCreat
       finalReduction,
       duration,
       skill.name,
-      attacker.id
+      attacker.id,
+      log
     );
 
     const bonusHP = Math.floor(target.stats.defense * finalReduction);
@@ -1741,9 +1801,9 @@ function applyDebuffEffect(ctx: SkillExecutionContext, targets: BattleCreature[]
   const duration = effects.effectDuration || skill.duration || 1;
 
   targets.forEach(target => {
-    addBuff(target, BuffType.ATTACK, debuffPercent, duration, skill.name, attacker.id);
-    addBuff(target, BuffType.DEFENSE, debuffPercent, duration, skill.name, attacker.id);
-    addBuff(target, BuffType.SPEED, debuffPercent, duration, skill.name, attacker.id);
+    addBuff(target, BuffType.ATTACK, debuffPercent, duration, skill.name, attacker.id, log);
+    addBuff(target, BuffType.DEFENSE, debuffPercent, duration, skill.name, attacker.id, log);
+    addBuff(target, BuffType.SPEED, debuffPercent, duration, skill.name, attacker.id, log);
 
     log.push({
       text: `${attacker.name} utilise ${skill.name} sur ${target.name}: Toutes stats ${Math.floor(debuffPercent * 100)}% (${duration} tours)`,
@@ -1971,14 +2031,14 @@ function applyMiroirDesAEffect(ctx: SkillExecutionContext, targets: BattleCreatu
     const buff = attackerBuffs.find(b => id.includes(b.sourceSkillId || '') && b.sourceCreatureId === attacker.id);
     if (buff) {
       // Recalculate buff ID to reflect new owner
-      addBuff(target, buff.type, buff.value, buff.turnsRemaining, buff.sourceSkillId, attacker.id);
+      addBuff(target, buff.type, buff.value, buff.turnsRemaining, buff.sourceSkillId, attacker.id, log);
     }
   });
 
   targetBuffIds.forEach(id => {
     const buff = targetBuffs.find(b => id.includes(b.sourceSkillId || '') && b.sourceCreatureId === target.id);
     if (buff) {
-      addBuff(attacker, buff.type, buff.value, buff.turnsRemaining, buff.sourceSkillId, target.id);
+      addBuff(attacker, buff.type, buff.value, buff.turnsRemaining, buff.sourceSkillId, target.id, log);
     }
   });
 
@@ -1993,7 +2053,7 @@ function applyMiroirDesAEffect(ctx: SkillExecutionContext, targets: BattleCreatu
     const targetOriginalBuffs = targetBuffs.filter(b => b.sourceCreatureId === target.id);
     if (targetOriginalBuffs.length > 0) {
       const stolenBuff = targetOriginalBuffs[Math.floor(Math.random() * targetOriginalBuffs.length)];
-      addBuff(attacker, stolenBuff.type, stolenBuff.value, stolenBuff.turnsRemaining, stolenBuff.sourceSkillId, stolenBuff.sourceCreatureId);
+      addBuff(attacker, stolenBuff.type, stolenBuff.value, stolenBuff.turnsRemaining, stolenBuff.sourceSkillId, stolenBuff.sourceCreatureId, log);
 
       log.push({
         text: `🔄🔄 Miroir des Âmes NIVEAU 5: ${attacker.name} vole un buff supplémentaire de ${target.name}! (${stolenBuff.type})`,
