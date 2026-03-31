@@ -105,7 +105,7 @@ function formatBuffChange(
 
 export default function BattlePage() {
   // Mode: "test" (default, brute stats) or "collection" (use hunting creatures)
-  const [battleMode, setBattleMode] = useState<"test" | "collection" | "easy">("test");
+  const [battleMode, setBattleMode] = useState<"test" | "easy">("test");
 
   // Team size: 1v1, 3v3, or 5v5
   const [teamSize, setTeamSize] = useState<TeamSize>(1);
@@ -403,12 +403,14 @@ export default function BattlePage() {
     if (teamSize > 1) {
       const playerValid = battleMode === "test"
         ? validateTestSlotConfigs(playerSlotConfigs, teamSize)
-        : validateTeamSize(playerTeamIds, teamSize);
+        : battleMode === "easy"
+        ? validateTeamSize(playerTeamIds, teamSize)
+        : false;  // Fallthrough (should not happen)
       const enemyValid = battleMode === "test"
         ? validateTestSlotConfigs(enemySlotConfigs, teamSize)
         : battleMode === "easy"
         ? true  // Easy mode always has valid random enemies
-        : validateTeamSize(enemyTeamIds, teamSize);
+        : false;  // Fallthrough (should not happen)
 
       if (!playerValid || !enemyValid) {
         alert(`Pour ${teamSize}v${teamSize}, vous devez sélectionner ${teamSize} créatures par équipe!`);
