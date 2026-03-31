@@ -33,6 +33,7 @@ import { TeamSize, BattleTeam, getAllBattleElements, executeCreatureTurn, isTeam
 import { MultiCreatureTestSelector, MultiCreatureCollectionSelector, SlotConfig } from "./multi-battle-components";
 import { MultiCreatureBattleDisplay, MultiCreatureBattleCompleteDisplay, BattleLogDisplay as MultiBattleLogDisplay } from "./multi-battle-display";
 import { generateRandomEnemyTeam, spawnEasyModeEnemy } from "@/lib/easy-mode";
+import { executeAITurn } from "@/lib/battle-ai";
 import Link from "next/link";
 
 type HuntingPhase = "ready" | "spawned" | "viewing";
