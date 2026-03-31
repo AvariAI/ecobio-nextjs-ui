@@ -155,7 +155,7 @@ function spawnCreature(): HuntedCreature {
     duration: personalitySkill.duration,
     cooldown: personalitySkill.cooldown,
     target: personalitySkill.target,
-  } : undefined;
+  } as any : undefined;
 
   return {
     ...creature,

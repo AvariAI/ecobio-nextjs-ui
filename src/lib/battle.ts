@@ -7,6 +7,7 @@ import { Creature, BaseStats, Rank, RANK_MULTIPLIERS } from "./database";
 import { applyTraits as applyTraitEffects, getTraitsByIds } from "./traits";
 import { calculateCombatXP } from "./combat-xp";
 import { Skill } from "./skills";
+import type { Skill as SkillType } from "./skills";
 
 export interface BattleElement {
   creature: BattleCreature;
@@ -748,7 +749,37 @@ function convertToSkillFormat(
     return null;
   }
 
-  // Build effects object based on old skill properties
+  // Import skills dynamically to avoid circular dependency
+  const { BASE_SKILLS, SPECIMEN_SKILLS } = require("./skills");
+
+  // If this is a known personality skill, load directly from skills.ts (preserves effects like recoilPercent)
+  if (source === "personality") {
+    const personalityTypes = ["agressive", "protective", "rapide", "soin_leurre", "precise", "balancee", "mysterieuse"] as const;
+    for (const type of personalityTypes) {
+      const baseSkill = BASE_SKILLS[type];
+      if (baseSkill && baseSkill.name === oldSkill.name) {
+        return {
+          ...baseSkill,
+          id: `${source}_${oldSkill.name}`,
+          level: 1, // Reset to level 1
+        };
+      }
+    }
+  }
+
+  // If this is a known specimen skill, load directly from skills.ts
+  if (source === "specimen") {
+    const specimenSkill = SPECIMEN_SKILLS[oldSkill.name.toLowerCase()];
+    if (specimenSkill) {
+      return {
+        ...specimenSkill,
+        id: `${source}_${oldSkill.name}`,
+        level: 1, // Reset to level 1
+      };
+    }
+  }
+
+  // Fallback: Build effects object based on old skill properties (for unknown/legacy skills)
   const effects: Skill["effects"] = {};
 
   switch (oldSkill.effect) {
