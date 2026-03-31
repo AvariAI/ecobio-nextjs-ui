@@ -52,7 +52,7 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
   agressive: {
     id: "agressive_base",
     name: "Ravage",
-    description: "Attaque tous les ennemis avec 100% dégâts ATK (AOE explosif)",
+    description: "Attaque tous les ennemis avec 100% dégâts ATK, mais vous prenez 20% des dégâts totaux comme recul",
     archetype: "agressive",
     source: "personality",
     type: "offensive",
@@ -64,6 +64,7 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
     level: 1,
     effects: {
       offenseMultiplier: 1.0,  // 100% per target (was 1.5)
+      recoilPercent: 0.20,
       effectDuration: 0,
     }
   },
@@ -306,7 +307,7 @@ function getSkillDescription(baseSkill: Skill, level: number): string {
   const levelBonus = `Lvl ${level}: `;
   switch (baseSkill.archetype) {
     case "agressive":
-      return `${baseSkill.description}${level > 1 ? " Lvl5: 175% damage" : ""}`;
+      return `${baseSkill.description}${level > 1 ? " Lvl5: 175% damage, 15% recoil" : ""}`;
     case "protective":
       return `${baseSkill.description}${level > 1 ? " Lvl5: 60% redirect, -30% reduced damage" : ""}`;
     case "rapide":
@@ -385,6 +386,11 @@ function scaleSkillEffects(baseSkill: Skill, level: number): Skill["effects"] {
   }
   if (level === 5 && (effects.selfBoostPercent || effects.enemyDebuffPercent)) {
     effects.effectDuration = 2;  // Lvl5: 2 turns
+  }
+
+  // Scale recoil damage
+  if (effects.recoilPercent) {
+    effects.recoilPercent = 0.20 - (level - 1) * 0.0125;  // Lvl5: 15%
   }
 
   // Scale multipliers
