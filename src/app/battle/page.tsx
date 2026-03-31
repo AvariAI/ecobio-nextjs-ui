@@ -366,19 +366,41 @@ export default function BattlePage() {
             el.team === (isPlayerTeamCurrent ? "player" : "enemy") &&
             el.creature.position === newCurrentCreature.position
           );
-          let nextIndex = (currentIndex + 1) % newTurnOrder.length;
-          let nextCreature = newTurnOrder[nextIndex];
 
-          // Find next alive creature (stunned creatures still get their turn - they just skip actions but take DoT/poison)
+          let nextIndex = -1;
+          let nextCreature: BattleElement | null = null;
           let attempts = 0;
-          while (nextCreature.creature.currentHP <= 0 && attempts < newTurnOrder.length) {
-            nextIndex = (nextIndex + 1) % newTurnOrder.length;
+
+          if (currentIndex === -1) {
+            console.warn("AI Loop: Could not find current creature in turn order:", newCurrentCreature.name);
+            // Fallback: find first alive creature
+            let targetIndex = 0;
+            let targetCreature = newTurnOrder[targetIndex];
+
+            attempts = 0;
+            while (targetCreature.creature.currentHP <= 0 && attempts < newTurnOrder.length) {
+              targetIndex = (targetIndex + 1) % newTurnOrder.length;
+              targetCreature = newTurnOrder[targetIndex];
+              attempts++;
+            }
+
+            nextIndex = targetIndex;
+            nextCreature = targetCreature;
+          } else {
+            nextIndex = (currentIndex + 1) % newTurnOrder.length;
             nextCreature = newTurnOrder[nextIndex];
-            attempts++;
+
+            // Find next alive creature (stunned creatures still get their turn - they just skip actions but take DoT/poison)
+            attempts = 0;
+            while (nextCreature != null && nextCreature.creature.currentHP <= 0 && attempts < newTurnOrder.length) {
+              nextIndex = (nextIndex + 1) % newTurnOrder.length;
+              nextCreature = newTurnOrder[nextIndex];
+              attempts++;
+            }
           }
 
           // If all creatures are dead, battle is over
-          if (attempts >= newTurnOrder.length) {
+          if (!nextCreature || attempts >= newTurnOrder.length) {
             const winner = getTeamBattleWinner(newPlayerTeam, newEnemyTeam);
             newLog.push({
               text: winner === "player" ? "🏆 VICTORY!" : "💀 DEFEAT!",
@@ -390,9 +412,10 @@ export default function BattlePage() {
             return;
           }
 
+          const currentCreatureIndex = currentIndex === -1 ? 0 : currentIndex;
           setCurrentActingCreature(nextCreature.creature);
           setTurn(nextCreature.team as "player" | "enemy");
-          if (nextIndex < currentIndex) {
+          if (nextIndex < currentCreatureIndex) {
             setRound((prev) => prev + 1);
           }
 
