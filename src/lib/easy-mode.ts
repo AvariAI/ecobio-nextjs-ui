@@ -1,116 +1,133 @@
 /**
  * ÉcoBio Easy Mode - Random Enemy Generation
- * Generates 5 random level 1 creatures for easy mode battles
+ * Uses hunting's spawnCreature() to generate 5 random level 1 creatures
  */
 
-import { Creature } from "./database";
+import { CREATURES, Rank } from "./database";
 import { getBaseSkill } from "./skills";
 import { getSpecimenSkill } from "./skills";
 
-// Available creatures for random spawns
-const AVAILABLE_CREATURES = [
-  "ant", "housefly", "honeybee", "spider_mutant"
-];
+// Dummy function placeholders - actual implementation in hunting/page.tsx
+// These will be replaced with real implementations
+function rollRarity(): Rank {
+  const ranks: Rank[] = ["E", "D", "C", "B", "A", "S", "S+"];
+  // Weight towards E rank for easy mode
+  const weights = [0.45, 0.30, 0.15, 0.05, 0.03, 0.01, 0.01];
+  const roll = Math.random();
+  let cumulative = 0;
+  for (let i = 0; i < ranks.length; i++) {
+    cumulative += weights[i];
+    if (roll < cumulative) return ranks[i];
+  }
+  return "E";
+}
 
-// Available personalities for random assignment
-const AVAILABLE_PERSONALITIES = [
-  "agressive",
-  "protective",
-  "rapide",
-  "soin_leurre",
-  "precise",
-  "balancee",
-  "mysterieuse"
-] as const;
+function getVarianceRange(rank: Rank): [number, number] {
+  const ranges: Record<Rank, [number, number]> = {
+    "E": [0.85, 1.00],
+    "D": [0.90, 1.15],
+    "C": [0.90, 1.30],
+    "B": [0.95, 1.50],
+    "A": [1.00, 1.80],
+    "S": [1.10, 2.20],
+    "S+": [1.25, 2.50],
+  };
+  return ranges[rank];
+}
 
-// Available traits for random assignment
-const AVAILABLE_TRAITS = [
-  "tank", "speedster", "crit_mastery", "dodge_mastery",
-  "regenerator", "berserk", "last_stand", "swarm_mind"
-];
+function rollRandomTraits(rank: Rank): string[] {
+  const allTraits = ["tank", "speedster", "crit_mastery", "dodge_mastery", "regenerator", "berserk", "last_stand", "swarm_mind"];
+  const numTraits = Math.floor(Math.random() * 2) + 1; // 1-2 traits for easy mode
+  return allTraits.sort(() => Math.random() - 0.5).slice(0, numTraits);
+}
 
-/**
- * Generate a random personality
- */
-function getRandomPersonality(): typeof AVAILABLE_PERSONALITIES[number] {
-  return AVAILABLE_PERSONALITIES[Math.floor(Math.random() * AVAILABLE_PERSONALITIES.length)];
+function generateRandomPersonality(): "agressive" | "protective" | "rapide" | "soin_leurre" | "precise" | "balancee" | "mysterieuse" {
+  const personalities: Array<"agressive" | "protective" | "rapide" | "soin_leurre" | "precise" | "balancee" | "mysterieuse"> =
+    ["agressive", "protective", "rapide", "soin_leurre", "precise", "balancee", "mysterieuse"];
+  return personalities[Math.floor(Math.random() * personalities.length)];
 }
 
 /**
- * Generate random traits (1-3 traits per creature)
+ * Generate a random creature using hunting's spawnCreature logic
+ * Returns creatureTemplate compatible with battle system
  */
-function getRandomTraits(): string[] {
-  const numTraits = Math.floor(Math.random() * 3) + 1;
-  const shuffled = [...AVAILABLE_TRAITS].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, numTraits);
-}
+export function spawnEasyModeEnemy(): {
+  creatureTemplate: any;
+  stats: any;
+  name: string;
+  traits?: string[];
+} {
+  const creaturePool = ["ant", "housefly", "honeybee", "spider_mutant"];
+  const creatureId = creaturePool[Math.floor(Math.random() * creaturePool.length)];
+  const creature: any = CREATURES[creatureId];
 
-/**
- * Generate a random level 1 creature
- */
-export function generateRandomEnemyCreature() {
-  const creatureId = AVAILABLE_CREATURES[Math.floor(Math.random() * AVAILABLE_CREATURES.length)];
-  const traits = getRandomTraits();
+  const rank: Rank = rollRarity();
+  const [minVar, maxVar] = getVarianceRange(rank);
+  const traits = rollRandomTraits(rank);
 
-  // Get skills - simple direct assignment
-  const personality = getRandomPersonality();
-  const personalitySkill = getBaseSkill(personality);
-  const specimenSkill = getSpecimenSkill(creatureId);
+  // Variance RNG
+  const hpVariance = minVar + Math.random() * (maxVar - minVar);
+  const atkVariance = minVar + Math.random() * (maxVar - minVar);
+  const defVariance = minVar + Math.random() * (maxVar - minVar);
+  const spdVariance = minVar + Math.random() * (maxVar - minVar);
+  const critVariance = minVar + Math.random() * (maxVar - minVar);
 
-  // Base stats (E rank) from database
-  const baseStats = {
-    hp: 100,
-    attack: 20,
-    defense: 20,
-    speed: 15,
-    crit: 10,
-  };
-
-  // Calculate RNG variance (E rank data)
-  const varianceStat = (base: number, min: number, max: number): number => {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  };
-
+  // Stats POST-variance
   const varianceStats = {
-    hp: varianceStat(baseStats.hp, 90, 110),
-    attack: varianceStat(baseStats.attack, 18, 22),
-    defense: varianceStat(baseStats.defense, 18, 22),
-    speed: varianceStat(baseStats.speed, 13, 17),
-    crit: varianceStat(baseStats.crit, 8, 12),
+    hp: Math.max(1, Math.floor(creature.baseStats.hp * hpVariance)),
+    attack: Math.max(1, Math.floor(creature.baseStats.attack * atkVariance)),
+    defense: Math.max(1, Math.floor(creature.baseStats.defense * defVariance)),
+    speed: Math.max(1, Math.floor(creature.baseStats.speed * spdVariance)),
+    crit: Math.max(1, Math.floor(creature.baseStats.crit * critVariance)),
+    rank,
   };
 
-  // Generate unique ID
-  const uniqueId = `enemy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  // Assign skills: specimen (species-based) + personality (archetype-based)
+  const personality = generateRandomPersonality();
+  const specimenSkill = getSpecimenSkill(creatureId);
+  const personalitySkill = getBaseSkill(personality);
+
+  // Convert skills to Creature format
+  const convertSkill = (skill: any) => {
+    if (!skill) return undefined;
+    return {
+      name: skill.name,
+      description: skill.description,
+      effect: skill.effect,
+      value: skill.value,
+      duration: skill.duration,
+      cooldown: skill.cooldown,
+      target: skill.target,
+    };
+  };
+
+  const creatureTemplate = {
+    ...creature,
+    specimenSkill: convertSkill(specimenSkill),
+    personalitySkill: convertSkill(personalitySkill),
+  };
+
+  const stats = {
+    ...varianceStats,
+    rank,
+  };
+
+  const name = `${creature.name} (R${rank} L1)`;
 
   return {
-    id: uniqueId,
-    name: `${creatureId.substring(0, 1).toUpperCase()}${creatureId.substring(1)} ${Math.floor(Math.random() * 999) + 1}`,
-    baseStats: {
-      hp: varianceStats.hp,
-      attack: varianceStats.attack,
-      defense: varianceStats.defense,
-      speed: varianceStats.speed,
-      crit: varianceStats.crit,
-    },
-    rank: "E",
-    desc: "Random enemy from easy mode",
-    // Simply assign skills directly - battle system handles conversion
-    specimenSkill: specimenSkill,
-    personalitySkill: personalitySkill,
-    level: 1,
-    currentXP: 0,
-    xpToNextLevel: 10,
-    stars: 0,
-    levelHistory: [],
+    creatureTemplate,
+    stats,
+    name,
     traits,
-  } as unknown as Creature;
+  };
 }
 
 /**
  * Generate a random enemy team of 5 level 1 creatures
+ * Uses hunting's spawn logic for consistency
  */
 export function generateRandomEnemyTeam(): Array<{
-  creatureTemplate: string;
+  creatureTemplate: any;
   stats: any;
   name: string;
   traits?: string[];
@@ -118,16 +135,7 @@ export function generateRandomEnemyTeam(): Array<{
   const enemies = [];
 
   for (let i = 0; i < 5; i++) {
-    const creature = generateRandomEnemyCreature() as any;
-    enemies.push({
-      creatureTemplate: creature.creatureId || creature.name.split(" ")[0],
-      stats: {
-        ...creature.baseStats,
-        rank: creature.rank,
-      },
-      name: creature.name,
-      traits: creature.traits,
-    });
+    enemies.push(spawnEasyModeEnemy());
   }
 
   return enemies;
