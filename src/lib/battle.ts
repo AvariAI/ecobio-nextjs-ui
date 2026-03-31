@@ -1907,15 +1907,15 @@ function applyRoueDuDestinCooldownReset(ctx: SkillExecutionContext, targets: Bat
 
   allyTeam.forEach(creature => {
     if (creature.currentHP <= 0) return;
-    if (!creature.creature.skill && !creature.creature.specimenSkill) return;
+    if (!creature.creature.personalitySkill && !creature.creature.specimenSkill) return;
 
     const creatureCooldowns: string[] = [];
 
     // Check personality skill cooldown
-    if (creature.creature.skill) {
-      const cooldownKey = `${creature.creature.skill.name}_personality_${creature.name}`;
+    if (creature.creature.personalitySkill) {
+      const cooldownKey = `${creature.creature.personalitySkill.name}_personality_${creature.name}`;
       if (creature.skillCooldowns[cooldownKey] !== undefined && creature.skillCooldowns[cooldownKey] > 0) {
-        creatureCooldowns.push(creature.creature.skill.name);
+        creatureCooldowns.push(creature.creature.personalitySkill.name);
       }
     }
 
@@ -1963,7 +1963,7 @@ function applyRoueDuDestinCooldownReset(ctx: SkillExecutionContext, targets: Bat
 
   // Reset cooldowns
   skillsReset.forEach(skillName => {
-    const personalitySkill = targetAlly.creature.skill;
+    const personalitySkill = targetAlly.creature.personalitySkill;
     const specimenSkill = targetAlly.creature.specimenSkill;
 
     if (personalitySkill && personalitySkill.name === skillName) {
