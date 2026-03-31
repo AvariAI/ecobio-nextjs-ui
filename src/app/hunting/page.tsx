@@ -137,14 +137,8 @@ function spawnCreature(): HuntedCreature {
   const uniqueId = `cre_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   // Assign skills with all compatibility fields
-  const fullSpecimenSkill: Creature["specimenSkill"] = specimenSkill ? {
-    name: specimenSkill.name,
-    description: specimenSkill.description,
-    effect: specimenSkill.effect,
-    value: specimenSkill.value,
-    duration: specimenSkill.duration,
-    cooldown: specimenSkill.cooldown,
-    target: specimenSkill.target,
+  const fullSpecimenSkill = specimenSkill ? {
+    ...(specimenSkill as any), // Keep all fields including effects!
   } : undefined;
 
   const fullPersonalitySkill = personalitySkill ? {
@@ -451,29 +445,13 @@ export default function HuntingPage() {
           if (!migrated.specimenSkill) {
             const specimenSkill = getSpecimenSkill(c.creatureId || c.id);
             if (specimenSkill) {
-              migrated.specimenSkill = {
-                name: specimenSkill.name,
-                description: specimenSkill.description,
-                effect: specimenSkill.effect,
-                value: specimenSkill.value,
-                duration: specimenSkill.duration,
-                cooldown: specimenSkill.cooldown,
-                target: specimenSkill.target,
-              };
+              migrated.specimenSkill = specimenSkill as any; // Keep all fields
             }
           }
           if (!migrated.personalitySkill) {
             const personalitySkill = getBaseSkill(migrated.personality);
             if (personalitySkill) {
-              migrated.personalitySkill = {
-                name: personalitySkill.name,
-                description: personalitySkill.description,
-                effect: personalitySkill.effect,
-                value: personalitySkill.value,
-                duration: personalitySkill.duration,
-                cooldown: personalitySkill.cooldown,
-                target: personalitySkill.target,
-              };
+              migrated.personalitySkill = personalitySkill as any; // Keep all fields
             }
           }
 
