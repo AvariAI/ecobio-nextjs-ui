@@ -2028,11 +2028,11 @@ function applyMiroirDesAEffect(ctx: SkillExecutionContext, targets: BattleCreatu
 
   const target = aliveEnemies[0];
 
-  // Get all buffs from both creatures
-  const attackerBuffs = Object.values(attacker.buffs);
-  const targetBuffs = Object.values(target.buffs);
+  // Get all buffs from both creatures BEFORE deletion
+  const storedAttackerBuffs: ActiveBuff[] = Object.values(attacker.buffs);
+  const storedTargetBuffs: ActiveBuff[] = Object.values(target.buffs);
 
-  if (attackerBuffs.length === 0 && targetBuffs.length === 0) {
+  if (storedAttackerBuffs.length === 0 && storedTargetBuffs.length === 0) {
     log.push({
       text: `🔄 Miroir des Âmes: ${attacker.name} et ${target.name} n'ont pas de buffs à échanger!`,
       type: "info",
@@ -2040,28 +2040,18 @@ function applyMiroirDesAEffect(ctx: SkillExecutionContext, targets: BattleCreatu
     return;
   }
 
-  // Store origin creature IDs for buffs
-  const attackerBuffIds: string[] = Object.keys(attacker.buffs);
-  const targetBuffIds: string[] = Object.keys(target.buffs);
-
   // Remove all buffs from both creatures
-  attackerBuffIds.forEach(id => delete attacker.buffs[id]);
-  targetBuffIds.forEach(id => delete target.buffs[id]);
+  Object.keys(attacker.buffs).forEach(id => delete attacker.buffs[id]);
+  Object.keys(target.buffs).forEach(id => delete target.buffs[id]);
 
-  // Re-add buffs with swapped owners
-  attackerBuffIds.forEach(id => {
-    const buff = attackerBuffs.find(b => id.includes(b.sourceSkillId || '') && b.sourceCreatureId === attacker.id);
-    if (buff) {
-      // Recalculate buff ID to reflect new owner
-      addBuff(target, buff.type, buff.value, buff.turnsRemaining, buff.sourceSkillId, attacker.id, log);
-    }
+  // Re-add attacker's buffs to target
+  storedAttackerBuffs.forEach(buff => {
+    addBuff(target, buff.type, buff.value, buff.turnsRemaining, buff.sourceSkillId, buff.sourceCreatureId, log);
   });
 
-  targetBuffIds.forEach(id => {
-    const buff = targetBuffs.find(b => id.includes(b.sourceSkillId || '') && b.sourceCreatureId === target.id);
-    if (buff) {
-      addBuff(attacker, buff.type, buff.value, buff.turnsRemaining, buff.sourceSkillId, target.id, log);
-    }
+  // Re-add target's buffs to attacker
+  storedTargetBuffs.forEach(buff => {
+    addBuff(attacker, buff.type, buff.value, buff.turnsRemaining, buff.sourceSkillId, buff.sourceCreatureId, log);
   });
 
   log.push({
@@ -2070,17 +2060,14 @@ function applyMiroirDesAEffect(ctx: SkillExecutionContext, targets: BattleCreatu
   });
 
   // Level 5: Steal one additional random buff
-  if (skill.level === 5 && targetBuffs.length > 1) {
-    // Pick a random buff from target (that originated from target)
-    const targetOriginalBuffs = targetBuffs.filter(b => b.sourceCreatureId === target.id);
-    if (targetOriginalBuffs.length > 0) {
-      const stolenBuff = targetOriginalBuffs[Math.floor(Math.random() * targetOriginalBuffs.length)];
-      addBuff(attacker, stolenBuff.type, stolenBuff.value, stolenBuff.turnsRemaining, stolenBuff.sourceSkillId, stolenBuff.sourceCreatureId, log);
+  if (skill.level === 5 && storedTargetBuffs.length > 1) {
+    // Pick a random buff from stored target buffs
+    const stolenBuff = storedTargetBuffs[Math.floor(Math.random() * storedTargetBuffs.length)];
+    addBuff(attacker, stolenBuff.type, stolenBuff.value, stolenBuff.turnsRemaining, stolenBuff.sourceSkillId, stolenBuff.sourceCreatureId, log);
 
-      log.push({
-        text: `🔄🔄 Miroir des Âmes NIVEAU 5: ${attacker.name} vole un buff supplémentaire de ${target.name}! (${stolenBuff.type})`,
-        type: "skill",
-      });
-    }
+    log.push({
+      text: `🔄🔄 Miroir des Âmes NIVEAU 5: ${attacker.name} vole un buff supplémentaire de ${target.name}! (${stolenBuff.type})`,
+      type: "skill",
+    });
   }
 }
