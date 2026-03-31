@@ -1560,7 +1560,8 @@ function applyDamageEffect(ctx: SkillExecutionContext, targets: BattleCreature[]
 
       // Critical hit (independent for each attack)
       const critChance = Math.min((attacker.stats.crit / 100), 0.40);
-      const isCrit = Math.random() < critChance;
+      // For Tir Critique (precise) with ignoreDodge = true, force critical hit
+      const isCrit = ignoreDodge || Math.random() < critChance;
 
       if (isCrit) {
         let critMult = 1.5 + (attacker.stats.crit / 100) * 0.25;
