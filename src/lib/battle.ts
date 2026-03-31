@@ -1615,26 +1615,37 @@ function applyDamageEffect(ctx: SkillExecutionContext, targets: BattleCreature[]
         // Don't break - continue cascade to next random target
       }
 
-      // Log each attack in cascade
-      if (isCascade && cascadeChances.length > 1) {
+      // Log each cascade attack SEPARATELY
+      if (isCascade) {
         log.push({
-          text: `${attacker.name} 💨 Assaut [#${attackNum}] sur ${cascadeTarget.name}: ${finalDamage} dégâts${ignoreDodge ? " (COUP GARANTI)" : ""}`,
-          type: "damage",
+          text: `${attacker.name} 💨 Assaut rapide [#${attackNum}/${cascadeChances.length}] sur ${cascadeTarget.name}: ${finalDamage} dégâts${isCrit ? " 💥 CRITICAL" : ""}${ignoreDodge ? " (COUP GARANTI)" : ""}`,
+          type: isCrit ? "critical" : "damage",
         });
       }
+
+      // Don't break - continue cascade to next random target
     }
 
     // Summary log for cascade
     if (isCascade && cascadeChances.length > 1) {
       log.push({
-        text: `🔁 ${skill.name}: ${attackNum} attack(s) pour un total de ${cascadeTotal} dégâts sur ${target.name}`,
+        text: `🔁 ${skill.name}: ${attackNum} attaque(s) pour un total de ${cascadeTotal} dégâts sur les ennemis!`,
         type: "damage",
       });
     } else {
       // Normal single attack log
+      const normCritChance = Math.min((attacker.stats.crit / 100), 0.40);
+      const normIsCrit = Math.random() < normCritChance;
+      let normDamage = baseDamage;
+      if (normIsCrit) {
+        let normCritMult = 1.5 + (attacker.stats.crit / 100) * 0.25;
+        if (effects.critDamageBonus) normCritMult += effects.critDamageBonus;
+        normDamage = Math.floor(normDamage * normCritMult);
+      }
+
       log.push({
-        text: `${attacker.name} utilise ${skill.name} sur ${target.name}: ${baseDamage} dégâts${ignoreDodge ? " (COUP GARANTI - ignore esquive)" : ""}`,
-        type: "damage",
+        text: `${attacker.name} utilise ${skill.name} sur ${target.name}: ${normDamage} dégâts${normIsCrit ? " 💥 CRITICAL" : ""}${ignoreDodge ? " (COUP GARANTI - ignore esquive)" : ""}`,
+        type: normIsCrit ? "critical" : "damage",
       });
     }
   });
