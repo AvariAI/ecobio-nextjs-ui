@@ -577,7 +577,8 @@ export function onDamageTakenHooks(
   attacker: BattleCreature,
   log: BattleLogEntry[]
 ): number {
-  const reflectedDamage = applyTraitOnDamageTaken(defender, damage, attacker, log);
+  // --- TRAITS DISABLED FOR NOW - will be re-integrated later ---
+  const reflectedDamage = 0;  // No trait damage reflection, return 0
   if (reflectedDamage > 0) {
     log.push({
       text: `🔥 Épines renvoie ${reflectedDamage} dégâts à ${attacker.name}!`,
@@ -606,6 +607,7 @@ export function onAttackHooks(
 
 /**
  * Apply trait effects when damage is taken
+ * TRAITS DISABLED FOR NOW - returns 0 (no damage reflection)
  */
 function applyTraitOnDamageTaken(
   defender: BattleCreature,
@@ -613,64 +615,53 @@ function applyTraitOnDamageTaken(
   attacker: BattleCreature,
   log: BattleLogEntry[]
 ): number {
-  const traits = getTraitsByIds(defender.traits);
-  let reflectedDamage = 0;
+  // TRAITS DISABLED - no damage reflection
+  return 0;
 
-  for (const trait of traits) {
-    if (trait.id === "epines") {
-      // Épines: Reflect X% of damage back to attacker
-      const reflectPercent = 0.2; // 20% reflection (will vary by rarity)
-      reflectedDamage += Math.floor(damage * reflectPercent);
-    }
-  }
+  // Original logic (disabled) - implements trait reflec-t Damage like "Épines"
+  // const traits = getTraitsByIds(defender.traits);
+  // let reflectedDamage = 0;
 
-  return reflectedDamage;
+  // for (const trait of traits) {
+  //   if (trait.id === "epines") {
+  //     const reflectPercent = 0.2;
+  //     reflectedDamage += Math.floor(damage * reflectPercent);
+  //   }
+  // }
+
+  // return reflectedDamage;
 }
 
 /**
  * Apply trait effects when attacking
+ * TRAITS DISABLED FOR NOW - does nothing (no status effects)
  */
 function applyTraitOnAttack(
   attacker: BattleCreature,
   defender: BattleCreature,
   log: BattleLogEntry[]
 ): void {
-  const traits = getTraitsByIds(attacker.traits);
+  // TRAITS DISABLED - do nothing (no Slow, Poison, etc.)
 
-  for (const trait of traits) {
-    if (trait.id === "slowTrait") {
-      const attacksNeeded = 3; // Every 3 attacks
-      if (attacker.attackCounter % attacksNeeded === 0) {
-        const slowAmount = 0.15; // 15% speed reduction
-        addStatusEffect(defender, StatusEffectType.SLOW, 2, slowAmount);
-        log.push({
-          text: `🐌 ${defender.name} est ralentit (${Math.floor(slowAmount * 100)}% SPD) pour 2 tours!`,
-          type: "info",
-        });
-      }
-    } else if (trait.id === "venom") {
-      const poisonChance = 0.3; // 30% chance to apply poison
-      if (Math.random() < poisonChance) {
-        const poisonDamage = 0.06; // 6% HP per turn
-        addStatusEffect(defender, StatusEffectType.POISON, 3, poisonDamage);
-        log.push({
-          text: `☠️ ${defender.name} est empoisonné!`,
-          type: "info",
-        });
-      }
-    } else if (trait.id === "coupBas") {
-      const defenderHpPercent = defender.currentHP / defender.stats.hp;
-      const myHpPercent = attacker.currentHP / attacker.stats.hp;
-      // When my HP < 20%, chance to stun target
-      if (myHpPercent < 0.2 && Math.random() < 0.25) {
-        addStatusEffect(defender, StatusEffectType.STUN, 1);
-        log.push({
-          text: `💫 ${defender.name} est étourdi par Coup Bas!`,
-          type: "info",
-        });
-      }
-    }
-  }
+  // Original logic (disabled) - implements traits like SlowTrait, PoisonTrait
+  // const traits = getTraitsByIds(attacker.traits);
+
+  // for (const trait of traits) {
+  //   if (trait.id === "slowTrait") {
+  //     const attacksNeeded = 3;
+  //     if (attacker.attackCounter % attacksNeeded === 0) {
+  //       const slowAmount = 0.15;
+  //       addStatusEffect(defender, StatusEffectType.SLOW, 2, slowAmount);
+  //       log.push({
+  //         text: `🐌 ${defender.name} est ralentit (${Math.floor(slowAmount * 100)}% SPD) pour 2 tours!`,
+  //         type: "info",
+  //       });
+  //     }
+  //   } else if (trait.id === "poisonTrait") {
+  //     // ... poison logic
+  //   }
+  //   // ... other traits
+  // }
 }
 
 /**
@@ -961,27 +952,32 @@ export function getBuffExpirationMessages(battleCreature: BattleCreature): strin
 
 /**
  * Apply trait regeneration during each turn
+ * TRAITS DISABLED FOR NOW - does nothing (no HP regeneration)
  */
 export function applyTraitRegeneration(
   battleCreature: BattleCreature,
   log: BattleLogEntry[]
 ): void {
-  const hpPercent = battleCreature.currentHP / battleCreature.stats.hp;
-  const traitMods = applyTraitModifiers(battleCreature, hpPercent);
+  // TRAITS DISABLED - do nothing (no regeneration)
+  return;
 
-  if (traitMods.regenPerTurn > 0 && battleCreature.currentHP > 0) {
-    const regenAmount = Math.floor(battleCreature.stats.hp * traitMods.regenPerTurn);
-    const oldHP = battleCreature.currentHP;
-    battleCreature.currentHP = Math.min(battleCreature.stats.hp, battleCreature.currentHP + regenAmount);
-    const actualHeal = battleCreature.currentHP - oldHP;
+  // Original logic (disabled) - implements traits like Régénération
+  // const hpPercent = battleCreature.currentHP / battleCreature.stats.hp;
+  // const traitMods = applyTraitModifiers(battleCreature, hpPercent);
 
-    if (actualHeal > 0) {
-      log.push({
-        text: `${battleCreature.name} se régénère (+${actualHeal} HP)`,
-        type: "info",
-      });
-    }
-  }
+  // if (traitMods.regenPerTurn > 0 && battleCreature.currentHP > 0) {
+  //   const regenAmount = Math.floor(battleCreature.stats.hp * traitMods.regenPerTurn);
+  //   const oldHP = battleCreature.currentHP;
+  //   battleCreature.currentHP = Math.min(battleCreature.stats.hp, battleCreature.currentHP + regenAmount);
+  //   const actualHeal = battleCreature.currentHP - oldHP;
+
+  //   if (actualHeal > 0) {
+  //     log.push({
+  //       text: `${battleCreature.name} se régénère (+${actualHeal} HP)`,
+  //       type: "info",
+  //     });
+  //   }
+  // }
 }
 
 /**
@@ -1007,6 +1003,7 @@ export function calculateCritMultiplier(stats: BaseStats): number {
 
 /**
  * Apply trait effects to battle stats
+ * TRAITS DISABLED FOR NOW - returns neutral values (no stat modifications)
  */
 export function applyTraitModifiers(
   creature: BattleCreature,
@@ -1019,24 +1016,34 @@ export function applyTraitModifiers(
   dodgeBonus: number;
   regenPerTurn: number;
 } {
-  const hpPercent = creature.currentHP / creature.stats.hp;
-
-  // Apply creature's traits with conditional context if available
-  let statsContext: any = {};
-  if (targetHpPercent !== undefined) {
-    statsContext.targetHpPercent = targetHpPercent;
-  }
-
-  const traitEffects = applyTraitEffects(creature.traits, hpPercent, statsContext);
-
+  // TRAITS DISABLED - return neutral values (no stat modifications)
   return {
-    critRateBonus: traitEffects.critRateAdjustment,
-    critMultBonus: traitEffects.critMultAdjustment,
-    damageDealtMult: traitEffects.damageDealtMult,
-    damageReceivedMult: traitEffects.damageReceivedMult,
-    dodgeBonus: traitEffects.dodgeAdjustment,
-    regenPerTurn: traitEffects.regenPerTurn,
+    critRateBonus: 0,
+    critMultBonus: 0,
+    damageDealtMult: 1,
+    damageReceivedMult: 1,
+    dodgeBonus: 0,
+    regenPerTurn: 0,
   };
+
+  // Original logic (disabled) - applies trait effects to stats
+  // const hpPercent = creature.currentHP / creature.stats.hp;
+
+  // let statsContext: any = {};
+  // if (targetHpPercent !== undefined) {
+  //   statsContext.targetHpPercent = targetHpPercent;
+  // }
+
+  // const traitEffects = applyTraitEffects(creature.traits, hpPercent, statsContext);
+
+  // return {
+  //   critRateBonus: traitEffects.critRateAdjustment,
+  //   critMultBonus: traitEffects.critMultAdjustment,
+  //   damageDealtMult: traitEffects.damageDealtMult,
+  //   damageReceivedMult: traitEffects.damageReceivedMult,
+  //   dodgeBonus: traitEffects.dodgeAdjustment,
+  //   regenPerTurn: traitEffects.regenPerTurn,
+  // };
 }
 
 /**
