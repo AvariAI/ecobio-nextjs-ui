@@ -144,8 +144,9 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
     target: "random",
     level: 1,
     effects: {
-      critDamageBonus: 1.5,
-      ignoreDodge: true,
+      offenseMultiplier: 1.0,  // CRITICAL: Base 100% damage
+      critDamageBonus: 1.5,    // +150% crit bonus
+      ignoreDodge: true,      // COUP GARANTI !
       effectDuration: 0,
     }
   },
