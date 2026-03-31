@@ -420,13 +420,16 @@ export function tickPersonalityBuff(
     buff.onRemove(creature);
 
     // Healing recovery notification for soin_leurre
-    if (creature.personality === "soin_leurre" && creature.soinLeurreState?.damageTakenDuringBuff > 0) {
-      const reduction = Math.floor(creature.soinLeurreState.damageTakenDuringBuff * 0.5);
-      if (reduction > 0) {
-        log.push({
-          text: `💊 Bouclier Temporel expire: ${creature.name} récupère ${reduction} HP (${creature.soinLeurreState.damageTakenDuringBuff} dégâts absorbés → -50%)`,
-          type: "heal",
-        });
+    if (creature.personality === "soin_leurre" && creature.soinLeurreState?.damageTakenDuringBuff) {
+      const damageTaken = creature.soinLeurreState.damageTakenDuringBuff;
+      if (damageTaken > 0) {
+        const reduction = Math.floor(damageTaken * 0.5);
+        if (reduction > 0) {
+          log.push({
+            text: `💊 Bouclier Temporel expire: ${creature.name} récupère ${reduction} HP (${damageTaken} dégâts absorbés → -50%)`,
+            type: "heal",
+          });
+        }
       }
     }
 
