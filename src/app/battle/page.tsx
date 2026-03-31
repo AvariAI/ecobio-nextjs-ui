@@ -993,12 +993,6 @@ export default function BattlePage() {
         (a, b) => getEffectiveSpeed(b.creature) - getEffectiveSpeed(a.creature)
       );
 
-      // Find the new creature reference corresponding to current
-      const newCurrentCreature = newTurnOrder.find(el =>
-        el.creature.name === currentActingCreature.name &&
-        el.team === (playerTeam.creatures.includes(currentActingCreature) ? "player" : "enemy")
-      )?.creature || currentActingCreature;
-
       // Update all state
       setLog(logCopy);
       setPlayerTeam(newPlayerTeam);
@@ -1018,8 +1012,15 @@ export default function BattlePage() {
       }
 
       // Move to next creature
-      const currentIndex = newTurnOrder.findIndex(el => el.creature === newCurrentCreature);
-      let nextIndex = (currentIndex + 1) % newTurnOrder.length;
+      // Use name + team + position for robust matching (instead of reference comparison)
+      const currentTeam = playerTeam.creatures.includes(currentActingCreature) ? "player" : "enemy";
+      const currentIndex = newTurnOrder.findIndex(el =>
+        el.creature.name === currentActingCreature.name &&
+        el.team === currentTeam &&
+        el.creature.position === currentActingCreature.position
+      );
+
+      let nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % newTurnOrder.length;
       let nextCreature = newTurnOrder[nextIndex];
 
       // Find next alive creature
@@ -1048,7 +1049,7 @@ export default function BattlePage() {
       setTurnOrder(newTurnOrder);
       setCurrentActingCreature(nextCreature.creature);
       setTurn(nextCreature.team as "player" | "enemy");
-      if (nextIndex < currentIndex) {
+      if (currentIndex !== -1 && nextIndex < currentIndex) {
         setRound((prev) => prev + 1);
       }
 
@@ -1179,8 +1180,13 @@ export default function BattlePage() {
       }
 
       // Move to next creature
-      const currentIndex = newTurnOrder.findIndex(el => el.creature === newCurrentCreature);
-      let nextIndex = (currentIndex + 1) % newTurnOrder.length;
+      // Use name + position for robust matching (instead of reference comparison)
+      const currentIndex = newTurnOrder.findIndex(el =>
+        el.creature.name === currentActingCreature.name &&
+        el.creature.position === currentActingCreature.position
+      );
+
+      let nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % newTurnOrder.length;
       let nextCreature = newTurnOrder[nextIndex];
 
       // Find next alive creature
@@ -1205,7 +1211,7 @@ export default function BattlePage() {
 
       setCurrentActingCreature(nextCreature.creature);
       setTurn(nextCreature.team as "player" | "enemy");
-      if (nextIndex < currentIndex) {
+      if (currentIndex !== -1 && nextIndex < currentIndex) {
         setRound((prev) => prev + 1);
       }
     }
@@ -1345,11 +1351,12 @@ export default function BattlePage() {
         }
 
         // Find current turn index - use name + position + team as unique key (not object reference)
+        const currentTeam = playerTeam.creatures.includes(currentActingCreature) ? "player" : "enemy";
         let currentIndex = -1;
         for (let i = 0; i < newTurnOrder.length; i++) {
           const el = newTurnOrder[i];
           if (el.creature.name === currentActingCreature.name &&
-              el.team === (playerTeam.creatures.includes(currentActingCreature) ? "player" : "enemy") &&
+              el.team === currentTeam &&
               el.creature.position === currentActingCreature.position) {
             currentIndex = i;
             break;
