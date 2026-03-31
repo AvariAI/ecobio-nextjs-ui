@@ -153,42 +153,41 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
 
   balancee: {
     id: "balancee_base",
-    name: "Échange Solaire",
-    description: "+20% toutes les stats (soi), -20% toutes les stats (ennemi) (1 tour)",
+    name: "Miroir des Âmes",
+    description: "Swap tous les buffs avec l'ennemi le plus buffé (symétrique)",
     archetype: "balancee",
     source: "personality",
     type: "special",
-    effect: "defense",  // Use defense type for stat manipulations
-    value: 0.20,  // 20% (increased from 10%)
-    duration: 1,
+    effect: "special",  // Buff swap
+    value: 0,  // No damage value
+    duration: 0,
     cooldown: 4,
-    target: "self",
+    target: "random",  // Target enemy with most buffs
     level: 1,
     effects: {
-      selfBoostPercent: 0.20,  // +20% (increased from 10%)
-      enemyDebuffPercent: -0.20,  // -20% (increased from -10%)
-      effectDuration: 1,
+      // Buff swap effect
+      effectDuration: 0,
     }
   },
 
   mysterieuse: {
     id: "mysterieuse_base",
     name: "Roue du Destin",
-    description: "Effet aléatoire basé sur PV actuels (ATK+40%, esquive+60%, soigne 40% PV max)",
+    description: "Reset le cooldown d'un allié aléatoire (échange d'énergie mystérieuse)",
     archetype: "mysterieuse",
     source: "personality",
     type: "special",
-    effect: "defense",  // Generic for RNG effects
-    value: 0.15,  // Target effect strength for display
-    duration: 2,
+    effect: "special",  // Cooldown reset
+    value: 0,  // No damage value
+    duration: 0,
     cooldown: 4,
-    target: "self",
+    target: "ally",  // Targets an ally
     level: 1,
     effects: {
-      // Dynamic effects determined at activation
-      effectDuration: 2,
+      // Cooldown reset effect
+      effectDuration: 0,
     }
-  }
+  },
 };
 
 // Skills defined per specimen (creature species)

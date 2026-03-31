@@ -298,24 +298,28 @@ export function executeCreatureTurn(
           // (This is a placeholder - actual damage-all logic would need skill effect types)
         } else if (targetType === "self") {
           // Self-buff skill
-          useSkill(activeCreature, log, activeCreature);
+          useSkill(activeCreature, log, activeCreature, undefined, allyTeam, allyTeam, playerTeam, enemyTeam);
+          usedSkill = true;
+        } else if (skill.effect === "special" && skill.name === "Roue du Destin") {
+          // Roue du Destin: target allies randomly or strategically (level 5)
+          useSkill(activeCreature, log, activeCreature, undefined, allyTeam, allyTeam, playerTeam, enemyTeam);
           usedSkill = true;
         } else if (skill.effect === "heal" || skill.effect === "defense" || skill.effect === "dodge" || skill.effect === "speed") {
           // Support/heal skill - target allies
           const targetAlly = selectTargetByPosition(activeCreature, allyTeam, teamSize, targetType);
           if (targetAlly) {
-            useSkill(activeCreature, log, targetAlly, undefined, allyTeam);
+            useSkill(activeCreature, log, targetAlly, undefined, allyTeam, allyTeam, playerTeam, enemyTeam);
             usedSkill = true;
           } else {
             // Fallback to self if no allies available
-            useSkill(activeCreature, log, activeCreature);
+            useSkill(activeCreature, log, activeCreature, undefined, allyTeam, allyTeam, playerTeam, enemyTeam);
             usedSkill = true;
           }
         } else {
           // Offensive skill (including "random", "front", "back") - target enemies
           const target = selectTargetByPosition(activeCreature, targetTeam, teamSize, targetType);
           if (target) {
-            useSkill(activeCreature, log, target, undefined, targetTeam);
+            useSkill(activeCreature, log, target, undefined, targetTeam, enemyTeam, playerTeam, enemyTeam);
             usedSkill = true;
           }
         }

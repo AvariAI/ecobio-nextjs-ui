@@ -686,7 +686,10 @@ export function useSkill(
   log: BattleLogEntry[],
   target?: BattleCreature | null,
   skillType?: "specimen" | "personality",
-  targetTeam?: BattleTeam | null
+  targetTeam?: BattleTeam | null,
+  allyTeam?: BattleTeam | null,
+  playerTeam?: BattleTeam | null,
+  enemyTeam?: BattleTeam | null
 ): boolean {
   // Use specified skill type, default to specimen
   const st = skillType || "specimen";
@@ -701,6 +704,12 @@ export function useSkill(
   if (!canUseSkill(battleCreature, st)) {
     return false;
   }
+
+  // Build battle context
+  const battleContext: BattleContext = {
+    playerTeam,
+    enemyTeam,
+  };
 
   // Determine what to pass as target (creature or team)
   let executionTarget: BattleCreature | BattleTeam | null;
@@ -724,8 +733,8 @@ export function useSkill(
     return false;
   }
 
-  // Execute skill using the new executor
-  return executeSkill(battleCreature, executionTarget, newSkill, log);
+  // Execute skill using the new executor (pass battle context)
+  return executeSkill(battleCreature, executionTarget, newSkill, log, battleContext);
 }
 
 /**
@@ -1183,20 +1192,27 @@ export function calculateFinalStats(
 // NEW SKILL EXECUTION SYSTEM (Refactored)
 // ============================================================================
 
+interface BattleContext {
+  playerTeam?: BattleTeam | null;
+  enemyTeam?: BattleTeam | null;
+}
+
 interface SkillExecutionContext {
   attacker: BattleCreature;
   target: BattleCreature | BattleTeam | null;
   skill: Skill;
   log: BattleLogEntry[];
+  battleContext?: BattleContext;
 }
 
 export function executeSkill(
   attacker: BattleCreature,
   target: BattleCreature | BattleTeam | null,
   skill: Skill,
-  log: BattleLogEntry[]
+  log: BattleLogEntry[],
+  battleContext?: BattleContext
 ): boolean {
-  const ctx: SkillExecutionContext = { attacker, target, skill, log };
+  const ctx: SkillExecutionContext = { attacker, target, skill, log, battleContext };
 
   // Determine targets based on skill.target
   const targets = determineTargetCreatures(ctx);
@@ -1244,9 +1260,12 @@ export function executeSkill(
     applyPoisonEffect(ctx, targets);
   }
 
-  // 5. Special effects (Roue du Destin RNG)
+  // 5. Special effects
   if (skill.archetype === "mysterieuse") {
-    applyRoueDuDestinEffect(ctx, targets);
+    applyRoueDuDestinCooldownReset(ctx, targets);
+  }
+  if (skill.archetype === "balancee") {
+    applyMiroirDesAEffect(ctx, targets);
   }
 
   // Set cooldown
@@ -1733,70 +1752,174 @@ function applyPoisonEffect(ctx: SkillExecutionContext, targets: BattleCreature[]
 }
 
 // ============================================================================
-// SPECIAL EFFECTS (Roue du Destin)
+// SPECIAL EFFECTS (Roue du Destin + Miroir des Âmes)
 // ============================================================================
 
-function applyRoueDuDestinEffect(ctx: SkillExecutionContext, targets: BattleCreature[]): void {
-  const { attacker, skill, log } = ctx;
-  const hpPercent = attacker.currentHP / attacker.stats.hp;
-  const duration = skill.effects.effectDuration || skill.duration || 2;
+function applyRoueDuDestinCooldownReset(ctx: SkillExecutionContext, targets: BattleCreature[]): void {
+  const { attacker, log, battleContext, skill } = ctx;
 
-  // 30/30/30/10 distribution: ATK, Dodge, Heal, Lucky Strike
-  const roll = Math.random();
-  let chosenEffect: string;
+  // Get attacker's ally team (find which team contains the attacker)
+  const playerCreatures = battleContext?.playerTeam?.creatures || [];
+  const enemyCreatures = battleContext?.enemyTeam?.creatures || [];
 
-  if (roll < 0.30) {
-    chosenEffect = "atk";  // 30%
-  } else if (roll < 0.60) {
-    chosenEffect = "dodge";  // 30%
-  } else if (roll < 0.90) {
-    chosenEffect = "heal";  // 30%
-  } else {
-    chosenEffect = "lucky";  // 10% rare bonus
+  const allyTeam = playerCreatures.some(c => c.id === attacker.id)
+    ? playerCreatures
+    : enemyCreatures;
+
+  if (!allyTeam || allyTeam.length === 0) {
+    log.push({
+      text: `🎰 Roue du Destin: ${attacker.name} active le mystère mais aucune équipe disponible!`,
+      type: "info",
+    });
+    return;
   }
 
-  switch (chosenEffect) {
-    case "atk":
-      addBuff(attacker, BuffType.ATTACK, 0.40, duration, skill.name, attacker.id);
-      log.push({
-        text: `🎰 Roue du Destin: ${attacker.name} gagne ATK +40%!`,
-        type: "skill",
-      });
-      break;
+  // Find all allies with active cooldowns (>=1 turn remaining)
+  const alliesWithCooldowns: Array<{ creature: BattleCreature; cooldowns: string[] }> = [];
 
-    case "dodge":
-      addBuff(attacker, BuffType.DODGE, 0.60, duration, skill.name, attacker.id);
-      log.push({
-        text: `🎰 Roue du Destin: ${attacker.name} gagne Esquive +60%!`,
-        type: "skill",
-      });
-      break;
+  allyTeam.forEach(creature => {
+    if (creature.currentHP <= 0) return;
+    if (!creature.creature.skill && !creature.creature.specimenSkill) return;
 
-    case "heal":
-      const healAmount = Math.floor(attacker.stats.hp * 0.40);
-      const oldHP = attacker.currentHP;
-      attacker.currentHP = Math.min(attacker.stats.hp, attacker.currentHP + healAmount);
-      const actualHealed = attacker.currentHP - oldHP;
-      log.push({
-        text: `🎰 Roue du Destin: ${attacker.name} se soigne de +${actualHealed} HP!`,
-        type: "skill",
-      });
-      break;
+    const creatureCooldowns: string[] = [];
 
-    case "lucky":
-      // Rare 10% bonus: ATK +30% + Crit Boost +20% (combined power)
-      addBuff(attacker, BuffType.ATTACK, 0.30, duration, skill.name, attacker.id);
-      log.push({
-        text: `🎰💎 COUP DE CHANCE! ${attacker.name} gagne ATK +30% + Crit Boost!`,
-        type: "skill",
-      });
-      break;
+    // Check personality skill cooldown
+    if (creature.creature.skill) {
+      const cooldownKey = `${creature.creature.skill.name}_personality_${creature.name}`;
+      if (creature.skillCooldowns[cooldownKey] !== undefined && creature.skillCooldowns[cooldownKey] > 0) {
+        creatureCooldowns.push(creature.creature.skill.name);
+      }
+    }
+
+    // Check specimen skill cooldown
+    if (creature.creature.specimenSkill) {
+      const cooldownKey = `${creature.creature.specimenSkill.name}_specimen_${creature.name}`;
+      if (creature.skillCooldowns[cooldownKey] !== undefined && creature.skillCooldowns[cooldownKey] > 0) {
+        creatureCooldowns.push(creature.creature.specimenSkill.name);
+      }
+    }
+
+    if (creatureCooldowns.length > 0) {
+      alliesWithCooldowns.push({ creature, cooldowns: creatureCooldowns });
+    }
+  });
+
+  if (alliesWithCooldowns.length === 0) {
+    log.push({
+      text: `🎰 Roue du Destin: ${attacker.name} n'a pas d'alliés avec cooldown actif!`,
+      type: "info",
+    });
+    return;
   }
+
+  // Reset cooldowns for the target ally
+  let targetAlly: BattleCreature;
+  let skillsReset: string[] = [];
 
   if (skill.level === 5) {
+    // Level 5: Choose the ally with most cooldowns (strategic)
+    alliesWithCooldowns.sort((a, b) => b.cooldowns.length - a.cooldowns.length);
+    const bestChoice = alliesWithCooldowns[0];
+    targetAlly = bestChoice.creature;
+    skillsReset = bestChoice.cooldowns;
     log.push({
-      text: `🎰🎰 BONUS NIVEAU 5: ${attacker.name} gagne un deuxième effet aléatoire!`,
+      text: `🎰🎰 Roue du Destin NIVEAU 5: ${attacker.name} choisit stratégiquement ${targetAlly.name}!`,
       type: "skill",
     });
+  } else {
+    // Level 1-4: Random
+    const randomChoice = alliesWithCooldowns[Math.floor(Math.random() * alliesWithCooldowns.length)];
+    targetAlly = randomChoice.creature;
+    skillsReset = randomChoice.cooldowns;
+  }
+
+  // Reset cooldowns
+  skillsReset.forEach(skillName => {
+    const personalitySkill = targetAlly.creature.skill;
+    const specimenSkill = targetAlly.creature.specimenSkill;
+
+    if (personalitySkill && personalitySkill.name === skillName) {
+      const cooldownKey = `${skillName}_personality_${targetAlly.name}`;
+      targetAlly.skillCooldowns[cooldownKey] = 0;
+    }
+
+    if (specimenSkill && specimenSkill.name === skillName) {
+      const cooldownKey = `${skillName}_specimen_${targetAlly.name}`;
+      targetAlly.skillCooldowns[cooldownKey] = 0;
+    }
+  });
+
+  log.push({
+    text: `🎰 Roue du Destin: ${attacker.name} a activé ${targetAlly.name}! (${skillsReset.join(", ")}) sont maintenant disponibles!`,
+    type: "skill",
+  });
+}
+
+function applyMiroirDesAEffect(ctx: SkillExecutionContext, targets: BattleCreature[]): void {
+  const { attacker, log, skill } = ctx;
+
+  if (targets.length === 0 || targets[0] === attacker) {
+    log.push({
+      text: `🔄 Miroir des Âmes: ${attacker.name} n'a pas d'ennemi à échanger!`,
+      type: "info",
+    });
+    return;
+  }
+
+  const target = targets[0];
+
+  // Get all buffs from both creatures
+  const attackerBuffs = Object.values(attacker.buffs);
+  const targetBuffs = Object.values(target.buffs);
+
+  if (attackerBuffs.length === 0 && targetBuffs.length === 0) {
+    log.push({
+      text: `🔄 Miroir des Âmes: ${attacker.name} et ${target.name} n'ont pas de buffs à échanger!`,
+      type: "info",
+    });
+    return;
+  }
+
+  // Store origin creature IDs for buffs
+  const attackerBuffIds: string[] = Object.keys(attacker.buffs);
+  const targetBuffIds: string[] = Object.keys(target.buffs);
+
+  // Remove all buffs from both creatures
+  attackerBuffIds.forEach(id => delete attacker.buffs[id]);
+  targetBuffIds.forEach(id => delete target.buffs[id]);
+
+  // Re-add buffs with swapped owners
+  attackerBuffIds.forEach(id => {
+    const buff = attackerBuffs.find(b => id.includes(b.sourceSkillId || '') && b.sourceCreatureId === attacker.id);
+    if (buff) {
+      addBuff(target, buff.type, buff.value, buff.turnsRemaining, buff.sourceSkillId, attacker.id);
+    }
+  });
+
+  targetBuffIds.forEach(id => {
+    const buff = targetBuffs.find(b => id.includes(b.sourceSkillId || '') && b.sourceCreatureId === target.id);
+    if (buff) {
+      addBuff(attacker, buff.type, buff.value, buff.turnsRemaining, buff.sourceSkillId, target.id);
+    }
+  });
+
+  log.push({
+    text: `🔄 Miroir des Âmes: ${attacker.name} et ${target.name} ont échangé leurs âmes (tous les buffs swapés)!`,
+    type: "skill",
+  });
+
+  // Level 5: Steal one additional random buff
+  if (skill.level === 5 && targetBuffs.length > 1) {
+    // Pick a random buff from target (that originated from target)
+    const targetOriginalBuffs = targetBuffs.filter(b => b.sourceCreatureId === target.id);
+    if (targetOriginalBuffs.length > 0) {
+      const stolenBuff = targetOriginalBuffs[Math.floor(Math.random() * targetOriginalBuffs.length)];
+      addBuff(attacker, stolenBuff.type, stolenBuff.value, stolenBuff.turnsRemaining, stolenBuff.sourceSkillId, stolenBuff.sourceCreatureId);
+
+      log.push({
+        text: `🔄🔄 Miroir des Âmes NIVEAU 5: ${attacker.name} vole un buff supplémentaire de ${target.name}! (${stolenBuff.type})`,
+        type: "skill",
+      });
+    }
   }
 }
