@@ -87,24 +87,11 @@ export function spawnEasyModeEnemy(): {
   const specimenSkill = getSpecimenSkill(creatureId);
   const personalitySkill = getBaseSkill(personality);
 
-  // Convert skills to Creature format
-  const convertSkill = (skill: any) => {
-    if (!skill) return undefined;
-    return {
-      name: skill.name,
-      description: skill.description,
-      effect: skill.effect,
-      value: skill.value,
-      duration: skill.duration,
-      cooldown: skill.cooldown,
-      target: skill.target,
-    };
-  };
-
+  // Convert skills to Creature format (preserve ALL fields including effects!)
   const creatureTemplate = {
     ...creature,
-    specimenSkill: convertSkill(specimenSkill),
-    personalitySkill: convertSkill(personalitySkill),
+    specimenSkill: specimenSkill ? { ...specimenSkill } : undefined,
+    personalitySkill: personalitySkill ? { ...personalitySkill } : undefined,
   };
 
   const stats = {
