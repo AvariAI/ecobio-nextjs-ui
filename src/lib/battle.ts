@@ -8,6 +8,13 @@ import { applyTraits as applyTraitEffects, getTraitsByIds } from "./traits";
 import { calculateCombatXP } from "./combat-xp";
 import { Skill } from "./skills";
 import type { Skill as SkillType } from "./skills";
+import {
+  getPersonalityBuff,
+  PersonalityType,
+  PersonalityBuff,
+  SoinLeurreState,
+  trackDamageForSoinLeurre,
+} from "./personality-buffs";
 
 export interface BattleElement {
   creature: BattleCreature;
@@ -17,6 +24,7 @@ export interface BattleElement {
 
 export interface BattleStats extends BaseStats {
   rank: Rank;
+  maxHP?: number; // For soin_leurre buff tracking
 }
 
 export interface SkillCooldowns {
@@ -99,6 +107,15 @@ export interface BattleCreature {
   kills: number; // Track kills this battle
   id: string; // Creature ID for XP mapping
   ignoreDodge?: boolean; // If true, ignore dodge for this attack (Tir Critique)
+
+  // Personality buff system
+  personality?: PersonalityType;
+  activePersonalityBuff?: PersonalityBuff; // Currently active personality buff
+  personalityBuffCooldown?: number; // Current cooldown (reduces on each turn)
+  originalMaxHP?: number; // For soin_leurre buff
+  soinLeurreState?: SoinLeurreState; // For soin_leurre damage tracking
+  mysterieuseBoostedStat?: "atk" | "def" | "speed" | "crit" | null; // Track which stat mysterieuse boosted
+  tempStats?: BattleStats; // Temporary stats during buff (- applied when buff is active)
 }
 
 /**
@@ -312,6 +329,141 @@ export function getBuffsAsObject(creature: BattleCreature): {
     defenseBuffTurns: getDefenseBuffTurns(creature),
     dodgeBuffTurns: getDodgeBuffTurns(creature),
   };
+}
+
+// ============================================================================
+// PERSONALITY BUFF SYSTEM
+// ============================================================================
+
+/**
+ * Get a creature's personality buff (if it has one)
+ */
+export function getCreaturePersonalityBuff(
+  creature: BattleCreature
+): PersonalityBuff | null {
+  if (!creature.personality) return null;
+  return getPersonalityBuff(creature.personality);
+}
+
+/**
+ * Check if a creature can activate its personality buff
+ */
+export function canActivatePersonalityBuff(creature: BattleCreature): boolean {
+  if (!creature.personality) return false;
+  if (!getPersonalityBuff(creature.personality)) return false;
+  if (creature.activePersonalityBuff) return false; // Already active
+  if (creature.personalityBuffCooldown && creature.personalityBuffCooldown > 0) return false; // On cooldown
+  return true;
+}
+
+/**
+ * Activate a creature's personality buff
+ */
+export function activatePersonalityBuff(
+  creature: BattleCreature,
+  log: BattleLogEntry[]
+): boolean {
+  if (!canActivatePersonalityBuff(creature)) {
+    return false;
+  }
+
+  const buff = getPersonalityBuff(creature.personality!);
+  if (!buff) return false;
+
+  // Reset cooldown to full duration
+  creature.personalityBuffCooldown = buff.cooldown;
+
+  // Store current stats in tempStats (copy)
+  if (!creature.tempStats) {
+    creature.tempStats = {
+      hp: creature.stats.hp,
+      attack: creature.stats.attack,
+      defense: creature.stats.defense,
+      speed: creature.stats.speed,
+      crit: creature.stats.crit,
+      rank: creature.stats.rank,
+      maxHP: creature.stats.hp, // For soin_leurre
+    };
+  }
+
+  // Apply buff effects
+  buff.onApply(creature);
+
+  // Set active buff with remaining turns
+  creature.activePersonalityBuff = buff;
+
+  log.push({
+    text: `🔮 ${creature.name} active [${buff.name}] (${buff.duration} tours, CD: ${buff.cooldown})`,
+    type: "info",
+  });
+
+  return true;
+}
+
+/**
+ * Tick down personality buff duration and handle expiration
+ * Returns true if buff expired (was active and is now removed)
+ */
+export function tickPersonalityBuff(
+  creature: BattleCreature,
+  log: BattleLogEntry[]
+): boolean {
+  if (!creature.activePersonalityBuff) return false;
+
+  // Decrement duration
+  creature.activePersonalityBuff.duration--;
+
+  const buff = creature.activePersonalityBuff;
+
+  if (buff.duration <= 0) {
+    // Buff expired - apply onRemove
+    buff.onRemove(creature);
+
+    // Healing recovery notification for soin_leurre
+    if (creature.personality === "soin_leurre" && creature.soinLeurreState?.damageTakenDuringBuff > 0) {
+      const reduction = Math.floor(creature.soinLeurreState.damageTakenDuringBuff * 0.5);
+      if (reduction > 0) {
+        log.push({
+          text: `💊 Bouclier Temporel expire: ${creature.name} récupère ${reduction} HP (${creature.soinLeurreState.damageTakenDuringBuff} dégâts absorbés → -50%)`,
+          type: "heal",
+        });
+      }
+    }
+
+    log.push({
+      text: `⏳ [${buff.name}] expire sur ${creature.name}`,
+      type: "info",
+    });
+
+    // Clear active buff
+    creature.activePersonalityBuff = undefined;
+
+    // Reset tempStats to base stats
+    creature.tempStats = undefined;
+
+    return true; // Buff expired
+  }
+
+  return false; // Buff still active
+}
+
+/**
+ * Tick down personality buff cooldown
+ */
+export function tickPersonalityBuffCooldown(creature: BattleCreature): void {
+  if (creature.personalityBuffCooldown && creature.personalityBuffCooldown > 0) {
+    creature.personalityBuffCooldown--;
+  }
+}
+
+/**
+ * Get effective stats considering personality buff (if active)
+ */
+export function getEffectiveStats(creature: BattleCreature): BattleStats {
+  if (creature.tempStats) {
+    return { ...creature.tempStats, rank: creature.stats.rank };
+  }
+  return creature.stats;
 }
 
 /**
@@ -669,8 +821,11 @@ function applyTraitOnAttack(
  * Formula: attack * (attack / (attack + defense))
  */
 export function calculateDamage(attacker: BattleCreature, defender: BattleCreature): number {
-  const atk = attacker.stats.attack;
-  const def = defender.stats.defense;
+  const attackerStats = getEffectiveStats(attacker);
+  const defenderStats = getEffectiveStats(defender);
+
+  const atk = attackerStats.attack;
+  const def = defenderStats.defense;
 
   let damage = atk * (atk / (atk + def));
 
@@ -1112,6 +1267,11 @@ export function executeAttack(
     attacker.kills = (attacker.kills || 0) + 1;
   }
 
+  // Track damage for soin_leurre Bouclier Temporel (if active)
+  if (defender.personality === "soin_leurre" && defender.activePersonalityBuff?.id === "buff_bouclier_temporel") {
+    trackDamageForSoinLeurre(defender, damage);
+  }
+
   // Apply damage taken hooks (e.g., Épines reflection)
   if (damage > 0) {
     const reflectedDamage = onDamageTakenHooks(defender, damage, attacker, log);
@@ -1154,9 +1314,10 @@ export function createBattleCreature(
   stats: BattleStats,
   name?: string,
   traits?: string[],
-  position?: number
+  position?: number,
+  personality?: PersonalityType
 ): BattleCreature {
-  return {
+  const battleCreature: BattleCreature = {
     creature,
     stats,
     currentHP: stats.hp,
@@ -1171,6 +1332,14 @@ export function createBattleCreature(
     kills: 0,
     id: creature.id,
   };
+
+  // Initialize personality if provided
+  if (personality) {
+    battleCreature.personality = personality;
+    battleCreature.personalityBuffCooldown = 0; // Start with no cooldown
+  }
+
+  return battleCreature;
 }
 
 /**
