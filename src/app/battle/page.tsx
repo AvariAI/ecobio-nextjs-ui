@@ -32,6 +32,7 @@ import { applyCombatXP } from "@/lib/combat-xp";
 import { TeamSize, BattleTeam, getAllBattleElements, executeCreatureTurn, isTeamBattleOver, getTeamBattleWinner, validateTeamSize, createBattleTeam, countAliveCreatures, switchPositions, selectTargetByPosition } from "@/lib/battle-multi";
 import { MultiCreatureTestSelector, MultiCreatureCollectionSelector, SlotConfig } from "./multi-battle-components";
 import { MultiCreatureBattleDisplay, MultiCreatureBattleCompleteDisplay, BattleLogDisplay as MultiBattleLogDisplay } from "./multi-battle-display";
+import { generateRandomEnemyTeam } from "@/lib/easy-mode";
 import Link from "next/link";
 
 type HuntingPhase = "ready" | "spawned" | "viewing";
@@ -104,7 +105,7 @@ function formatBuffChange(
 
 export default function BattlePage() {
   // Mode: "test" (default, brute stats) or "collection" (use hunting creatures)
-  const [battleMode, setBattleMode] = useState<"test" | "collection">("test");
+  const [battleMode, setBattleMode] = useState<"test" | "collection" | "easy">("test");
 
   // Team size: 1v1, 3v3, or 5v5
   const [teamSize, setTeamSize] = useState<TeamSize>(1);
@@ -405,6 +406,8 @@ export default function BattlePage() {
         : validateTeamSize(playerTeamIds, teamSize);
       const enemyValid = battleMode === "test"
         ? validateTestSlotConfigs(enemySlotConfigs, teamSize)
+        : battleMode === "easy"
+        ? true  // Easy mode always has valid random enemies
         : validateTeamSize(enemyTeamIds, teamSize);
 
       if (!playerValid || !enemyValid) {
@@ -614,7 +617,7 @@ export default function BattlePage() {
       // Build enemy team
       for (let i = 0; i < teamSize; i++) {
         const creatureId = enemyTeamIds[i];
-        if (!creatureId && battleMode !== "test") continue;
+        if (!creatureId && battleMode !== "test" && battleMode !== "easy") continue;
 
         if (battleMode === "test") {
           // Test mode: Use slot-based creature configuration
@@ -636,6 +639,19 @@ export default function BattlePage() {
             name: `${testCreature.name} ${i + 1} (R${slotConfig.rank} L${slotConfig.level})`,
             traits: [],
           });
+        } else if (battleMode === "easy") {
+          // Easy mode: Generate random enemies (ephemeral, not stored)
+          const randomEnemies = generateRandomEnemyTeam();
+          const randomEnemy = randomEnemies[i]; // Use index i from team size loop
+
+          if (randomEnemy) {
+            enemyCreatures.push({
+              creatureTemplate: randomEnemy.creatureTemplate,
+              stats: randomEnemy.stats,
+              name: randomEnemy.name,
+              traits: randomEnemy.traits,
+            });
+          }
         } else {
           // Collection mode: Use selected creatures
           const collected = collection.find(c => c.id === creatureId);
@@ -1472,6 +1488,16 @@ export default function BattlePage() {
               }`}
             >
               🧪 Test Brut
+            </button>
+            <button
+              onClick={() => setBattleMode("easy")}
+              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                battleMode === "easy"
+                  ? "bg-green-600 text-white shadow-lg"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              🎮 Easy Mode
             </button>
             <button
               onClick={() => setBattleMode("collection")}
