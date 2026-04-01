@@ -49,11 +49,11 @@ export interface Skill {
 
 // Skills defined per personality (archetype)
 export const BASE_SKILLS: Record<PersonalityType, Skill> = {
-  agressive: {
-    id: "agressive_base",
+  agressif: {
+    id: "agressif_base",
     name: "Frénésie",
     description: "Buff actif: +50% ATK pendant 2 tours (cooldown: 3 tours)",
-    archetype: "agressive",
+    archetype: "agressif",
     source: "personality",
     type: "offensive",
     effect: "attack",
@@ -67,11 +67,11 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
     }
   },
 
-  protective: {
-    id: "protective_base",
+  protecteur: {
+    id: "protecteur_base",
     name: "Cuirasse",
     description: "Buff actif: +50% DEF pendant 2 tours (cooldown: 3 tours)",
-    archetype: "protective",
+    archetype: "protecteur",
     source: "personality",
     type: "defensive",
     effect: "defense",
@@ -105,11 +105,11 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
     }
   },
 
-  soin_leurre: {
-    id: "soin_leurre_base",
+  stratège: {
+    id: "stratège_base",
     name: "Bouclier Temporel",
     description: "Buff actif: +50% MAX HP pendant 2 tours + rétro-réduction 50% des dégâts reçus à l'expiration (cooldown: 3 tours)",
-    archetype: "soin_leurre",
+    archetype: "stratège",
     source: "personality",
     type: "special",
     effect: "defense",
@@ -123,11 +123,11 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
     }
   },
 
-  précise: {
-    id: "precise_base",
+  précis: {
+    id: "précis_base",
     name: "Visée Laser",
     description: "Buff actif: +50% CRITIQUE pendant 2 tours (cooldown: 3 tours)",
-    archetype: "précise",
+    archetype: "précis",
     source: "personality",
     type: "offensive",
     effect: "attack",
@@ -141,29 +141,11 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
     }
   },
 
-  balancee: {
-    id: "balancee_base",
-    name: "Équilibre",
-    description: "Buff actif: +25% TOUS les stats (ATK/DEF/VIT/CRIT) pendant 2 tours (cooldown: 3 tours)",
-    archetype: "balancee",
-    source: "personality",
-    type: "special",
-    effect: "special",
-    value: 0.25,  // 25% all stats
-    duration: 2,
-    cooldown: 3,
-    target: "self",
-    level: 1,
-    effects: {
-      effectDuration: 2,
-    }
-  },
-
-  mysterieuse: {
-    id: "mysterieuse_base",
+  mystérieux: {
+    id: "mystérieux_base",
     name: "Surprise",
     description: "Buff actif: +50% à UNE stat random (ATK/DEF/VIT/CRIT) pendant 2 tours (cooldown: 3 tours)",
-    archetype: "mysterieuse",
+    archetype: "mystérieux",
     source: "personality",
     type: "special",
     effect: "special",
@@ -300,13 +282,11 @@ function getSkillDescription(baseSkill: Skill, level: number): string {
       return `${baseSkill.description}${level > 1 ? " Lvl5: 60% redirect, -30% reduced damage" : ""}`;
     case "rapide":
       return `${baseSkill.description}${level > 1 ? " Lvl5: +50%, 2 allies, dodge crit heals 10% maxHP" : ""}`;
-    case "soin_leurre":
+    case "stratège":
       return `${baseSkill.description}${level > 1 ? " Lvl5: 20% heal, 12% poison, 5% self poison damage" : ""}`;
-    case "précise":
+    case "précis":
       return `${baseSkill.description}${level > 1 ? " Lvl5: +200% damage, ignore 30% DEF" : ""}`;
-    case "balancee":
-      return `${baseSkill.description}${level > 1 ? " Lvl5: Steal extra buff on swap" : ""}`;
-    case "mysterieuse":
+    case "mystérieux":
       return `${baseSkill.description}${level > 1 ? " Lvl5: Strategic choice (most cooldowns)" : ""}`;
     default:
       return baseSkill.description;
@@ -353,7 +333,7 @@ function scaleSkillEffects(baseSkill: Skill, level: number): Skill["effects"] {
   }
   
   // Scale heal
-  if (effects.healPercent && baseSkill.archetype === "soin_leurre") {
+  if (effects.healPercent && baseSkill.archetype === "stratège") {
     effects.healPercent = 0.15 + (level - 1) * 0.0125;  // Lvl5: 20%
   }
   
@@ -398,11 +378,10 @@ export function getBaseSkill(personality: PersonalityType): Skill {
 }
 
 export const SKILL_ICONS: Record<PersonalityType, string> = {
-  agressive: "⚔️",
-  protective: "🛡️",
+  agressif: "⚔️",
+  protecteur: "🛡️",
   rapide: "💨",
-  soin_leurre: "💉",
-  précise: "🎯",
-  balancee: "⚖️",
-  mysterieuse: "🎰",
+  stratège: "💉",
+  précis: "🎯",
+  mystérieux: "⚖️",
 };

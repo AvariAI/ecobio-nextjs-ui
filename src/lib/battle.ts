@@ -24,7 +24,7 @@ export interface BattleElement {
 
 export interface BattleStats extends BaseStats {
   rank: Rank;
-  maxHP?: number; // For soin_leurre buff tracking
+  maxHP?: number; // For stratège buff tracking
 }
 
 export interface SkillCooldowns {
@@ -112,9 +112,9 @@ export interface BattleCreature {
   personality?: PersonalityType;
   activePersonalityBuff?: PersonalityBuff; // Currently active personality buff
   personalityBuffCooldown?: number; // Current cooldown (reduces on each turn)
-  originalMaxHP?: number; // For soin_leurre buff
-  soinLeurreState?: SoinLeurreState; // For soin_leurre damage tracking
-  mysterieuseBoostedStat?: "atk" | "def" | "speed" | "crit" | null; // Track which stat mysterieuse boosted
+  originalMaxHP?: number; // For stratège buff
+  soinLeurreState?: SoinLeurreState; // For stratège damage tracking
+  mystérieuxBoostedStat?: "atk" | "def" | "speed" | "crit" | null; // Track which stat mystérieux boosted
   tempStats?: BattleStats; // Temporary stats during buff (- applied when buff is active)
 }
 
@@ -382,7 +382,7 @@ export function activatePersonalityBuff(
       speed: creature.stats.speed,
       crit: creature.stats.crit,
       rank: creature.stats.rank,
-      maxHP: creature.stats.hp, // For soin_leurre
+      maxHP: creature.stats.hp, // For stratège
     };
   }
 
@@ -419,8 +419,8 @@ export function tickPersonalityBuff(
     // Buff expired - apply onRemove
     buff.onRemove(creature);
 
-    // Healing recovery notification for soin_leurre
-    if (creature.personality === "soin_leurre" && creature.soinLeurreState?.damageTakenDuringBuff) {
+    // Healing recovery notification for stratège
+    if (creature.personality === "stratège" && creature.soinLeurreState?.damageTakenDuringBuff) {
       const damageTaken = creature.soinLeurreState.damageTakenDuringBuff;
       if (damageTaken > 0) {
         const reduction = Math.floor(damageTaken * 0.5);
@@ -1542,9 +1542,6 @@ export function executeSkill(
   if (skill.archetype === "mysterieuse") {
     applyRoueDuDestinCooldownReset(ctx, targets);
   }
-  if (skill.archetype === "balancee") {
-    applyMiroirDesAEffect(ctx, targets);
-  }
 
   // Set cooldown
   const cooldownKey = `${skill.name}_${skill.source}_${attacker.name}`;
@@ -2191,141 +2188,6 @@ function applyRoueDuDestinCooldownReset(ctx: SkillExecutionContext, targets: Bat
       text: `🎰 Roue du Destin: ${attacker.name} a activé ${targetAlly.name}! (${skillsReset.join(", ")}) sont maintenant disponibles!`,
       type: "skill",
     });
-  }
-}
-
-function applyMiroirDesAEffect(ctx: SkillExecutionContext, targets: BattleCreature[]): void {
-  const { attacker, log, skill, battleContext } = ctx;
-
-  // Get enemy team from battle context (find team that doesn't contain attacker)
-  if (!battleContext) {
-    log.push({
-      text: `🔄 Miroir des Âmes: ${attacker.name} ne peut trouver l'équipe ennemie!`,
-      type: "info",
-    });
-    return;
-  }
-
-  const playerCreatures = battleContext.playerTeam?.creatures || [];
-  const enemyCreatures = battleContext.enemyTeam?.creatures || [];
-
-  const isPlayer = playerCreatures.some(c => c.id === attacker.id);
-  const enemyTeam = isPlayer ? enemyCreatures : playerCreatures;
-
-  if (enemyTeam.length === 0) {
-    log.push({
-      text: `🔄 Miroir des Âmes: ${attacker.name} n'a pas d'ennemis à voler!`,
-      type: "info",
-    });
-    return;
-  }
-
-  // Find all alive enemies
-  const aliveEnemies = enemyTeam.filter(c => c.currentHP > 0);
-  if (aliveEnemies.length === 0) {
-    log.push({
-      text: `🔄 Miroir des Âmes: Tous les ennemis sont KO!`,
-      type: "info",
-    });
-    return;
-  }
-
-  // Calculate MAX_BUFFS among alive enemies
-  const maxBuffCount = Math.max(...aliveEnemies.map(c => Object.keys(c.buffs).length));
-
-  // Abort if no enemy has any buffs
-  if (maxBuffCount === 0) {
-    log.push({
-      text: `🔄 Miroir des Âmes: Aucun ennemi n'a de buff à voler!`,
-      type: "info",
-    });
-    return;
-  }
-
-  // Filter enemies with MAX_BUFFS_COUNT
-  const maxBuffedEnemies = aliveEnemies.filter(c => Object.keys(c.buffs).length === maxBuffCount);
-
-  // If multiple candidates, choose randomly
-  const target = maxBuffedEnemies.length === 1
-    ? maxBuffedEnemies[0]
-    : maxBuffedEnemies[Math.floor(Math.random() * maxBuffedEnemies.length)];
-
-  // Get all buffs from target
-  const targetBuffs: ActiveBuff[] = Object.values(target.buffs);
-
-  if (targetBuffs.length === 0) {
-    // Should not happen due to maxBuffCount > 0 check, but safety fallback
-    log.push({
-      text: `🔄 Miroir des Âmes: ${target.name} n'a pas de buff à voler!`,
-      type: "info",
-    });
-    return;
-  }
-
-  // *** STEAL 1 RANDOM BUFF ***
-
-  // Choose 1 random buff from target
-  const stolenBuff = targetBuffs[Math.floor(Math.random() * targetBuffs.length)];
-
-  // Add the stolen buff to attacker
-  addBuff(
-    attacker,
-    stolenBuff.type,
-    stolenBuff.value,
-    stolenBuff.turnsRemaining,
-    stolenBuff.sourceSkillId,
-    target.id,  // Source = originally from target
-    log
-  );
-
-  // Remove the buff from target
-  Object.keys(target.buffs).forEach(buffId => {
-    const buff = target.buffs[buffId];
-    if (buff.sourceSkillId === stolenBuff.sourceSkillId && buff.sourceCreatureId === target.id) {
-      delete target.buffs[buffId];
-    }
-  });
-
-  log.push({
-    text: `🔄 Miroir des Âmes: ${attacker.name} vole ${formatBuffName(stolenBuff.type)} de ${target.name}!`,
-    type: "skill",
-  });
-
-  // *** LEVEL 5 BONUS: Steal 2nd random buff **\*
-
-  if (skill.level === 5 && targetBuffs.length > 1) {
-    // Choose another random buff (different from first stolen)
-    const remainingBuffs = targetBuffs.filter(b =>
-      !(b.sourceSkillId === stolenBuff.sourceSkillId && b.sourceCreatureId === target.id)
-    );
-
-    if (remainingBuffs.length > 0) {
-      const secondStolenBuff = remainingBuffs[Math.floor(Math.random() * remainingBuffs.length)];
-
-      // Add the 2nd stolen buff to attacker
-      addBuff(
-        attacker,
-        secondStolenBuff.type,
-        secondStolenBuff.value,
-        secondStolenBuff.turnsRemaining,
-        secondStolenBuff.sourceSkillId,
-        target.id,
-        log
-      );
-
-      // Remove the 2nd buff from target
-      Object.keys(target.buffs).forEach(buffId => {
-        const buff = target.buffs[buffId];
-        if (buff.sourceSkillId === secondStolenBuff.sourceSkillId && buff.sourceCreatureId === target.id) {
-          delete target.buffs[buffId];
-        }
-      });
-
-      log.push({
-        text: `🔄🔄 Miroir des Âmes NIVEAU 5: ${attacker.name} vole ${formatBuffName(secondStolenBuff.type)} supplémentaire de ${target.name}!`,
-        type: "skill",
-      });
-    }
   }
 }
 

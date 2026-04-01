@@ -140,7 +140,7 @@ export const RANK_MULTIPLIERS: Record<Rank, number> = {
   "S+": 2.2,
 };
 
-export type PersonalityType = "agressive" | "protective" | "rapide" | "soin_leurre" | "précise" | "mysterieuse";
+export type PersonalityType = "agressif" | "protecteur" | "rapide" | "stratège" | "précis" | "mystérieux";
 
 export interface Personality {
   id: PersonalityType;
@@ -167,9 +167,9 @@ export interface Personality {
 }
 
 export const PERSONALITIES: Record<PersonalityType, Personality> = {
-  agressive: {
-    id: "agressive",
-    name: "Agressive",
+  agressif: {
+    id: "agressif",
+    name: "Agressif",
     emoji: "🦁",
     description: "Attacking first, brutal. +3.5% ATK, +8% others (Option C balance)",
     statModifiers: {
@@ -188,11 +188,11 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     },
     rarity: 25
   },
-  protective: {
-    id: "protective",
-    name: "Protective",
+  protecteur: {
+    id: "protecteur",
+    name: "Protecteur",
     emoji: "🛡️",
-    description: "Protects allies first. +12% DEF, +8% others",
+    description: "Protects allies first. +3.5% DEF, +8% others (Option C balance)",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -230,11 +230,11 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     },
     rarity: 15
   },
-  soin_leurre: {
-    id: "soin_leurre",
-    name: "Soin-Leurre",
+  stratège: {
+    id: "stratège",
+    name: "Stratège",
     emoji: "❤️",
-    description: "Gentle, caring. +3.5% HP, +8% others (Option C balance)",
+    description: "Support tactics, speaks to control. +3.5% HP, +8% others (Option C balance)",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -251,9 +251,9 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     },
     rarity: 12
   },
-  précise: {
-    id: "précise",
-    name: "Précise",
+  précis: {
+    id: "précis",
+    name: "Précis",
     emoji: "🎯",
     description: "Precision hunter. +3.5% CRIT, +8% others (Option C balance)",
     statModifiers: {
@@ -273,9 +273,9 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     rarity: 12
   },
 
-  mysterieuse: {
-    id: "mysterieuse",
-    name: "Mysterieuse",
+  mystérieux: {
+    id: "mystérieux",
+    name: "Mystérieux",
     emoji: "🌙",
     description: "Mysterious, unpredictable. +3.5% to random stat each level (Option C balance)",
     statModifiers: {
@@ -310,7 +310,7 @@ export function generateRandomPersonality(): PersonalityType {
   }
   
   // Fallback
-  return "agressive";
+  return "agressif";
 }
 
 // Apply personality stat modifiers to base stats (NOT USED in sandbox mode)
@@ -331,7 +331,7 @@ export function applyPersonalityStats(
 
 // Apply level scaling based on personality
 // Formula: scaledStat = baseStat * (1 + (level - 1) * scalingMultiplier)
-// For mysterieuse: RANDOM stat gets 3.5% scaling each level (deterministic based on level)
+// For mystérieux: RANDOM stat gets 3.5% scaling each level (deterministic based on level)
 export function applyLevelScaling(
   baseStats: BaseStats,
   level: number,
@@ -340,8 +340,8 @@ export function applyLevelScaling(
   const personalityDef = PERSONALITIES[personality];
   const levelFactor = level - 1; // Level 1 = 0 bonus, Level 50 = 49 bonus levels
 
-  // Mysterieuse: RANDOM stat gets 3.5% scaling each level
-  if (personality === "mysterieuse") {
+  // Mystérieux: RANDOM stat gets 3.5% scaling each level
+  if (personality === "mystérieux") {
     const stats: (keyof BaseStats)[] = ["hp", "attack", "defense", "speed", "crit"];
     // Deterministic random based on level (same level = same stat)
     const randomStat = stats[level % stats.length];

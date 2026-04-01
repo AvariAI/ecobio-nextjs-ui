@@ -65,9 +65,9 @@ export const STAT_BOOST_TRAITS: Record<string, StatBoostTrait> = {
     emoji: "🎯",
   },
 
-  mystere: {
-    id: "mystere",
-    name: "Mystère",
+  destin: {
+    id: "destin",
+    name: "Destin",
     description: "+0.6% sur une stat RANDOM à chaque niveau",
     statBoosts: [{ stat: "random", valuePerLevel: 0.006 }], // "random" stat means it changes each level
     emoji: "🌑",

@@ -54,7 +54,7 @@ interface HuntedCreature extends Creature {
   battlesTotal: number; // Total battles fought
 
   // Personality identifier (DEPRECATED - use 'personality' field instead)
-  personalityType?: "agressive" | "protective" | "rapide" | "soin_leurre" | "précise" | "mysterieuse";
+  personalityType?: "agressif" | "protecteur" | "rapide" | "stratège" | "précis" | "mystérieux";
 
   // Exploration system (NEW)
   explorationXP: number; // Exploration experience points
@@ -68,7 +68,7 @@ interface HuntedCreature extends Creature {
   maxHP: number; // Maximum HP based on stats and level
 
   // Personality system (NEW)
-  personality: "agressive" | "protective" | "rapide" | "soin_leurre" | "précise" | "mysterieuse";
+  personality: "agressif" | "protecteur" | "rapide" | "stratège" | "précis" | "mystérieux";
 }
 
 function rollRarity(): RarityRank {
