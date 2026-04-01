@@ -961,7 +961,7 @@ function convertToSkillFormat(
 
   // If this is a known personality skill, load directly from skills.ts (preserves effects like recoilPercent)
   if (source === "personality") {
-    const personalityTypes = ["agressive", "protective", "rapide", "soin_leurre", "précise", "balancee", "mysterieuse"] as const;
+    const personalityTypes = ["agressif", "protecteur", "rapide", "stratège", "précis", "mystérieux"] as const;
     for (const type of personalityTypes) {
       const baseSkill = BASE_SKILLS[type];
       if (baseSkill && baseSkill.name === oldSkill.name) {
@@ -1037,7 +1037,7 @@ function convertToSkillFormat(
       if (oldSkill.name === "Tir Critique") {
         const { BASE_SKILLS } = require("./skills");
         return {
-          ...BASE_SKILLS.précise,
+          ...BASE_SKILLS.précis,
           id: `${source}_${oldSkill.name}`,
           level: 1,
         };
@@ -1059,7 +1059,7 @@ function convertToSkillFormat(
     target: oldSkill.target,
     level: 1, // Default level 1 for now
     effects,
-    archetype: "agressive" as any, // Not available in old format, use placeholder
+    archetype: "agressif" as any, // Not available in old format, use placeholder
     creatureId: undefined,
   };
 }
@@ -1911,7 +1911,7 @@ function applySpeedBuffEffect(ctx: SkillExecutionContext, targets: BattleCreatur
 function applyDefenseBuffEffect(ctx: SkillExecutionContext, targets: BattleCreature[]): void {
   const { attacker, skill, log } = ctx;
   const effects = skill.effects;
-  const isForteresseLvl5 = skill.archetype === "protective" && skill.level === 5;
+  const isForteresseLvl5 = skill.archetype === "protecteur" && skill.level === 5;
 
   const damageReduction = effects.damageReduction || effects.defenseRedirect || 0;
   const duration = effects.effectDuration || skill.duration || 2;
