@@ -1023,32 +1023,29 @@ export default function HuntingPage() {
                     </div>
                   </div>
                 )}
-                <div className="bg-purple-600 bg-opacity-50 rounded-lg p-3 mb-4">
-                  <p className="text-purple-100 font-bold">⬆️ Level {selectedCreature.level} | XP: {selectedCreature.currentXP}/{selectedCreature.xpToNextLevel}</p>
-                  <div className="w-full bg-purple-950 rounded-full h-2 mt-2">
+                <div className="bg-purple-600 bg-opacity-50 rounded-lg p-2 mb-3">
+                  <p className="text-purple-100 text-sm font-bold">⬆️ L{selectedCreature.level}</p>
+                  <div className="w-full bg-purple-950 rounded-full h-1.5 mt-1">
                     <div
-                      className="bg-purple-400 h-2 rounded-full"
+                      className="bg-purple-400 h-1.5 rounded-full"
                       style={{ width: `${(selectedCreature.currentXP / selectedCreature.xpToNextLevel) * 100}%` }}
                     />
                   </div>
                 </div>
 
-                <div className="bg-yellow-600 bg-opacity-50 rounded-lg p-3 mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    {renderStars(selectedCreature.stars || 0)}
+                <div className="bg-yellow-600 bg-opacity-50 rounded-lg p-2 mb-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-yellow-100 text-sm font-bold">⭐ {selectedCreature.stars || 0}/5</span>
+                    <span className="text-yellow-200 text-xs">{selectedCreature.combatXP || 0} XP</span>
                   </div>
-                  <p className="text-yellow-100 font-bold">⭐ Star {selectedCreature.stars || 0} | Combat XP: {selectedCreature.combatXP || 0}/{selectedCreature.combatXPToNextStar || "MAX"}</p>
                   {selectedCreature.stars !== undefined && selectedCreature.stars < 5 && selectedCreature.combatXPToNextStar > 0 && (
-                    <div className="w-full bg-yellow-950 rounded-full h-2 mt-2">
+                    <div className="w-full bg-yellow-950 rounded-full h-1.5">
                       <div
-                        className="bg-yellow-400 h-2 rounded-full"
+                        className="bg-yellow-400 h-1.5 rounded-full"
                         style={{ width: `${Math.min(100, ((selectedCreature.combatXP || 0) / Math.max(1, selectedCreature.combatXPToNextStar)) * 100)}%` }}
                       />
                     </div>
                   )}
-                  <div className="text-xs text-yellow-200 mt-2">
-                    Victoires: {selectedCreature.battlesWon || 0} | Batailles: {selectedCreature.battlesTotal || 0}
-                  </div>
                 </div>
 
                 {/* NEW: Add exploration progress bar */}
@@ -1066,26 +1063,24 @@ export default function HuntingPage() {
                 </div>
 
                 {SHOW_TRAITS && selectedCreature.traits && selectedCreature.traits.length > 0 && (
-                  <div className="bg-purple-700 bg-opacity-50 rounded-lg p-3 mb-4">
-                    <h3 className="font-bold text-purple-100">✨ Traits ({selectedCreature.traits.length})</h3>
-                    <div className="mt-2 space-y-2">
+                  <div className="bg-purple-700 bg-opacity-50 rounded-lg p-2 mb-3">
+                    <div className="flex flex-wrap gap-1">
                       {getTraitsByIds(selectedCreature.traits).map(trait => (
-                        <div key={trait.id} className="bg-purple-900 bg-opacity-50 rounded p-2">
-                          <p className="text-sm font-bold text-purple-100">{trait.name}</p>
-                          <p className="text-xs text-purple-200">{trait.description}</p>
-                        </div>
+                        <span key={trait.id} className="text-xs px-2 py-1 bg-purple-900 bg-opacity-50 rounded text-purple-100">
+                          {trait.emoji} {trait.name}
+                        </span>
                       ))}
                     </div>
                   </div>
                 )}
               </div>
             </div>
-            <h3 className="text-xl font-bold text-green-100 mb-4">📊 Stats</h3>
-            <div className="grid grid-cols-2 gap-3 mb-6">
+            <h3 className="text-lg font-bold text-green-100 mb-3">📊 Stats</h3>
+            <div className="grid grid-cols-5 gap-2 mb-4">
               {(["hp", "attack", "defense", "speed", "crit"] as const).map(stat => (
-                <div key={stat} className="bg-green-950 rounded-lg p-3">
-                  <p className="text-green-200 font-semibold">{stat.toUpperCase()}</p>
-                  <p className="text-2xl font-bold text-green-100">{selectedCreature.finalStats[stat]}</p>
+                <div key={stat} className="bg-green-950 rounded p-2 text-center">
+                  <p className="text-green-300 text-xs font-semibold">{stat.toUpperCase()}</p>
+                  <p className="text-lg font-bold text-green-100">{selectedCreature.finalStats[stat]}</p>
                 </div>
               ))}
             </div>
