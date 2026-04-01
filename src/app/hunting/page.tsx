@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { CREATURES, Rank, Creature, generateRandomPersonality, PERSONALITIES, PersonalityType, applyLevelScaling, BaseStats } from "@/lib/database";
 import { getVarianceRange, BattleStats } from "@/lib/battle";
 import { rollRandomTraits, getTraitsByIds, applyTraitStatModifiers } from "@/lib/traits";
+import { rollRandomGeneticType, getGeneticType } from "@/lib/genetic-types";
 import { transformCreatureToEssence } from "@/lib/craft";
 import { loadBreedingEggs, getEggRemainingTime } from "@/lib/breeding";
 import { getExplorationBonus } from "@/lib/exploration";
@@ -45,6 +46,9 @@ interface HuntedCreature extends Creature {
   creatureId: string;
   traits: string[];  // Trait IDs
   isFavorite: boolean;  // Protection contre la nutrition et le relâchement
+
+  // Genetic type system (NEW)
+  geneticType: "resilient" | "scribeur" | "symbiote" | "radiant" | "chimere" | "pathogene" | "synchroniseur" | "ombre";
 
   // Star progression (NEW)
   stars: number; // 0-5 (visual progression only, no unlocks)
@@ -101,6 +105,9 @@ function spawnCreature(): HuntedCreature {
 
   // Roll random traits based on rank
   const traits = rollRandomTraits(rank);
+
+  // Roll random genetic type
+  const geneticType = rollRandomGeneticType();
 
   // Variance RNG: Stats variation based on rank
   const hpVariance = minVar + Math.random() * (maxVar - minVar);
@@ -181,6 +188,9 @@ function spawnCreature(): HuntedCreature {
     creatureId,
     traits,  // Random traits based on rank
     isFavorite: false,  // Pas favori par défaut
+
+    // Genetic type
+    geneticType,
 
     // Star progression initialization
     stars: 0, // 0 stars on spawn (stars are visual only)
@@ -842,6 +852,17 @@ export default function HuntingPage() {
                     </div>
                   );
                 })()}
+                {huntedCreature.geneticType && (() => {
+                  const gt = getGeneticType(huntedCreature.geneticType);
+                  if (!gt) return null;
+                  return (
+                    <div className="mb-3">
+                      <span className="text-sm px-3 py-1 rounded-full bg-cyan-700 text-cyan-100 font-bold">
+                        {gt.emoji} {gt.name}
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 {(huntedCreature.specimenSkill || huntedCreature.personalitySkill) && (
                   <div className="bg-green-700 bg-opacity-50 rounded-lg p-3 mb-4">
@@ -931,6 +952,17 @@ export default function HuntingPage() {
                   <span className={`text-2xl font-bold ${getRankBadgeColor(selectedCreature.finalStats.rank)} text-white px-3 py-1 rounded-full`}>{selectedCreature.finalStats.rank}</span>
                 </div>
                 <p className="text-green-200 mb-4">{selectedCreature.desc}</p>
+                {selectedCreature.geneticType && (() => {
+                  const gt = getGeneticType(selectedCreature.geneticType);
+                  if (!gt) return null;
+                  return (
+                    <div className="mb-3">
+                      <span className="text-sm px-3 py-1 rounded-full bg-cyan-700 text-cyan-100 font-bold">
+                        {gt.emoji} {gt.name}
+                      </span>
+                    </div>
+                  );
+                })()}
                 <div className="mb-4">
                   <p className="text-green-200 font-semibold mb-2">🎭 Voir par rang:</p>
                   <div className="flex flex-wrap gap-2">
@@ -1169,9 +1201,20 @@ export default function HuntingPage() {
                         />
                         <div className="flex-1">
                           <p className="text-green-100 font-semibold text-sm">{creature.name}</p>
-                          <p className="text-green-300 text-xs">
-                            Level {creature.level} | Rang {creature.finalStats.rank}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-green-300 text-xs">
+                              Level {creature.level} | Rang {creature.finalStats.rank}
+                            </p>
+                            {creature.geneticType && (() => {
+                              const gt = getGeneticType(creature.geneticType);
+                              if (!gt) return null;
+                              return (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-600 text-cyan-100 font-bold">
+                                  {gt.emoji}
+                                </span>
+                              );
+                            })()}
+                          </div>
                         </div>
                         <div className="text-right flex items-center gap-2">
                           <div>
