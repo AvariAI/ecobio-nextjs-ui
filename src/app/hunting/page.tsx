@@ -895,14 +895,12 @@ export default function HuntingPage() {
                   </div>
                 )}
                 {SHOW_TRAITS && huntedCreature.traits && huntedCreature.traits.length > 0 && (
-                  <div className="bg-purple-700 bg-opacity-50 rounded-lg p-2 mb-3">
-                    <div className="flex flex-wrap gap-1">
-                      {getTraitsByIds(huntedCreature.traits).map(trait => (
-                        <span key={trait.id} className="text-xs px-2 py-1 bg-purple-900 bg-opacity-50 rounded text-purple-100">
-                          {trait.emoji} {trait.name}
-                        </span>
-                      ))}
-                    </div>
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {getTraitsByIds(huntedCreature.traits).map(trait => (
+                      <span key={trait.id} className="text-xs px-2 py-1 bg-purple-700 bg-opacity-50 rounded text-purple-100">
+                        {trait.emoji} {trait.name}
+                      </span>
+                    ))}
                   </div>
                 )}
               </div>
@@ -1031,14 +1029,12 @@ export default function HuntingPage() {
                 </div>
 
                 {SHOW_TRAITS && selectedCreature.traits && selectedCreature.traits.length > 0 && (
-                  <div className="bg-purple-700 bg-opacity-50 rounded-lg p-2 mb-3">
-                    <div className="flex flex-wrap gap-1">
-                      {getTraitsByIds(selectedCreature.traits).map(trait => (
-                        <span key={trait.id} className="text-xs px-2 py-1 bg-purple-900 bg-opacity-50 rounded text-purple-100">
-                          {trait.emoji} {trait.name}
-                        </span>
-                      ))}
-                    </div>
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {getTraitsByIds(selectedCreature.traits).map(trait => (
+                      <span key={trait.id} className="text-xs px-2 py-1 bg-purple-700 bg-opacity-50 rounded text-purple-100">
+                        {trait.emoji} {trait.name}
+                      </span>
+                    ))}
                   </div>
                 )}
               </div>
@@ -1435,14 +1431,13 @@ export default function HuntingPage() {
               </div>
 
               {peekingCreature.traits && peekingCreature.traits.length > 0 && (
-                <div className="mt-6 bg-purple-700 bg-opacity-30 rounded-lg p-4 border border-purple-500">
-                  <h3 className="text-xl font-bold text-purple-100 mb-3">✨ Traits ({peekingCreature.traits.length})</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="mt-6">
+                  <h3 className="text-xl font-bold text-purple-100 mb-3">✨ Traits</h3>
+                  <div className="flex flex-wrap gap-1">
                     {getTraitsByIds(peekingCreature.traits).map(trait => (
-                      <div key={trait.id} className="bg-purple-900 bg-opacity-50 rounded p-3">
-                        <p className="font-bold text-purple-100">{trait.name}</p>
-                        <p className="text-sm text-purple-200">{trait.description}</p>
-                      </div>
+                      <span key={trait.id} className="text-xs px-2 py-1 bg-purple-700 bg-opacity-50 rounded text-purple-100">
+                        {trait.emoji} {trait.name}
+                      </span>
                     ))}
                   </div>
                 </div>
