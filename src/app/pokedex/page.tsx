@@ -152,7 +152,7 @@ export default function PokedexPage() {
                       <div
                         key={rank}
                         className={`
-                          relative aspect-[3/4] rounded-lg flex flex-col items-center justify-center
+                          relative aspect-[4/3] rounded-lg flex flex-col items-center justify-center
                           transition-all hover:scale-105 cursor-pointer
                           ${isUnlocked ? "shadow-md" : "shadow-inner"}
                           ${isRowOdd ? "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600" : "bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-600 dark:to-gray-700"}
@@ -169,12 +169,12 @@ export default function PokedexPage() {
                           <img
                             src={getCardImage(type, rank)}
                             alt={`${typeData.name} ${rank}`}
-                            className="w-20 h-20 object-contain"
+                            className="w-full h-full object-contain px-4"
                           />
                         ) : (
                           <>
                             {/* Card back - Noir */}
-                            <div className="w-20 h-20 bg-gray-900 dark:bg-black rounded-lg border-2 border-gray-400 dark:border-gray-600 flex items-center justify-center shadow-inner">
+                            <div className="w-full h-full bg-gray-900 dark:bg-black rounded-lg border-2 border-gray-400 dark:border-gray-600 flex items-center justify-center shadow-inner">
                               <span className="text-4xl text-gray-400 dark:text-gray-500">?</span>
                             </div>
                           </>
