@@ -163,13 +163,50 @@ export default function PokedexPage() {
                       <div
                         key={rank}
                         className={`
-                          relative aspect-[2/3] rounded-lg flex flex-col items-center justify-center
+                          relative aspect-[2/3] rounded-lg overflow-hidden
                           transition-all hover:scale-105 cursor-pointer
                           ${isUnlocked ? "shadow-md" : "shadow-inner"}
                           ${isRowOdd ? "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600" : "bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-600 dark:to-gray-700"}
                         `}
                         title={isUnlocked ? `${typeData.name} ${rank} (${captureCount} specimens)` : "Non débloqué - Capturez ce type"}
                       >
+                        {/* Rank badge */}
+                        <div className={`absolute top-2 right-2 ${getRankBadgeColor(rank)} text-white text-xs font-bold px-2 py-1 rounded-full z-10`}>
+                          {rank}
+                        </div>
+
+                        {/* Debug badge */}
+                        <div className="absolute top-2 left-2 text-xs text-gray-600 dark:text-gray-400 z-10">
+                          {isUnlocked ? `✓` : `✗`}
+                        </div>
+
+                        {/* Card content */}
+                        <img
+                          src={getCardImage(type, rank)}
+                          alt={`${typeData.name} ${rank}`}
+                          className={`w-full h-full object-cover ${
+                            isUnlocked ? "" : "opacity-0"
+                          }`}
+                          onError={(e) => {
+                            console.error(`Failed to load: ${getCardImage(type, rank)}`);
+                            (e.target as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+
+                        {/* Card back - Noir (unlocked only) */}
+                        {!isUnlocked && (
+                          <div className="absolute inset-0 bg-gray-900 dark:bg-black rounded-lg border-2 border-gray-400 dark:border-gray-600 flex items-center justify-center">
+                            <span className="text-4xl text-gray-400 dark:text-gray-500">?</span>
+                          </div>
+                        )}
+
+                        {/* Capture count */}
+                        {isUnlocked && captureCount > 1 && (
+                          <div className="absolute bottom-2 left-2 bg-purple-600 text-white text-xs font-bold px-2 py-0.5 rounded-full z-10">
+                            ×{captureCount}
+                          </div>
+                        )}
+                      </div>
                         {/* Rank badge */}
                         <div className={`absolute top-2 right-2 ${getRankBadgeColor(rank)} text-white text-xs font-bold px-2 py-1 rounded-full`}>
                           {rank}
