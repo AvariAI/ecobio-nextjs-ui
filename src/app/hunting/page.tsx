@@ -1016,22 +1016,24 @@ export default function HuntingPage() {
                   })()}
                 </div>
                 <div className="flex flex-wrap gap-2 mb-3">
+                  <span className="text-sm text-green-200">Compétences:</span>
                   {selectedCreature.specimenSkill && (
-                    <span className="text-xs px-2 py-1 rounded-full bg-green-600 text-green-100 font-bold flex items-center gap-1">
+                    <span className="text-sm px-3 py-1.5 rounded-full bg-green-600 text-green-100 font-bold flex items-center gap-1">
                       🔬 {selectedCreature.specimenSkill.name}
                     </span>
                   )}
                   {selectedCreature.personalitySkill && (
-                    <span className="text-xs px-2 py-1 rounded-full bg-blue-600 text-blue-100 font-bold flex items-center gap-1">
+                    <span className="text-sm px-3 py-1.5 rounded-full bg-blue-600 text-blue-100 font-bold flex items-center gap-1">
                       🎭 {selectedCreature.personalitySkill.name}
                     </span>
                   )}
                 </div>
 
                 {SHOW_TRAITS && selectedCreature.traits && selectedCreature.traits.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-3">
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <span className="text-sm text-purple-200">✨ Traits:</span>
                     {getTraitsByIds(selectedCreature.traits).map(trait => (
-                      <span key={trait.id} className="text-xs px-2 py-1 bg-purple-700 bg-opacity-50 rounded text-purple-100">
+                      <span key={trait.id} className="text-sm px-3 py-1.5 rounded-full bg-purple-700 text-purple-100 flex items-center gap-1">
                         {trait.emoji} {trait.name}
                       </span>
                     ))}
