@@ -23,6 +23,7 @@ export interface GeneticTypeData {
   characteristic: string;
   counters: GeneticType[]; // Types this counters (advantage)
   weakAgainst: GeneticType[]; // Types this is weak against
+  weight?: number; // Spawning weight (uniform 100 = 12.5% each, total 800)
 }
 
 /**
@@ -118,6 +119,7 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     characteristic: "Persistence — Reinforce all ongoing effects (buffs/debuffs duration extension)",
     counters: ["pathogene"],
     weakAgainst: ["ombre"],
+    weight: 100,
   },
 
   scribeur: {
@@ -130,6 +132,7 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     characteristic: "Radar — Preview enemy intent, dodge anticipation, predict-and-react",
     counters: ["symbiote"],
     weakAgainst: ["pathogene"],
+    weight: 100,
   },
 
   symbiote: {
@@ -142,6 +145,7 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     characteristic: "Link — Share buffs, split damage with ally, mutual buff transfer",
     counters: ["radiant"],
     weakAgainst: ["scribeur"],
+    weight: 100,
   },
 
   radiant: {
@@ -154,6 +158,7 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     characteristic: "Energy drain — Absorb enemy HP when hitting, self-sustain via damage",
     counters: ["chimere"],
     weakAgainst: ["symbiote"],
+    weight: 100,
   },
 
   chimere: {
@@ -166,6 +171,7 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     characteristic: "Mutation — Random stat boost per turn, volatile but potentially game-changing",
     counters: ["synchroniseur"],
     weakAgainst: ["radiant"],
+    weight: 100,
   },
 
   pathogene: {
@@ -178,6 +184,7 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     characteristic: "Spread — Poison stacks, spreads to nearby allies, reduces enemy healing",
     counters: ["scribeur"],
     weakAgainst: ["resilient"],
+    weight: 100,
   },
 
   synchroniseur: {
@@ -190,6 +197,7 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     characteristic: "Swap — Move allies/enemies, reposition, time warps, battlefield manipulation",
     counters: ["ombre"],
     weakAgainst: ["chimere"],
+    weight: 100,
   },
 
   ombre: {
@@ -202,6 +210,7 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     characteristic: "Surprise — Crit bonus first turn, evasion opener, shadow form with enhanced offense",
     counters: ["resilient"],
     weakAgainst: ["synchroniseur"],
+    weight: 100,
   },
 };
 
@@ -241,9 +250,21 @@ export function getGeneticType(typeId: GeneticType): GeneticTypeData | undefined
 /**
  * Roll random genetic type for a creature
  * Weighted by biome affinity (for future AnyMaps integration)
- * For now: uniform random across all 8 types
+ * For now: uniform random (weight 100 each = 12.5% probability)
  */
 export function rollRandomGeneticType(): GeneticType {
-  const types = Object.keys(GENETIC_TYPES) as GeneticType[];
-  return types[Math.floor(Math.random() * types.length)];
+  const types = Object.values(GENETIC_TYPES);
+  const totalWeight = types.reduce((sum, type) => sum + (type.weight || 1), 0);
+
+  let randomWeight = Math.random() * totalWeight;
+
+  for (const type of types) {
+    randomWeight -= (type.weight || 1);
+    if (randomWeight <= 0) {
+      return type.id;
+    }
+  }
+
+  // Fallback (should not happen)
+  return types[0].id;
 }
