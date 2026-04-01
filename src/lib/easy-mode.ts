@@ -41,9 +41,9 @@ function rollRandomTraits(rank: Rank): string[] {
   return allTraits.sort(() => Math.random() - 0.5).slice(0, numTraits);
 }
 
-function generateRandomPersonality(): "agressive" | "protective" | "rapide" | "soin_leurre" | "precise" | "balancee" | "mysterieuse" {
-  const personalities: Array<"agressive" | "protective" | "rapide" | "soin_leurre" | "precise" | "balancee" | "mysterieuse"> =
-    ["agressive", "protective", "rapide", "soin_leurre", "precise", "balancee", "mysterieuse"];
+function generateRandomPersonality(): "agressive" | "protective" | "rapide" | "soin_leurre" | "précise" | "balancee" | "mysterieuse" {
+  const personalities: Array<"agressive" | "protective" | "rapide" | "soin_leurre" | "précise" | "balancee" | "mysterieuse"> =
+    ["agressive", "protective", "rapide", "soin_leurre", "précise", "balancee", "mysterieuse"];
   return personalities[Math.floor(Math.random() * personalities.length)];
 }
 

@@ -53,8 +53,8 @@ interface HuntedCreature extends Creature {
   battlesWon: number; // Track battle wins for stats
   battlesTotal: number; // Total battles fought
 
-  // Personality identifier
-  personalityType?: PersonalityType;
+  // Personality identifier (DEPRECATED - use 'personality' field instead)
+  personalityType?: "agressive" | "protective" | "rapide" | "soin_leurre" | "précise" | "balancee" | "mysterieuse";
 
   // Exploration system (NEW)
   explorationXP: number; // Exploration experience points
@@ -68,7 +68,7 @@ interface HuntedCreature extends Creature {
   maxHP: number; // Maximum HP based on stats and level
 
   // Personality system (NEW)
-  personality: "agressive" | "protective" | "rapide" | "soin_leurre" | "precise" | "balancee" | "mysterieuse";
+  personality: "agressive" | "protective" | "rapide" | "soin_leurre" | "précise" | "balancee" | "mysterieuse";
 
   // Gamble bonuses for mysterieuse personality
   gambleBonuses?: GambleBonus[];
@@ -192,7 +192,7 @@ function spawnCreature(): HuntedCreature {
 
     // Personality system (NEW)
     personality: personality,
-    personalityType: personality,
+    personalityType: personality as any, // Type assertion for compatibility
 
     // Gamble bonuses initialization (mysterieuse only, starts empty)
     gambleBonuses: [],
@@ -443,7 +443,7 @@ export default function HuntingPage() {
             migrated.personality = generateRandomPersonality(); // Assign random personality
           }
           if (!migrated.personalityType) {
-            migrated.personalityType = migrated.personality; // Set personalityType for reference
+            migrated.personalityType = migrated.personality as any; // Type assertion for compatibility
           }
 
           // DUAL SKILLS migration - restore specimenSkill and personalitySkill

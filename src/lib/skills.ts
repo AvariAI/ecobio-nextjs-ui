@@ -302,7 +302,7 @@ function getSkillDescription(baseSkill: Skill, level: number): string {
       return `${baseSkill.description}${level > 1 ? " Lvl5: +50%, 2 allies, dodge crit heals 10% maxHP" : ""}`;
     case "soin_leurre":
       return `${baseSkill.description}${level > 1 ? " Lvl5: 20% heal, 12% poison, 5% self poison damage" : ""}`;
-    case "precise":
+    case "précise":
       return `${baseSkill.description}${level > 1 ? " Lvl5: +200% damage, ignore 30% DEF" : ""}`;
     case "balancee":
       return `${baseSkill.description}${level > 1 ? " Lvl5: Steal extra buff on swap" : ""}`;
@@ -402,7 +402,7 @@ export const SKILL_ICONS: Record<PersonalityType, string> = {
   protective: "🛡️",
   rapide: "💨",
   soin_leurre: "💉",
-  precise: "🎯",
+  précise: "🎯",
   balancee: "⚖️",
   mysterieuse: "🎰",
 };

@@ -961,7 +961,7 @@ function convertToSkillFormat(
 
   // If this is a known personality skill, load directly from skills.ts (preserves effects like recoilPercent)
   if (source === "personality") {
-    const personalityTypes = ["agressive", "protective", "rapide", "soin_leurre", "precise", "balancee", "mysterieuse"] as const;
+    const personalityTypes = ["agressive", "protective", "rapide", "soin_leurre", "précise", "balancee", "mysterieuse"] as const;
     for (const type of personalityTypes) {
       const baseSkill = BASE_SKILLS[type];
       if (baseSkill && baseSkill.name === oldSkill.name) {
@@ -1037,7 +1037,7 @@ function convertToSkillFormat(
       if (oldSkill.name === "Tir Critique") {
         const { BASE_SKILLS } = require("./skills");
         return {
-          ...BASE_SKILLS.precise,
+          ...BASE_SKILLS.précise,
           id: `${source}_${oldSkill.name}`,
           level: 1,
         };
