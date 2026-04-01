@@ -846,27 +846,26 @@ export default function HuntingPage() {
                   <span className={`text-2xl font-bold ${getRankBadgeColor(huntedCreature.finalStats.rank)} text-white px-3 py-1 rounded-full`}>{huntedCreature.finalStats.rank}</span>
                 </div>
                 <p className="text-green-200 mb-4">{huntedCreature.desc}</p>
-                {huntedCreature.personality && (() => {
-                  const p = PERSONALITIES[huntedCreature.personality];
-                  return (
-                    <div className="mb-3">
-                      <span className="text-x px-3 py-1 rounded-full bg-purple-700 text-purple-100 font-bold">
-                        {p.emoji} {p.name}
-                      </span>
-                    </div>
-                  );
-                })()}
-                {huntedCreature.geneticType && (() => {
-                  const gt = getGeneticType(huntedCreature.geneticType);
-                  if (!gt) return null;
-                  return (
-                    <div className="mb-3">
-                      <span className="text-sm px-3 py-1 rounded-full bg-cyan-700 text-cyan-100 font-bold">
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {huntedCreature.geneticType && (() => {
+                    const gt = getGeneticType(huntedCreature.geneticType);
+                    if (!gt) return null;
+                    return (
+                      <span className="text-sm px-3 py-1 rounded-full bg-cyan-700 text-cyan-100 font-bold flex items-center gap-1">
                         {gt.emoji} {gt.name}
                       </span>
-                    </div>
-                  );
-                })()}
+                    );
+                  })()}
+                  {huntedCreature.personality && (() => {
+                    const p = PERSONALITIES[huntedCreature.personality];
+                    if (!p) return null;
+                    return (
+                      <span className="text-sm px-3 py-1 rounded-full bg-purple-700 text-purple-100 font-bold flex items-center gap-1">
+                        {p.emoji} {p.name}
+                      </span>
+                    );
+                  })()}
+                </div>
 
                 {(huntedCreature.specimenSkill || huntedCreature.personalitySkill) && (
                   <div className="bg-green-700 bg-opacity-50 rounded-lg p-3 mb-4">
@@ -956,17 +955,26 @@ export default function HuntingPage() {
                   <span className={`text-2xl font-bold ${getRankBadgeColor(selectedCreature.finalStats.rank)} text-white px-3 py-1 rounded-full`}>{selectedCreature.finalStats.rank}</span>
                 </div>
                 <p className="text-green-200 mb-4">{selectedCreature.desc}</p>
-                {selectedCreature.geneticType && (() => {
-                  const gt = getGeneticType(selectedCreature.geneticType);
-                  if (!gt) return null;
-                  return (
-                    <div className="mb-3">
-                      <span className="text-sm px-3 py-1 rounded-full bg-cyan-700 text-cyan-100 font-bold">
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {selectedCreature.geneticType && (() => {
+                    const gt = getGeneticType(selectedCreature.geneticType);
+                    if (!gt) return null;
+                    return (
+                      <span className="text-sm px-3 py-1 rounded-full bg-cyan-700 text-cyan-100 font-bold flex items-center gap-1">
                         {gt.emoji} {gt.name}
                       </span>
-                    </div>
-                  );
-                })()}
+                    );
+                  })()}
+                  {selectedCreature.personality && (() => {
+                    const p = PERSONALITIES[selectedCreature.personality];
+                    if (!p) return null;
+                    return (
+                      <span className="text-sm px-3 py-1 rounded-full bg-purple-700 text-purple-100 font-bold flex items-center gap-1">
+                        {p.emoji} {p.name}
+                      </span>
+                    );
+                  })()}
+                </div>
                 <div className="mb-4">
                   <p className="text-green-200 font-semibold mb-2">🎭 Voir par rang:</p>
                   <div className="flex flex-wrap gap-2">
