@@ -140,7 +140,7 @@ export const RANK_MULTIPLIERS: Record<Rank, number> = {
   "S+": 2.2,
 };
 
-export type PersonalityType = "agressive" | "protective" | "rapide" | "soin_leurre" | "précise" | "balancee" | "mysterieuse";
+export type PersonalityType = "agressive" | "protective" | "rapide" | "soin_leurre" | "précise" | "mysterieuse";
 
 export interface Personality {
   id: PersonalityType;
@@ -171,7 +171,7 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     id: "agressive",
     name: "Agressive",
     emoji: "🦁",
-    description: "Attacking first, brutal. +12% ATK, +8% others",
+    description: "Attacking first, brutal. +3.5% ATK, +8% others (Option C balance)",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -255,7 +255,7 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     id: "précise",
     name: "Précise",
     emoji: "🎯",
-    description: "Precision hunter. +12% CRIT, +8% others",
+    description: "Precision hunter. +3.5% CRIT, +8% others (Option C balance)",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -272,32 +272,12 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     },
     rarity: 12
   },
-  balancee: {
-    id: "balancee",
-    name: "Balancee",
-    emoji: "✨",
-    description: "Balanced, adaptable. +10% ALL stats",
-    statModifiers: {
-      hp: 1.00,
-      attack: 1.00,
-      defense: 1.00,
-      speed: 1.00,
-      crit: 1.00,
-    },
-    scalingMultipliers: {
-      hp: 0.10,
-      attack: 0.10,
-      defense: 0.10,
-      speed: 0.10,
-      crit: 0.10
-    },
-    rarity: 10
-  },
+
   mysterieuse: {
     id: "mysterieuse",
     name: "Mysterieuse",
     emoji: "🌙",
-    description: "Mysterious, unpredictable. +15% to random stat each level",
+    description: "Mysterious, unpredictable. +3.5% to random stat each level (Option C balance)",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -306,15 +286,13 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
       crit: 1.00,
     },
     scalingMultipliers: {
-      hp: 0.10,
-      attack: 0.10,
-      defense: 0.10,
-      speed: 0.10,
-      crit: 0.10
+      hp: 0.035,    // +3.5% (RANDOM stat each level)
+      attack: 0.035, // +3.5% (RANDOM stat each level)
+      defense: 0.035,
+      speed: 0.035,
+      crit: 0.035
     },
     rarity: 6,
-    gambleTriggerLevels: [],
-    gambleBonusRange: [15, 15]
   }
 };
 
@@ -332,7 +310,7 @@ export function generateRandomPersonality(): PersonalityType {
   }
   
   // Fallback
-  return "balancee";
+  return "agressive";
 }
 
 // Apply personality stat modifiers to base stats (NOT USED in sandbox mode)

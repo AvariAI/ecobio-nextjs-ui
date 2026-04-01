@@ -65,36 +65,12 @@ export const STAT_BOOST_TRAITS: Record<string, StatBoostTrait> = {
     emoji: "🎯",
   },
 
-  equilibre: {
-    id: "equilibre",
-    name: "Équilibre",
-    description: "+0.5% TOUTES les stats par niveau",
-    statBoosts: [
-      { stat: "hp", valuePerLevel: 0.005 },
-      { stat: "attack", valuePerLevel: 0.005 },
-      { stat: "defense", valuePerLevel: 0.005 },
-      { stat: "speed", valuePerLevel: 0.005 },
-      { stat: "crit", valuePerLevel: 0.005 },
-    ],
-    emoji: "⚖️",
-  },
-
-  rage: {
-    id: "rage",
-    name: "Rage",
-    description: "+0.8% ATK, -0.5% DEF par niveau",
-    statBoosts: [{ stat: "attack", valuePerLevel: 0.008 }],
-    statPenalties: [{ stat: "defense", valuePerLevel: -0.005 }],
-    emoji: "🔥",
-  },
-
-  survivant: {
-    id: "survivant",
-    name: "Survivant",
-    description: "+0.8% DEF, -0.5% ATK par niveau",
-    statBoosts: [{ stat: "defense", valuePerLevel: 0.008 }],
-    statPenalties: [{ stat: "attack", valuePerLevel: -0.005 }],
-    emoji: "🛡️",
+  mystere: {
+    id: "mystere",
+    name: "Mystère",
+    description: "+0.6% sur une stat RANDOM à chaque niveau",
+    statBoosts: [{ stat: "random", valuePerLevel: 0.006 }], // "random" stat means it changes each level
+    emoji: "🌑",
   },
 };
 
@@ -137,16 +113,16 @@ export function calculateTraitMultiplier(
 
 // Get number of stat boost trait slots by rank
 export function getTraitSlotsByRank(rank: string): number {
-  const slots: Record<string, number> = {
-    "E": 1,
-    "D": 1,
-    "C": 2,
-    "B": 3,
-    "A": 4,
-    "S": 5,
-    "S+": 6,
-  };
-  return slots[rank] || 0;
+  // ALL ranks have 1 slot for now
+  return 1;
+}
+
+// Get random stat for Mystère trait at a given level (deterministic based on level)
+function getRandomStatForLevel(level: number): StatBoostType {
+  const stats: StatBoostType[] = ["hp", "attack", "defense", "speed", "crit"];
+  // Use level to determine random stat (deterministic for same level)
+  const index = level % stats.length;
+  return stats[index];
 }
 
 // Apply all stat boost traits to stats
@@ -163,8 +139,15 @@ export function applyStatBoostTraits(
 
     // Apply boosts
     for (const boost of trait.statBoosts) {
+      let targetStat = boost.stat;
+
+      // Handle Mystère trait (Random stat per level)
+      if (targetStat === "random") {
+        targetStat = getRandomStatForLevel(level);
+      }
+
       const multiplier = 1.0 + (level - 1) * boost.valuePerLevel;
-      switch (boost.stat) {
+      switch (targetStat) {
         case "hp":
           result.hp = Math.floor(result.hp * multiplier);
           break;
