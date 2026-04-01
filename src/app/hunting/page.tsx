@@ -870,37 +870,32 @@ export default function HuntingPage() {
                   })()}
                 </div>
 
-                {(huntedCreature.specimenSkill || huntedCreature.personalitySkill) && (
-                  <div className="bg-green-700 bg-opacity-50 rounded-lg p-3 mb-4">
-                    <h3 className="font-bold text-green-100 mb-3">🎯 Compétences</h3>
-                    <div className="space-y-3">
-                      {huntedCreature.specimenSkill && (
-                        <div className="bg-green-600 bg-opacity-50 rounded-lg p-3">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold text-green-300 px-2 py-1 rounded-full border border-green-400">SPECIMEN</span>
-                            <span className="font-semibold text-green-100">{huntedCreature.specimenSkill.name}</span>
-                          </div>
-                          <p className="text-sm text-green-200">{huntedCreature.specimenSkill.description}</p>
-                          <p className="text-xs text-green-300 mt-1">CD: {huntedCreature.specimenSkill.cooldown}t | Durée: {huntedCreature.specimenSkill.duration}t</p>
-                        </div>
-                      )}
-                      {huntedCreature.personalitySkill && (
-                        <div className="bg-blue-600 bg-opacity-50 rounded-lg p-3">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold text-blue-300 px-2 py-1 rounded-full border border-blue-400">PERSONNALITÉ</span>
-                            <span className="font-semibold text-blue-100">{huntedCreature.personalitySkill.name}</span>
-                          </div>
-                          <p className="text-sm text-blue-200">{huntedCreature.personalitySkill.description}</p>
-                          <p className="text-xs text-blue-300 mt-1">CD: {huntedCreature.personalitySkill.cooldown}t | Durée: {huntedCreature.personalitySkill.duration}t</p>
-                        </div>
-                      )}
+                <div className="space-y-2 mb-3">
+                  <span className="text-sm text-green-200">Compétences:</span>
+                  {huntedCreature.specimenSkill && (
+                    <div className="bg-green-700 bg-opacity-50 rounded-lg p-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-green-100">🔬 {huntedCreature.specimenSkill.name}</span>
+                        <span className="text-xs text-green-300">CD = {huntedCreature.specimenSkill.cooldown} tours</span>
+                      </div>
+                      <p className="text-xs text-green-200 mt-1">{huntedCreature.specimenSkill.description}</p>
                     </div>
-                  </div>
-                )}
+                  )}
+                  {huntedCreature.personalitySkill && (
+                    <div className="bg-blue-700 bg-opacity-50 rounded-lg p-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-blue-100">🎭 {huntedCreature.personalitySkill.name}</span>
+                        <span className="text-xs text-blue-300">CD = {huntedCreature.personalitySkill.cooldown} tours</span>
+                      </div>
+                      <p className="text-xs text-blue-200 mt-1">{huntedCreature.personalitySkill.description}</p>
+                    </div>
+                  )}
+                </div>
                 {SHOW_TRAITS && huntedCreature.traits && huntedCreature.traits.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-3">
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <span className="text-sm text-purple-200">✨ Traits:</span>
                     {getTraitsByIds(huntedCreature.traits).map(trait => (
-                      <span key={trait.id} className="text-xs px-2 py-1 bg-purple-700 bg-opacity-50 rounded text-purple-100">
+                      <span key={trait.id} className="text-sm px-3 py-1 rounded-full bg-purple-700 text-purple-100 flex items-center gap-1">
                         {trait.emoji} {trait.name}
                       </span>
                     ))}
@@ -1018,17 +1013,25 @@ export default function HuntingPage() {
                     );
                   })()}
                 </div>
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="space-y-2 mb-3">
                   <span className="text-sm text-green-200">Compétences:</span>
                   {selectedCreature.specimenSkill && (
-                    <span className="text-sm px-3 py-1.5 rounded-full bg-green-600 text-green-100 font-bold flex items-center gap-1">
-                      🔬 {selectedCreature.specimenSkill.name}
-                    </span>
+                    <div className="bg-green-700 bg-opacity-50 rounded-lg p-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-green-100">🔬 {selectedCreature.specimenSkill.name}</span>
+                        <span className="text-xs text-green-300">CD = {selectedCreature.specimenSkill.cooldown} tours</span>
+                      </div>
+                      <p className="text-xs text-green-200 mt-1">{selectedCreature.specimenSkill.description}</p>
+                    </div>
                   )}
                   {selectedCreature.personalitySkill && (
-                    <span className="text-sm px-3 py-1.5 rounded-full bg-blue-600 text-blue-100 font-bold flex items-center gap-1">
-                      🎭 {selectedCreature.personalitySkill.name}
-                    </span>
+                    <div className="bg-blue-700 bg-opacity-50 rounded-lg p-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-blue-100">🎭 {selectedCreature.personalitySkill.name}</span>
+                        <span className="text-xs text-blue-300">CD = {selectedCreature.personalitySkill.cooldown} tours</span>
+                      </div>
+                      <p className="text-xs text-blue-200 mt-1">{selectedCreature.personalitySkill.description}</p>
+                    </div>
                   )}
                 </div>
 
