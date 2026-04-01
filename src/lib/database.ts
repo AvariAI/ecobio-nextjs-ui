@@ -181,7 +181,7 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     },
     scalingMultipliers: {
       hp: 0.08,
-      attack: 0.12,  // +12% (focus!)
+      attack: 0.035,  // +3.5% (focus!) - Option C balance
       defense: 0.08,
       speed: 0.08,
       crit: 0.10
@@ -203,7 +203,7 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     scalingMultipliers: {
       hp: 0.08,
       attack: 0.08,
-      defense: 0.12,  // +12% (focus!)
+      defense: 0.035,  // +3.5% (focus!) - Option C balance
       speed: 0.08,
       crit: 0.10
     },
@@ -213,7 +213,7 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     id: "rapide",
     name: "Rapide",
     emoji: "💨",
-    description: "Attacks first and runs. +12% SPD, +8% others",
+    description: "Attacks first and runs. +3.5% SPD, +8% others (Option C balance)",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -225,7 +225,7 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
       hp: 0.08,
       attack: 0.08,
       defense: 0.08,
-      speed: 0.12,  // +12% (focus!)
+      speed: 0.035,  // +3.5% (focus!) - Option C balance
       crit: 0.10
     },
     rarity: 15
@@ -234,7 +234,7 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     id: "soin_leurre",
     name: "Soin-Leurre",
     emoji: "❤️",
-    description: "Gentle, caring. +12% HP, +8% others",
+    description: "Gentle, caring. +3.5% HP, +8% others (Option C balance)",
     statModifiers: {
       hp: 1.00,
       attack: 1.00,
@@ -243,7 +243,7 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
       crit: 1.00
     },
     scalingMultipliers: {
-      hp: 0.12,    // +12% (focus!)
+      hp: 0.035,    // +3.5% (focus!) - Option C balance
       attack: 0.08,
       defense: 0.08,
       speed: 0.08,
@@ -268,7 +268,7 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
       attack: 0.08,
       defense: 0.08,
       speed: 0.08,
-      crit: 0.12    // +12% (focus!)
+      crit: 0.035    // +3.5% (focus!) - Option C balance
     },
     rarity: 12
   },
