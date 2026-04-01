@@ -895,14 +895,12 @@ export default function HuntingPage() {
                   </div>
                 )}
                 {SHOW_TRAITS && huntedCreature.traits && huntedCreature.traits.length > 0 && (
-                  <div className="bg-purple-700 bg-opacity-50 rounded-lg p-3 mb-4">
-                    <h3 className="font-bold text-purple-100">✨ Traits ({huntedCreature.traits.length})</h3>
-                    <div className="mt-2 space-y-2">
+                  <div className="bg-purple-700 bg-opacity-50 rounded-lg p-2 mb-3">
+                    <div className="flex flex-wrap gap-1">
                       {getTraitsByIds(huntedCreature.traits).map(trait => (
-                        <div key={trait.id} className="bg-purple-900 bg-opacity-50 rounded p-2">
-                          <p className="text-sm font-bold text-purple-100">{trait.name}</p>
-                          <p className="text-xs text-purple-200">{trait.description}</p>
-                        </div>
+                        <span key={trait.id} className="text-xs px-2 py-1 bg-purple-900 bg-opacity-50 rounded text-purple-100">
+                          {trait.emoji} {trait.name}
+                        </span>
                       ))}
                     </div>
                   </div>
@@ -1019,33 +1017,18 @@ export default function HuntingPage() {
                     );
                   })()}
                 </div>
-                {(selectedCreature.specimenSkill || selectedCreature.personalitySkill) && (
-                  <div className="bg-green-700 bg-opacity-50 rounded-lg p-3 mb-4">
-                    <h3 className="font-bold text-green-100 mb-3">🎯 Compétences</h3>
-                    <div className="space-y-3">
-                      {selectedCreature.specimenSkill && (
-                        <div className="bg-green-600 bg-opacity-50 rounded-lg p-3">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold text-green-300 px-2 py-1 rounded-full border border-green-400">SPECIMEN</span>
-                            <span className="font-semibold text-green-100">{selectedCreature.specimenSkill.name}</span>
-                          </div>
-                          <p className="text-sm text-green-200">{selectedCreature.specimenSkill.description}</p>
-                          <p className="text-xs text-green-300 mt-1">CD: {selectedCreature.specimenSkill.cooldown}t | Durée: {selectedCreature.specimenSkill.duration}t</p>
-                        </div>
-                      )}
-                      {selectedCreature.personalitySkill && (
-                        <div className="bg-blue-600 bg-opacity-50 rounded-lg p-3">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold text-blue-300 px-2 py-1 rounded-full border border-blue-400">PERSONNALITÉ</span>
-                            <span className="font-semibold text-blue-100">{selectedCreature.personalitySkill.name}</span>
-                          </div>
-                          <p className="text-sm text-blue-200">{selectedCreature.personalitySkill.description}</p>
-                          <p className="text-xs text-blue-300 mt-1">CD: {selectedCreature.personalitySkill.cooldown}t | Durée: {selectedCreature.personalitySkill.duration}t</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {selectedCreature.specimenSkill && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-green-600 text-green-100 font-bold flex items-center gap-1">
+                      🔬 {selectedCreature.specimenSkill.name}
+                    </span>
+                  )}
+                  {selectedCreature.personalitySkill && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-blue-600 text-blue-100 font-bold flex items-center gap-1">
+                      🎭 {selectedCreature.personalitySkill.name}
+                    </span>
+                  )}
+                </div>
 
                 {SHOW_TRAITS && selectedCreature.traits && selectedCreature.traits.length > 0 && (
                   <div className="bg-purple-700 bg-opacity-50 rounded-lg p-2 mb-3">
