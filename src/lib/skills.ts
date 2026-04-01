@@ -52,7 +52,7 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
   agressif: {
     id: "agressif_base",
     name: "Frénésie",
-    description: "Buff actif: +50% ATK pendant 2 tours (cooldown: 3 tours)",
+    description: "Buff actif: +50% ATK pendant 2 tours",
     archetype: "agressif",
     source: "personality",
     type: "offensive",
@@ -70,7 +70,7 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
   protecteur: {
     id: "protecteur_base",
     name: "Cuirasse",
-    description: "Buff actif: +50% DEF pendant 2 tours (cooldown: 3 tours)",
+    description: "Buff actif: +50% DEF pendant 2 tours",
     archetype: "protecteur",
     source: "personality",
     type: "defensive",
@@ -89,7 +89,7 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
   rapide: {
     id: "rapide_base",
     name: "Accélération",
-    description: "Buff actif: +50% VITESSE pendant 2 tours (cooldown: 3 tours)",
+    description: "Buff actif: +50% VITESSE pendant 2 tours",
     archetype: "rapide",
     source: "personality",
     type: "offensive",
@@ -108,7 +108,7 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
   stratège: {
     id: "stratège_base",
     name: "Bouclier Temporel",
-    description: "Buff actif: +50% MAX HP pendant 2 tours + rétro-réduction 50% des dégâts reçus à l'expiration (cooldown: 3 tours)",
+    description: "Buff actif: +50% MAX HP pendant 2 tours + rétro-réduction 50% des dégâts reçus à l'expiration",
     archetype: "stratège",
     source: "personality",
     type: "special",
@@ -126,7 +126,7 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
   précis: {
     id: "précis_base",
     name: "Visée Laser",
-    description: "Buff actif: +50% CRITIQUE pendant 2 tours (cooldown: 3 tours)",
+    description: "Buff actif: +50% CRITIQUE pendant 2 tours",
     archetype: "précis",
     source: "personality",
     type: "offensive",
@@ -144,7 +144,7 @@ export const BASE_SKILLS: Record<PersonalityType, Skill> = {
   mystérieux: {
     id: "mystérieux_base",
     name: "Surprise",
-    description: "Buff actif: +50% à UNE stat random (ATK/DEF/VIT/CRIT) pendant 2 tours (cooldown: 3 tours)",
+    description: "Buff actif: +50% à UNE stat random (ATK/DEF/VIT/CRIT) pendant 2 tours",
     archetype: "mystérieux",
     source: "personality",
     type: "special",
