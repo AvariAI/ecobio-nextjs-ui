@@ -73,21 +73,10 @@ interface HuntedCreature extends Creature {
   isOnMission: boolean; // True if creature is on exploration mission
 }
 
-function getCreatureImage(creatureId: string, rank: Rank): string {
-  if (creatureId === "housefly") {
-    const rankSuffix = rank === "S+" ? "S+" : rank;
-    return `/creatures/fly-rank-${rankSuffix}.png`;
-  }
-  if (creatureId === "ant") {
-    const rankSuffix = rank === "S+" ? "S+" : rank;
-    return `/creatures/ant_rank_${rankSuffix}.png`;
-  }
-  if (creatureId === "honeybee") {
-    const rankSuffix = rank === "S+" ? "S+" : rank;
-    return `/creatures/bee-rank-${rankSuffix}.png`;
-  }
-  if (creatureId === "spider_mutant") {
-    return `/images/creatures/spider_mutant_e.png`;
+function getCreatureImage(creatureId: string, rank: Rank, geneticType?: string): string {
+  if (creatureId === "ravaryn" && geneticType) {
+    const normalizedType = geneticType.toLowerCase().replace("é", "e").replace("è", "e");
+    return `/ecobio-nextjs-ui/images/creatures/ravaryn_${normalizedType}_e.png`;
   }
   return `/images/creatures/spider_mutant_e.png`; // Fallback
 }
@@ -112,23 +101,23 @@ export default function BattlePage() {
   const [teamSize, setTeamSize] = useState<TeamSize>(1);
 
   // Test mode state
-  const [playerCreatureId, setPlayerCreatureId] = useState("ant");
+  const [playerCreatureId, setPlayerCreatureId] = useState("ravaryn");
   const [playerLevel, setPlayerLevel] = useState(10);
   const [playerRank, setPlayerRank] = useState<Rank>("E");
-  const [enemyCreatureId, setEnemyCreatureId] = useState("housefly");
+  const [enemyCreatureId, setEnemyCreatureId] = useState("ravaryn");
   const [enemyLevel, setEnemyLevel] = useState(10);
   const [enemyRank, setEnemyRank] = useState<Rank>("E");
 
   // Multi-slot test mode state
   const [playerSlotConfigs, setPlayerSlotConfigs] = useState<SlotConfig[]>([
-    { creatureId: "ant", level: 10, rank: "E" },
+    { creatureId: "ravaryn", level: 10, rank: "E" },
     { creatureId: "", level: 10, rank: "E" },
     { creatureId: "", level: 10, rank: "E" },
     { creatureId: "", level: 10, rank: "E" },
     { creatureId: "", level: 10, rank: "E" },
   ]);
   const [enemySlotConfigs, setEnemySlotConfigs] = useState<SlotConfig[]>([
-    { creatureId: "housefly", level: 10, rank: "E" },
+    { creatureId: "ravaryn", level: 10, rank: "E" },
     { creatureId: "", level: 10, rank: "E" },
     { creatureId: "", level: 10, rank: "E" },
     { creatureId: "", level: 10, rank: "E" },
@@ -1677,14 +1666,14 @@ export default function BattlePage() {
                 setEnemyTeamIds([null, null, null, null, null]);
                 // Reset test mode slot configs
                 setPlayerSlotConfigs([
-                  { creatureId: "ant", level: 10, rank: "E" },
+                  { creatureId: "ravaryn", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
                 ]);
                 setEnemySlotConfigs([
-                  { creatureId: "housefly", level: 10, rank: "E" },
+                  { creatureId: "ravaryn", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
@@ -1706,14 +1695,14 @@ export default function BattlePage() {
                 setEnemyTeamIds([null, null, null, null, null]);
                 // Reset test mode slot configs for 3v3
                 setPlayerSlotConfigs([
-                  { creatureId: "ant", level: 10, rank: "E" },
+                  { creatureId: "ravaryn", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
                 ]);
                 setEnemySlotConfigs([
-                  { creatureId: "housefly", level: 10, rank: "E" },
+                  { creatureId: "ravaryn", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
@@ -1735,14 +1724,14 @@ export default function BattlePage() {
                 setEnemyTeamIds([null, null, null, null, null]);
                 // Reset test mode slot configs for 5v5
                 setPlayerSlotConfigs([
-                  { creatureId: "ant", level: 10, rank: "E" },
+                  { creatureId: "ravaryn", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
                 ]);
                 setEnemySlotConfigs([
-                  { creatureId: "housefly", level: 10, rank: "E" },
+                  { creatureId: "ravaryn", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },
                   { creatureId: "", level: 10, rank: "E" },

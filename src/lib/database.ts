@@ -69,62 +69,6 @@ export interface CreatureType {
 export type Rank = "E" | "D" | "C" | "B" | "A" | "S" | "S+";
 
 export const CREATURES: Record<string, Creature> = {
-  ant: {
-    id: "ant",
-    name: "Fourmi",
-    rank: "E",
-    baseStats: {
-      hp: 500,
-      attack: 100,
-      defense: 100,
-      speed: 100,
-      crit: 100,
-    },
-    desc: "Fourmi robuste avec defenses élevées",
-    image: "/images/caterpillar.png",
-  },
-  housefly: {
-    id: "housefly",
-    name: "Mouche",
-    rank: "E",
-    baseStats: {
-      hp: 500,
-      attack: 100,
-      defense: 100,
-      speed: 100,
-      crit: 100,
-    },
-    desc: "Insecte volant agile avec yeux composés et vol rapide",
-    image: "/images/giant_fly.png", // Placeholder
-  },
-  honeybee: {
-    id: "honeybee",
-    name: "Abeille",
-    rank: "E",
-    baseStats: {
-      hp: 500,
-      attack: 100,
-      defense: 100,
-      speed: 100,
-      crit: 100,
-    },
-    desc: "Abeille ouvrière avec rôle de support, boostée l'attaque ou la défense des alliés",
-    image: "/images/bee.png"
-  },
-  spider_mutant: {
-    id: "spider_mutant",
-    name: "Araignée Mutante",
-    rank: "E",
-    baseStats: {
-      hp: 500,
-      attack: 100,
-      defense: 100,
-      speed: 100,
-      crit: 100,
-    },
-    desc: "Créature mutante bizarre avec multiples yeux et des filaments lumineux",
-    image: "/images/creatures/spider_mutant_e.png",
-  },
   ravaryn: {
     id: "ravaryn",
     name: "Ravaryn",
