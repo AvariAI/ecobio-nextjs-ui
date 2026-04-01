@@ -824,7 +824,10 @@ export default function HuntingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-900 to-green-950 p-6">
       <div className="max-w-5xl mx-auto">
-        <Link href="/" className="text-green-300 hover:text-green-200 mb-6 inline-block">← Retour</Link>
+        <div className="flex items-center gap-4 mb-2">
+          <Link href="/" className="text-green-300 hover:text-green-200">← Retour</Link>
+          <Link href="/pokedex" className="text-green-300 hover:text-green-200">📚 Pokédex</Link>
+        </div>
         <h1 className="text-4xl font-bold text-green-100 mb-2">🏹 Chasse Créatures</h1>
         <p className="text-green-200 mb-8">Spawn RNG et build ta collection!</p>
 
