@@ -935,12 +935,52 @@ export default function HuntingPage() {
           <div className="bg-gradient-to-br from-green-800 to-green-900 rounded-xl p-6 shadow-xl border border-green-700">
             <button onClick={() => { setPhase("ready"); setSelectedRank(null); }} className="text-green-300 hover:text-green-200 mb-4 inline-block font-semibold">← Retour</button>
             <div className="flex items-start gap-6 mb-6">
-              <div className="w-48 h-48 flex-shrink-0">
-                <img
-                  src={getCreatureImage(selectedCreature.creatureId, selectedRank || selectedCreature.finalStats.rank, selectedCreature.geneticType)}
-                  alt={selectedCreature.name}
-                  className="w-full h-full object-cover rounded-lg border-2 border-green-600"
-                />
+              <div className="flex-shrink-0">
+                <div className="w-48 h-48 mb-3">
+                  <img
+                    src={getCreatureImage(selectedCreature.creatureId, selectedRank || selectedCreature.finalStats.rank, selectedCreature.geneticType)}
+                    alt={selectedCreature.name}
+                    className="w-full h-full object-cover rounded-lg border-2 border-green-600"
+                  />
+                </div>
+                {/* Compact progression bars under image */}
+                <div className="space-y-2" style={{width: "12.5rem"}}>
+                  {/* Level XP bar */}
+                  <div className="bg-purple-600 bg-opacity-50 rounded p-2">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-purple-100 text-xs font-bold">⬆️ Level {selectedCreature.level}</span>
+                      <span className="text-purple-200 text-xs">{selectedCreature.currentXP}/{selectedCreature.xpToNextLevel}</span>
+                    </div>
+                    <div className="w-full bg-purple-950 rounded-full h-1.5">
+                      <div
+                        className="bg-purple-400 h-1.5 rounded-full"
+                        style={{ width: `${(selectedCreature.currentXP / selectedCreature.xpToNextLevel) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                  {/* Stars bar */}
+                  <div className="bg-yellow-600 bg-opacity-50 rounded p-2">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-yellow-100 text-xs font-bold">⭐ {selectedCreature.stars || 0}/5</span>
+                      <span className="text-yellow-200 text-xs">{selectedCreature.combatXP || 0} XP</span>
+                    </div>
+                    <div className="flex gap-0.5 mb-1">
+                      {[0,1,2,3,4].map(i => (
+                        <span key={i} className={`text-sm ${i < (selectedCreature.stars || 0) ? "" : "opacity-30"}`}>
+                          {i < (selectedCreature.stars || 0) ? "⭐" : "☆"}
+                        </span>
+                      ))}
+                    </div>
+                    {selectedCreature.stars !== undefined && selectedCreature.stars < 5 && selectedCreature.combatXPToNextStar > 0 && (
+                    <div className="w-full bg-yellow-950 rounded-full h-1.5">
+                      <div
+                        className="bg-yellow-400 h-1.5 rounded-full"
+                        style={{ width: `${Math.min(100, ((selectedCreature.combatXP || 0) / Math.max(1, selectedCreature.combatXPToNextStar)) * 100)}%` }}
+                      />
+                    </div>
+                    )}
+                  </div>
+                </div>
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
@@ -1023,44 +1063,6 @@ export default function HuntingPage() {
                     </div>
                   </div>
                 )}
-                <div className="bg-purple-600 bg-opacity-50 rounded-lg p-2 mb-3">
-                  <p className="text-purple-100 text-sm font-bold">⬆️ L{selectedCreature.level}</p>
-                  <div className="w-full bg-purple-950 rounded-full h-1.5 mt-1">
-                    <div
-                      className="bg-purple-400 h-1.5 rounded-full"
-                      style={{ width: `${(selectedCreature.currentXP / selectedCreature.xpToNextLevel) * 100}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="bg-yellow-600 bg-opacity-50 rounded-lg p-2 mb-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-yellow-100 text-sm font-bold">⭐ {selectedCreature.stars || 0}/5</span>
-                    <span className="text-yellow-200 text-xs">{selectedCreature.combatXP || 0} XP</span>
-                  </div>
-                  {selectedCreature.stars !== undefined && selectedCreature.stars < 5 && selectedCreature.combatXPToNextStar > 0 && (
-                    <div className="w-full bg-yellow-950 rounded-full h-1.5">
-                      <div
-                        className="bg-yellow-400 h-1.5 rounded-full"
-                        style={{ width: `${Math.min(100, ((selectedCreature.combatXP || 0) / Math.max(1, selectedCreature.combatXPToNextStar)) * 100)}%` }}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* NEW: Add exploration progress bar */}
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-bold text-amber-700 dark:text-amber-400 mb-3">
-                    Progression d'Exploration
-                  </h3>
-                  {renderExplorationProgress(selectedCreature, (e) => {
-                    if (e) e.stopPropagation();
-                    setShowExplorationBonuses(selectedCreature);
-                  })}
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                    Envoyez cette créature en mission pour gagner de l'XP et débloquer des durées de mission plus longues.
-                  </p>
-                </div>
 
                 {SHOW_TRAITS && selectedCreature.traits && selectedCreature.traits.length > 0 && (
                   <div className="bg-purple-700 bg-opacity-50 rounded-lg p-2 mb-3">
@@ -1073,6 +1075,12 @@ export default function HuntingPage() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Compact exploration bar */}
+              <div className="bg-amber-600 bg-opacity-50 rounded p-2 w-[12.5rem]">
+                <span className="text-amber-100 text-xs font-bold">Exploration</span>
+                {renderExplorationProgress(selectedCreature, () => {})}
               </div>
             </div>
             <h3 className="text-lg font-bold text-green-100 mb-3">📊 Stats</h3>
