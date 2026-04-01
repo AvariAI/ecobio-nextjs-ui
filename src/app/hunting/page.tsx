@@ -1019,27 +1019,6 @@ export default function HuntingPage() {
                     );
                   })()}
                 </div>
-                <div className="mb-4">
-                  <p className="text-green-200 font-semibold mb-2">🎭 Voir par rang:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {(["E", "D", "C", "B", "A", "S", "S+"] as Rank[]).map(rank => (
-                      <button
-                        key={rank}
-                        onClick={() => handleRankChange(rank)}
-                        className={`px-3 py-1 rounded-full font-bold text-sm ${
-                          selectedRank === rank
-                            ? `${getRankBadgeColor(rank)} ring-2 ring-white`
-                            : `${getRankBadgeColor(rank)} opacity-60 hover:opacity-100`
-                        }`}
-                      >
-                        {rank}
-                      </button>
-                    ))}
-                  </div>
-                  {selectedRank && selectedRank !== selectedCreature.finalStats.rank && (
-                    <p className="text-yellow-300 text-sm mt-2">Affichage: rang {selectedRank} (créature rang {selectedCreature.finalStats.rank})</p>
-                  )}
-                </div>
                 {(selectedCreature.specimenSkill || selectedCreature.personalitySkill) && (
                   <div className="bg-green-700 bg-opacity-50 rounded-lg p-3 mb-4">
                     <h3 className="font-bold text-green-100 mb-3">🎯 Compétences</h3>
