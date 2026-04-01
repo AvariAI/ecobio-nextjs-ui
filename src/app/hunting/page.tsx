@@ -980,6 +980,11 @@ export default function HuntingPage() {
                     </div>
                     )}
                   </div>
+                  {/* Exploration progress bar - under stars */}
+                  <div className="bg-amber-600 bg-opacity-50 rounded p-2">
+                    <span className="text-amber-100 text-xs font-bold">Exploration</span>
+                    {renderExplorationProgress(selectedCreature, () => {})}
+                  </div>
                 </div>
               </div>
               <div className="flex-1">
@@ -1075,12 +1080,6 @@ export default function HuntingPage() {
                     </div>
                   </div>
                 )}
-              </div>
-
-              {/* Compact exploration bar */}
-              <div className="bg-amber-600 bg-opacity-50 rounded p-2 w-[12.5rem]">
-                <span className="text-amber-100 text-xs font-bold">Exploration</span>
-                {renderExplorationProgress(selectedCreature, () => {})}
               </div>
             </div>
             <h3 className="text-lg font-bold text-green-100 mb-3">📊 Stats</h3>
