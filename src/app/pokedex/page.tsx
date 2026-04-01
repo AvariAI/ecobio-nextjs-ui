@@ -135,14 +135,9 @@ export default function PokedexPage() {
                     alt={typeData.name}
                     className="w-16 h-16 rounded-lg border-2 border-gray-300 dark:border-gray-600"
                   />
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {typeData.emoji} {typeData.name}
-                    </h2>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {typeData.characteristic}
-                    </p>
-                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {typeData.emoji} {typeData.name}
+                  </h2>
                 </div>
 
                 {/* Rank cards row */}
