@@ -206,34 +206,11 @@ export default function PokedexPage() {
                             ×{captureCount}
                           </div>
                         )}
-                      </div>
+
                         {/* Rank badge */}
                         <div className={`absolute top-2 right-2 ${getRankBadgeColor(rank)} text-white text-xs font-bold px-2 py-1 rounded-full`}>
                           {rank}
                         </div>
-
-                        {/* Debug: Always show card count info */}
-                        <div className="absolute top-2 left-2 text-xs text-gray-600 dark:text-gray-400">
-                          {isUnlocked ? `✓` : `✗`}
-                        </div>
-
-                        {/* Card content - Show image always for debugging */}
-                        <img
-                          src={getCardImage(type, rank)}
-                          alt={`${typeData.name} ${rank}`}
-                          className="w-full h-full object-contain p-2"
-                          onError={(e) => {
-                            console.error(`Failed to load ${getCardImage(type, rank)}`);
-                            (e.target as HTMLImageElement).style.display = "none";
-                          }}
-                        />
-
-                        {/* Capture count */}
-                        {isUnlocked && captureCount > 1 && (
-                          <div className="absolute bottom-2 left-2 bg-purple-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                            ×{captureCount}
-                          </div>
-                        )}
                       </div>
                     );
                   })}
