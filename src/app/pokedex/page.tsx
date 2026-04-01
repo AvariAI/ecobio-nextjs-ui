@@ -177,11 +177,6 @@ export default function PokedexPage() {
                           {rank}
                         </div>
 
-                        {/* Debug badge */}
-                        <div className="absolute top-2 left-2 text-xs text-gray-600 dark:text-gray-400 z-10">
-                          {isUnlocked ? `✓` : `✗`}
-                        </div>
-
                         {/* Card content */}
                         <img
                           src={getCardImage(type, rank)}
@@ -208,11 +203,6 @@ export default function PokedexPage() {
                             ×{captureCount}
                           </div>
                         )}
-
-                        {/* Rank badge */}
-                        <div className={`absolute top-2 right-2 ${getRankBadgeColor(rank)} text-white text-xs font-bold px-2 py-1 rounded-full`}>
-                          {rank}
-                        </div>
                       </div>
                     );
                   })}
