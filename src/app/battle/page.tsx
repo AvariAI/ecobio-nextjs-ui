@@ -76,7 +76,7 @@ interface HuntedCreature extends Creature {
 function getCreatureImage(creatureId: string, rank: Rank, geneticType?: string): string {
   if (creatureId === "ravaryn" && geneticType) {
     const normalizedType = geneticType.toLowerCase().replace("é", "e").replace("è", "e");
-    return `/ecobio-nextjs-ui/images/creatures/ravaryn_${normalizedType}_e.png`;
+    return `/images/creatures/ravaryn_${normalizedType}_e.png`;
   }
   return `/images/creatures/spider_mutant_e.png`; // Fallback
 }

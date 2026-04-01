@@ -336,7 +336,7 @@ function getCreatureImage(creatureId: string, rank: Rank, geneticType?: string):
   }
   if (creatureId === "ravaryn" && geneticType) {
     const normalizedType = geneticType.toLowerCase().replace("é", "e").replace("è", "e");
-    return `/ecobio-nextjs-ui/images/creatures/ravaryn_${normalizedType}_e.png`;
+    return `/images/creatures/ravaryn_${normalizedType}_e.png`;
   }
   return "/ecobio-nextjs-ui/images/giant_fly.png";
 }
