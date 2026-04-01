@@ -2,13 +2,12 @@
 // Each personality has a unique buff that boosts its corresponding stat(s)
 
 export type PersonalityType =
-  | "agressive"
-  | "protective"
+  | "agressif"
+  | "protecteur"
   | "rapide"
-  | "soin_leurre"
-  | "précise"
-  | "balancee"
-  | "mysterieuse";
+  | "stratège"
+  | "précis"
+  | "mystérieux";
 
 export interface PersonalityBuff {
   id: string;
@@ -25,12 +24,13 @@ export interface SoinLeurreState {
   damageTakenDuringBuff: number;
 }
 
+// Personality Buffs definitions
 const PERSONALITY_BUFFS: Record<PersonalityType, PersonalityBuff> = {
-  // Agressive: +50% ATK for 2 turns
-  agressive: {
+  // Agressif: +50% ATK for 2 turns
+  agressif: {
     id: "buff_frenesie",
     name: "Frénésie",
-    personality: "agressive",
+    personality: "agressif",
     duration: 2,
     cooldown: 3,
     onApply: (creature) => {
@@ -41,11 +41,11 @@ const PERSONALITY_BUFFS: Record<PersonalityType, PersonalityBuff> = {
     },
   },
 
-  // Protective: +50% DEF for 2 turns
-  protective: {
+  // Protecteur: +50% DEF for 2 turns
+  protecteur: {
     id: "buff_cuirasse",
     name: "Cuirasse",
-    personality: "protective",
+    personality: "protecteur",
     duration: 2,
     cooldown: 3,
     onApply: (creature) => {
@@ -71,11 +71,11 @@ const PERSONALITY_BUFFS: Record<PersonalityType, PersonalityBuff> = {
     },
   },
 
-  // Soin-Leurre: +50% MAX HP during buff, damage taken reduced by 50% retroactively on removal
-  soin_leurre: {
+  // Stratège: +50% MAX HP during buff, damage taken reduced by 50% retroactively on removal
+  stratège: {
     id: "buff_bouclier_temporel",
     name: "Bouclier Temporel",
-    personality: "soin_leurre",
+    personality: "stratège",
     duration: 2,
     cooldown: 3,
     onApply: (creature) => {
@@ -116,11 +116,11 @@ const PERSONALITY_BUFFS: Record<PersonalityType, PersonalityBuff> = {
     },
   },
 
-  // Précise: +50% CRIT for 2 turns
-  précise: {
+  // Précis: +50% CRIT for 2 turns
+  précis: {
     id: "buff_visee_laser",
     name: "Visée Laser",
-    personality: "précise",
+    personality: "précis",
     duration: 2,
     cooldown: 3,
     onApply: (creature) => {
@@ -131,32 +131,11 @@ const PERSONALITY_BUFFS: Record<PersonalityType, PersonalityBuff> = {
     },
   },
 
-  // Balancee: +25% ALL stats for 2 turns
-  balancee: {
-    id: "buff_equilibre",
-    name: "Équilibre",
-    personality: "balancee",
-    duration: 2,
-    cooldown: 3,
-    onApply: (creature) => {
-      creature.tempStats.atk = Math.floor(creature.tempStats.atk * 1.25);
-      creature.tempStats.def = Math.floor(creature.tempStats.def * 1.25);
-      creature.tempStats.speed = Math.floor(creature.tempStats.speed * 1.25);
-      creature.tempStats.crit = Math.floor(creature.tempStats.crit * 1.25);
-    },
-    onRemove: (creature) => {
-      creature.tempStats.atk = Math.floor(creature.tempStats.atk / 1.25);
-      creature.tempStats.def = Math.floor(creature.tempStats.def / 1.25);
-      creature.tempStats.speed = Math.floor(creature.tempStats.speed / 1.25);
-      creature.tempStats.crit = Math.floor(creature.tempStats.crit / 1.25);
-    },
-  },
-
-  // Mysterieuse: +50% to ONE random stat for 2 turns
-  mysterieuse: {
+  // Mystérieux: +50% to ONE random stat for 2 turns
+  mystérieux: {
     id: "buff_surprise",
     name: "Surprise",
-    personality: "mysterieuse",
+    personality: "mystérieux",
     duration: 2,
     cooldown: 3,
     onApply: (creature) => {
@@ -165,23 +144,23 @@ const PERSONALITY_BUFFS: Record<PersonalityType, PersonalityBuff> = {
       const randomStat = stats[Math.floor(Math.random() * stats.length)];
 
       // Store which stat was boosted for removal
-      if (!creature.mysterieuseBoostedStat) {
-        creature.mysterieuseBoostedStat = null as "atk" | "def" | "speed" | "crit" | null;
+      if (!creature.mystérieuxBoostedStat) {
+        creature.mystérieuxBoostedStat = null as "atk" | "def" | "speed" | "crit" | null;
       }
-      creature.mysterieuseBoostedStat = randomStat as "atk" | "def" | "speed" | "crit";
+      creature.mystérieuxBoostedStat = randomStat as "atk" | "def" | "speed" | "crit";
 
       // Apply +50% to that stat
       creature.tempStats[randomStat] = Math.floor(creature.tempStats[randomStat] * 1.5);
     },
     onRemove: (creature) => {
-      if (!creature.mysterieuseBoostedStat) return;
+      if (!creature.mystérieuxBoostedStat) return;
 
       // Remove +50% from the boosted stat
-      creature.tempStats[creature.mysterieuseBoostedStat] = Math.floor(
-        creature.tempStats[creature.mysterieuseBoostedStat] / 1.5
+      creature.tempStats[creature.mystérieuxBoostedStat] = Math.floor(
+        creature.tempStats[creature.mystérieuxBoostedStat] / 1.5
       );
 
-      creature.mysterieuseBoostedStat = null;
+      creature.mystérieuxBoostedStat = null;
     },
   },
 };
