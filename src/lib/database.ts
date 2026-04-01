@@ -140,7 +140,7 @@ export const RANK_MULTIPLIERS: Record<Rank, number> = {
   "S+": 2.2,
 };
 
-export type PersonalityType = "agressive" | "protective" | "rapide" | "soin_leurre" | "precise" | "balancee" | "mysterieuse";
+export type PersonalityType = "agressive" | "protective" | "rapide" | "soin_leurre" | "précise" | "balancee" | "mysterieuse";
 
 export interface Personality {
   id: PersonalityType;
@@ -251,8 +251,8 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     },
     rarity: 12
   },
-  precise: {
-    id: "precise",
+  précise: {
+    id: "précise",
     name: "Précise",
     emoji: "🎯",
     description: "Precision hunter. +12% CRIT, +8% others",
