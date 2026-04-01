@@ -51,141 +51,129 @@ export interface Skill {
 export const BASE_SKILLS: Record<PersonalityType, Skill> = {
   agressive: {
     id: "agressive_base",
-    name: "Ravage",
-    description: "Attaque tous les ennemis avec 100% dégâts ATK, mais vous prenez 20% des dégâts totaux comme recul",
+    name: "Frénésie",
+    description: "Buff actif: +50% ATK pendant 2 tours (cooldown: 3 tours)",
     archetype: "agressive",
     source: "personality",
     type: "offensive",
-    effect: "aoe_damage",  // Changed to AOE
-    value: 1.0,  // 100% damage per target (down from 150% for AOE balance)
-    duration: 0,  // Instant
-    cooldown: 4,
-    target: "all",  // ALL enemies
+    effect: "attack",
+    value: 0.50,  // 50% ATK boost
+    duration: 2,  // 2 turns
+    cooldown: 3,
+    target: "self",
     level: 1,
     effects: {
-      offenseMultiplier: 1.0,  // 100% per target (was 1.5)
-      recoilPercent: 0.20,
-      effectDuration: 0,
+      effectDuration: 2,
     }
   },
 
   protective: {
     id: "protective_base",
-    name: "Forteresse",
-    description: "+60% DEF + Force les ennemis à cibler cette créature en priorité (2 tours)",
+    name: "Cuirasse",
+    description: "Buff actif: +50% DEF pendant 2 tours (cooldown: 3 tours)",
     archetype: "protective",
     source: "personality",
     type: "defensive",
     effect: "defense",
-    value: 0.60,  // 60% DEF boost
+    value: 0.50,  // 50% DEF boost
     duration: 2,
-    cooldown: 4,
+    cooldown: 3,
     target: "self",
     level: 1,
     effects: {
-      defenseRedirect: 0.60,  // Now acts as DEF boost
-      taunt: true,  // NEW: Forces enemy targeting
+      defenseRedirect: 0.50,
       effectDuration: 2,
     }
   },
 
   rapide: {
     id: "rapide_base",
-    name: "Assaut Rapide",
-    description: "Attaques en cascade: 100% (garanti), 70% 2ème, 50% 3ème, 25% 4ème - ~240% dégâts moyenne",
+    name: "Accélération",
+    description: "Buff actif: +50% VITESSE pendant 2 tours (cooldown: 3 tours)",
     archetype: "rapide",
     source: "personality",
     type: "offensive",
-    effect: "attack",  // Attack with cascade mechanic
-    value: 1.0,  // 100% damage per attack
-    duration: 0,  // Instant cascade
-    cooldown: 4,
-    target: "random",
+    effect: "speed",  // Speed buff
+    value: 0.50,  // 50% speed boost
+    duration: 2,
+    cooldown: 3,
+    target: "self",
     level: 1,
     effects: {
-      offenseMultiplier: 1.0,  // 100% per attack
-      cascade: true,  // NEW: Multi-attack cascade
-      cascadeChances: [1.0, 0.70, 0.50, 0.25],  // Probabilities for each attack
-      effectDuration: 0,
+      speedBonus: 0.50,
+      effectDuration: 2,
     }
   },
 
   soin_leurre: {
     id: "soin_leurre_base",
-    name: "Sacrifice Vital",
-    description: "Sacrifie 15% de votre PV pour soigner 30% du PV max du premier allié avant",
+    name: "Bouclier Temporel",
+    description: "Buff actif: +50% MAX HP pendant 2 tours + rétro-réduction 50% des dégâts reçus à l'expiration (cooldown: 3 tours)",
     archetype: "soin_leurre",
     source: "personality",
-    type: "heal",
-    effect: "heal",
-    value: 0.30,  // 30% heal (up from 15%)
-    duration: 0,  // Instant
-    cooldown: 4,
-    target: "front",  // NEW: Heals front-most ally (position 1, then 2, then 3)
+    type: "special",
+    effect: "defense",
+    value: 0.50,  // 50% max HP boost
+    duration: 2,
+    cooldown: 3,
+    target: "self",
     level: 1,
     effects: {
-      healPercent: 0.30,  // 30% heal for ally
-      selfSacrificePercent: 0.15,  // Sacrifice 15% of own HP
-      effectDuration: 0,
+      effectDuration: 2,
     }
   },
 
-  precise: {
+  précise: {
     id: "precise_base",
-    name: "Tir Critique",
-    description: "Coups garantis ignore esquive: +150% dégâts critiques instantanés (coup garanti)",
-    archetype: "precise",
+    name: "Visée Laser",
+    description: "Buff actif: +50% CRITIQUE pendant 2 tours (cooldown: 3 tours)",
+    archetype: "précise",
     source: "personality",
     type: "offensive",
     effect: "attack",
-    value: 1.5,  // 150% crit bonus
-    duration: 0,  // Instant, not a buff
-    cooldown: 4,
-    target: "random",
+    value: 0.50,  // 50% crit boost
+    duration: 2,
+    cooldown: 3,
+    target: "self",
     level: 1,
     effects: {
-      offenseMultiplier: 1.0,  // CRITICAL: Base 100% damage
-      critDamageBonus: 1.5,    // +150% crit bonus
-      ignoreDodge: true,      // COUP GARANTI !
-      effectDuration: 0,
+      effectDuration: 2,
     }
   },
 
   balancee: {
     id: "balancee_base",
-    name: "Miroir des Âmes",
-    description: "Swap tous les buffs avec l'ennemi le plus buffé (symétrique)",
+    name: "Équilibre",
+    description: "Buff actif: +25% TOUS les stats (ATK/DEF/VIT/CRIT) pendant 2 tours (cooldown: 3 tours)",
     archetype: "balancee",
     source: "personality",
     type: "special",
-    effect: "special",  // Buff swap
-    value: 0,  // No damage value
-    duration: 0,
-    cooldown: 4,
-    target: "random",  // Target enemy with most buffs
+    effect: "special",
+    value: 0.25,  // 25% all stats
+    duration: 2,
+    cooldown: 3,
+    target: "self",
     level: 1,
     effects: {
-      // Buff swap effect
-      effectDuration: 0,
+      effectDuration: 2,
     }
   },
 
   mysterieuse: {
     id: "mysterieuse_base",
-    name: "Roue du Destin",
-    description: "Reset le cooldown d'un allié aléatoire (échange d'énergie mystérieuse)",
+    name: "Surprise",
+    description: "Buff actif: +50% à UNE stat random (ATK/DEF/VIT/CRIT) pendant 2 tours (cooldown: 3 tours)",
     archetype: "mysterieuse",
     source: "personality",
     type: "special",
-    effect: "special",  // Cooldown reset
-    value: 0,  // No damage value
-    duration: 0,
-    cooldown: 4,
-    target: "ally",  // Targets an ally
+    effect: "special",
+    value: 0.50,  // 50% to one random stat
+    duration: 2,
+    cooldown: 3,
+    target: "self",
     level: 1,
     effects: {
-      // Cooldown reset effect
-      effectDuration: 0,
+      effectDuration: 2,
     }
   },
 };
