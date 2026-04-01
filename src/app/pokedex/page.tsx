@@ -180,7 +180,7 @@ export default function PokedexPage() {
                           <img
                             src={getCardImage(type, rank)}
                             alt={`${typeData.name} ${rank}`}
-                            className="w-full h-full object-contain px-4"
+                            className="w-full h-full object-cover"
                           />
                         ) : (
                           <>
