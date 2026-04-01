@@ -999,7 +999,6 @@ export default function HuntingPage() {
                   </button>
                   <span className={`text-2xl font-bold ${getRankBadgeColor(selectedCreature.finalStats.rank)} text-white px-3 py-1 rounded-full`}>{selectedCreature.finalStats.rank}</span>
                 </div>
-                <p className="text-green-200 mb-4">{selectedCreature.desc}</p>
                 <div className="flex flex-wrap gap-2 mb-4">
                   {selectedCreature.geneticType && (() => {
                     const gt = getGeneticType(selectedCreature.geneticType);
