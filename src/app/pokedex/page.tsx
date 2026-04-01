@@ -26,11 +26,22 @@ function getCardImage(geneticType: GeneticType, rank: Rank): string {
 function hasCaptured(geneticType: GeneticType, rank: Rank): boolean {
   try {
     const collection = JSON.parse(localStorage.getItem("ecobio_collection") || "[]");
-    return collection.some((creature: any) =>
+    const matches = collection.filter((creature: any) =>
       creature.geneticType === geneticType &&
       creature.finalStats.rank === rank
     );
-  } catch {
+    console.log(`Checking ${geneticType} ${rank}: found ${matches.length} creatures`);
+    if (matches.length > 0) {
+      console.log("Match samples:", matches.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        geneticType: c.geneticType,
+        rank: c.finalStats.rank
+      })));
+    }
+    return matches.length > 0;
+  } catch (error) {
+    console.error("Error checking captures:", error);
     return false;
   }
 }
