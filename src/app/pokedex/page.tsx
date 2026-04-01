@@ -163,7 +163,7 @@ export default function PokedexPage() {
                       <div
                         key={rank}
                         className={`
-                          relative aspect-[4/3] rounded-lg flex flex-col items-center justify-center
+                          relative aspect-[3/4] rounded-lg flex flex-col items-center justify-center
                           transition-all hover:scale-105 cursor-pointer
                           ${isUnlocked ? "shadow-md" : "shadow-inner"}
                           ${isRowOdd ? "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600" : "bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-600 dark:to-gray-700"}
