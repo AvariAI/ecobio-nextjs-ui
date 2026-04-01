@@ -491,7 +491,8 @@ export default function BattlePage() {
             speed: selectedPlayer.finalStats.speed,
             crit: selectedPlayer.finalStats.crit,
           },
-          selectedPlayer.traits || []
+          selectedPlayer.traits || [],
+          selectedPlayer.level || 1
         );
 
         const playerCreatureWithSkills = {
@@ -547,7 +548,8 @@ export default function BattlePage() {
             speed: selectedPlayer.finalStats.speed,
             crit: selectedPlayer.finalStats.crit,
           },
-          selectedPlayer.traits || []
+          selectedPlayer.traits || [],
+          selectedPlayer.level || 1
         );
 
         const enemyStatMods = applyTraitStatModifiers(
@@ -558,7 +560,8 @@ export default function BattlePage() {
             speed: selectedEnemy.finalStats.speed,
             crit: selectedEnemy.finalStats.crit,
           },
-          selectedEnemy.traits || []
+          selectedEnemy.traits || [],
+          selectedEnemy.level || 1
         );
 
         // Create creature templates with dual skills for 1v1 collection mode
@@ -683,7 +686,8 @@ export default function BattlePage() {
               speed: collected.finalStats.speed,
               crit: collected.finalStats.crit,
             },
-            collected.traits || []
+            collected.traits || [],
+            collected.level || 1
           );
 
           // Create creature template with dual skills from collected creature
@@ -765,7 +769,8 @@ export default function BattlePage() {
                 speed: collected.finalStats.speed,
                 crit: collected.finalStats.crit,
               },
-              collected.traits || []
+              collected.traits || [],
+              collected.level || 1
             );
 
             // Create creature template with dual skills from collected creature

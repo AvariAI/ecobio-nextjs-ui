@@ -1,453 +1,188 @@
 /**
- * ÉcoBio Trait System
- * Passive and conditional traits for creatures
+ * ÉcoBio Trait System - Simplified to 6 Stat Boost Traits
+ * All traits provide level-dependent stat scaling
  */
 
 import { Rank } from "./database";
 
-export enum TraitType {
-  PASSIVE = "passive",    // Always active
-  CONDITIONAL = "conditional",  // Active only under specific conditions
-}
+export type StatBoostType = "hp" | "attack" | "defense" | "speed" | "crit" | "random";
 
-export enum TraitCategory {
-  OFFENSE = "offense",
-  DEFENSE = "defense",
-  UTILITY = "utility",
-  HYBRID = "hybrid",  // Mixed effects (e.g., +atk but -def)
-}
-
-export interface TraitEffect {
-  stat: "hp" | "attack" | "defense" | "speed" | "crit" | "damageDealt" | "damageReceived" | "critRate" | "critMult" | "dodge" | "regen";
-  value: number;  // Percentage multipler (e.g., 0.15 = +15%)
-  // For hybrid traits with both positive and negative effects
-  isNegative?: boolean;
-}
-
-export interface Trait {
+export interface StatBoostTrait {
   id: string;
   name: string;
   description: string;
-  type: TraitType;
-  category: TraitCategory;
-  rarity: Rank[];  // Which ranks can spawn with this trait
-  effects: TraitEffect[];
-  // For conditional traits only
-  condition?: string;  // Human-readable condition description
-  conditionFn?: (hpPercent: number, stats: any) => boolean;  // Runtime check
+  emoji: string;
+  statBoosts: {
+    stat: StatBoostType;
+    valuePerLevel: number; // % boost per level (e.g., 0.006 for +0.6% per level)
+  }[];
+  statPenalties?: {
+    stat: StatBoostType;
+    valuePerLevel: number; // % penalty per level (negative)
+  }[];
+  weight?: number; // Weighted probability (integer, sum to 100)
 }
 
 /**
- * Trait slots per rank (with RNG variance)
- * E: 0-1 (50% chance)
- * D: 1
- * C: 1-2 (50% chance)
- * B: 2
- * A: 2-3 (50% chance)
- * S: 3
- * S+: 3-4 (50% chance)
+ * 6 Stat Boost Traits - All ranks can use these
+ * Weights: 18 each for normal traits (90% total), 10 for Destin (10%)
  */
-export const RANK_TRAIT_SLOTS: Record<Rank, { min: number; max: number }> = {
-  E: { min: 0, max: 1 },
-  D: { min: 1, max: 1 },
-  C: { min: 1, max: 2 },
-  B: { min: 2, max: 2 },
-  A: { min: 2, max: 3 },
-  S: { min: 3, max: 3 },
-  "S+": { min: 3, max: 4 },
+export const TRAITS: Record<string, StatBoostTrait> = {
+  vitalite: {
+    id: "vitalite",
+    name: "Vitalité",
+    description: "+0.6% HP par niveau",
+    emoji: "🧡",
+    statBoosts: [{ stat: "hp", valuePerLevel: 0.006 }],
+    weight: 18,
+  },
+
+  puissance: {
+    id: "puissance",
+    name: "Puissance",
+    description: "+0.6% ATK par niveau",
+    emoji: "⚔️",
+    statBoosts: [{ stat: "attack", valuePerLevel: 0.006 }],
+    weight: 18,
+  },
+
+  carapace: {
+    id: "carapace",
+    name: "Carapace",
+    description: "+0.6% DEF par niveau",
+    emoji: "🛡️",
+    statBoosts: [{ stat: "defense", valuePerLevel: 0.006 }],
+    weight: 18,
+  },
+
+  vitesse: {
+    id: "vitesse",
+    name: "Vitesse",
+    description: "+0.6% VIT par niveau",
+    emoji: "💨",
+    statBoosts: [{ stat: "speed", valuePerLevel: 0.006 }],
+    weight: 18,
+  },
+
+  precision: {
+    id: "precision",
+    name: "Précision",
+    description: "+0.6% CRIT par niveau",
+    emoji: "🎯",
+    statBoosts: [{ stat: "crit", valuePerLevel: 0.006 }],
+    weight: 18,
+  },
+
+  destin: {
+    id: "destin",
+    name: "Destin",
+    description: "+0.6% sur une stat RANDOM à chaque niveau",
+    emoji: "🌑",
+    statBoosts: [{ stat: "random", valuePerLevel: 0.006 }],
+    weight: 10, // Rarer: 10% vs 18%
+  },
 };
 
 /**
- * Calculate number of trait slots for a given rank (with RNG)
+ * Trait slots per rank (now simplified to fixed slots)
+ */
+export const RANK_TRAIT_SLOTS: Record<Rank, number> = {
+  E: 1,
+  D: 1,
+  C: 1,
+  B: 1,
+  A: 1,
+  S: 1,
+  "S+": 1,
+};
+
+/**
+ * Get trait slot count for a rank
  */
 export function getTraitSlotCount(rank: Rank): number {
-  const slots = RANK_TRAIT_SLOTS[rank];
-  if (slots.min === slots.max) {
-    return slots.min;
-  }
-
-  // Random choice between min and max
-  const roll = Math.random();
-  return roll < 0.5 ? slots.min : slots.max;
+  return RANK_TRAIT_SLOTS[rank] || 1;
 }
 
 /**
- * Roll random traits for a creature
- * @param rank Creature's rank
+ * Roll random traits for a creature using weighted probability
+ * @param rank Creature's rank (all ranks get same trait pool)
  * @param excludeTraits Trait IDs to exclude (for deduplication)
  * @returns Array of trait IDs
  */
 export function rollRandomTraits(rank: Rank, excludeTraits: string[] = []): string[] {
   const numSlots = getTraitSlotCount(rank);
-  const availableTraits = getAllTraitsForRank(rank);
-
-  // Filter out excluded traits and dedupe during selection
+  const availableTraits = Object.values(TRAITS).filter(t => !excludeTraits.includes(t.id));
   const selectedTraits: string[] = [];
-  const usedTraits = new Set(excludeTraits);
 
   for (let i = 0; i < numSlots; i++) {
-    const available = availableTraits.filter(t => !usedTraits.has(t.id));
-
-    if (available.length === 0) {
-      break;  // No more unique traits available
+    if (availableTraits.length === 0) {
+      break;
     }
 
-    const randomTrait = available[Math.floor(Math.random() * available.length)];
-    selectedTraits.push(randomTrait.id);
-    usedTraits.add(randomTrait.id);
+    // Calculate total weight
+    const totalWeight = availableTraits.reduce((sum, trait) => sum + (trait.weight || 1), 0);
+
+    // Weighted random selection
+    let randomWeight = Math.random() * totalWeight;
+    let selectedTrait: StatBoostTrait | null = null;
+
+    for (const trait of availableTraits) {
+      randomWeight -= (trait.weight || 1);
+      if (randomWeight <= 0) {
+        selectedTrait = trait;
+        break;
+      }
+    }
+
+    if (selectedTrait) {
+      selectedTraits.push(selectedTrait.id);
+      // Remove selected trait from available pool (no duplicates)
+      const index = availableTraits.indexOf(selectedTrait);
+      if (index > -1) {
+        availableTraits.splice(index, 1);
+      }
+    }
   }
 
   return selectedTraits;
 }
 
 /**
- * Get all traits that can spawn for a given rank
+ * Get all traits (for UI selection)
  */
-export function getAllTraitsForRank(rank: Rank): Trait[] {
-  return Object.values(TRAITS).filter(trait =>
-    trait.rarity.includes(rank)
-  );
+export function getAllTraitsForRank(rank: Rank): StatBoostTrait[] {
+  // All ranks have access to all 6 traits
+  return Object.values(TRAITS);
 }
-
-/**
- * Trait definitions - ~20 passive traits across categories
- * PHASE 1: Simple multipliers and effects
- * PHASE 2: Status effects (stun, poison, counters) - TODO
- */
-export const TRAITS: Record<string, Trait> = {
-  // OFFENSE TRAITS ===========================
-
-  critBoost: {
-    id: "critBoost",
-    name: "Frappe Critique",
-    description: "+15% taux de critique",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.OFFENSE,
-    rarity: ["D", "C", "B", "A", "S", "S+"],
-    effects: [
-      { stat: "critRate", value: 0.15 },
-    ],
-  },
-
-  heavyHitter: {
-    id: "heavyHitter",
-    name: "Frappe Lourde",
-    description: "+20% multiplicateur de critique",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.OFFENSE,
-    rarity: ["B", "A", "S", "S+"],
-    effects: [
-      { stat: "critMult", value: 0.20 },
-    ],
-  },
-
-  berserker: {
-    id: "berserker",
-    name: "Berserker",
-    description: "+15% dégâts infligés",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.OFFENSE,
-    rarity: ["C", "B", "A", "S", "S+"],
-    effects: [
-      { stat: "damageDealt", value: 0.15 },
-    ],
-  },
-
-  assassin: {
-    id: "assassin",
-    name: "Assassin",
-    description: "+25% dégâts infligés si cible HP < 50% (ne s'applique que quand bonus actif)",
-    type: TraitType.CONDITIONAL,
-    category: TraitCategory.OFFENSE,
-    rarity: ["A", "S", "S+"],
-    effects: [
-      { stat: "damageDealt", value: 0.25 },
-    ],
-    condition: "cible HP < 50%",
-    conditionFn: (_hpPercent: number, stats: any) => stats.targetHpPercent < 0.5,
-  },
-
-  swiftStrike: {
-    id: "swiftStrike",
-    name: "Frappe Éclair",
-    description: "+10% vitesse",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.OFFENSE,
-    rarity: ["D", "C", "B", "A", "S", "S+"],
-    effects: [
-      { stat: "speed", value: 0.10 },
-    ],
-  },
-
-  sniper: {
-    id: "sniper",
-    name: "Sniper",
-    description: "+10% taux de critique supplémentaire (cumule avec Frappe Critique, cap 40%)",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.OFFENSE,
-    rarity: ["B", "A", "S", "S+"],
-    effects: [
-      { stat: "critRate", value: 0.10 },
-    ],
-  },
-
-  // DEFENSE TRAITS ===========================
-
-  thickSkin: {
-    id: "thickSkin",
-    name: "Peau Épaisse",
-    description: "-10% dégâts reçus",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.DEFENSE,
-    rarity: ["E", "D", "C", "B", "A", "S", "S+"],
-    effects: [
-      { stat: "damageReceived", value: -0.10 },
-    ],
-  },
-
-  ironWill: {
-    id: "ironWill",
-    name: "Volonté de Fer",
-    description: "-15% dégâts reçus",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.DEFENSE,
-    rarity: ["B", "A", "S", "S+"],
-    effects: [
-      { stat: "damageReceived", value: -0.15 },
-    ],
-  },
-
-  tanky: {
-    id: "tanky",
-    name: "Tank",
-    description: "+20% HP",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.DEFENSE,
-    rarity: ["B", "A", "S", "S+"],
-    effects: [
-      { stat: "hp", value: 0.20 },
-    ],
-  },
-
-  evasion: {
-    id: "evasion",
-    name: "Esquive",
-    description: "+15% esquive",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.DEFENSE,
-    rarity: ["B", "A", "S", "S+"],
-    effects: [
-      { stat: "dodge", value: 0.15 },
-    ],
-  },
-
-  secondWind: {
-    id: "secondWind",
-    name: "Second Souffle",
-    description: "-25% dégâts reçus quand HP < 30% (ne s'applique que quand bonus actif)",
-    type: TraitType.CONDITIONAL,
-    category: TraitCategory.DEFENSE,
-    rarity: ["A", "S", "S+"],
-    effects: [
-      { stat: "damageReceived", value: -0.25 },
-    ],
-    condition: "HP < 30%",
-    conditionFn: (hpPercent: number) => hpPercent < 0.3,
-  },
-
-  // UTILITY TRAITS ===========================
-
-  regenLite: {
-    id: "regenLite",
-    name: "Régénération Légère",
-    description: "Récupère 2% HP par tour",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.UTILITY,
-    rarity: ["C", "B", "A", "S", "S+"],
-    effects: [
-      { stat: "regen", value: 0.02 },
-    ],
-  },
-
-  regenStrong: {
-    id: "regenStrong",
-    name: "Régénération Puissante",
-    description: "Récupère 5% HP par tour",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.UTILITY,
-    rarity: ["S", "S+"],
-    effects: [
-      { stat: "regen", value: 0.05 },
-    ],
-  },
-
-  sturdy: {
-    id: "sturdy",
-    name: "Solide",
-    description: "+10% HP et +5% défense",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.UTILITY,
-    rarity: ["C", "B", "A", "S", "S+"],
-    effects: [
-      { stat: "hp", value: 0.10 },
-      { stat: "defense", value: 0.05 },
-    ],
-  },
-
-  adrenaline: {
-    id: "adrenaline",
-    name: "Adrénaline",
-    description: "+15% vitesse et +10% critique quand HP < 25%",
-    type: TraitType.CONDITIONAL,
-    category: TraitCategory.UTILITY,
-    rarity: ["A", "S", "S+"],
-    effects: [
-      { stat: "speed", value: 0.15 },
-      { stat: "critRate", value: 0.10 },
-    ],
-    condition: "HP < 25%",
-    conditionFn: (hpPercent: number) => hpPercent < 0.25,
-  },
-
-  // HYBRID TRAITS (bonus + malus) =========
-
-  glassCannon: {
-    id: "glassCannon",
-    name: "Canon de Verre",
-    description: "+25% dégâts infligés, mais +20% dégâts reçus",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.HYBRID,
-    rarity: ["B", "A", "S", "S+"],
-    effects: [
-      { stat: "damageDealt", value: 0.25 },
-      { stat: "damageReceived", value: 0.20, isNegative: true },
-    ],
-  },
-
-  reckless: {
-    id: "reckless",
-    name: "Téméraire",
-    description: "+20% attaque et +15% défense, mais -10% vitesse",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.HYBRID,
-    rarity: ["C", "B", "A", "S", "S+"],
-    effects: [
-      { stat: "attack", value: 0.20 },
-      { stat: "defense", value: 0.15 },
-      { stat: "speed", value: -0.10, isNegative: true },
-    ],
-  },
-
-  fragileStriker: {
-    id: "fragileStriker",
-    name: "Frappeur Fragile",
-    description: "+35% dégâts infligés, mais -15% HP",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.HYBRID,
-    rarity: ["A", "S", "S+"],
-    effects: [
-      { stat: "damageDealt", value: 0.35 },
-      { stat: "hp", value: -0.15, isNegative: true },
-    ],
-  },
-
-  berserkMode: {
-    id: "berserkMode",
-    name: "Mode Berserk",
-    description: "+40% dégâts infligés quand HP < 20%, mais +10% dégâts reçus",
-    type: TraitType.CONDITIONAL,
-    category: TraitCategory.HYBRID,
-    rarity: ["S", "S+"],
-    effects: [
-      { stat: "damageDealt", value: 0.40 },
-      { stat: "damageReceived", value: 0.10, isNegative: true },
-    ],
-    condition: "HP < 20%",
-    conditionFn: (hpPercent: number) => hpPercent < 0.2,
-  },
-
-  slowButStrong: {
-    id: "slowButStrong",
-    name: "Lent mais Puissant",
-    description: "+25% attaque et +20% défense, mais -20% vitesse",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.HYBRID,
-    rarity: ["B", "A", "S", "S+"],
-    effects: [
-      { stat: "attack", value: 0.25 },
-      { stat: "defense", value: 0.20 },
-      { stat: "speed", value: -0.20, isNegative: true },
-    ],
-  },
-
-  // STATUS EFFECT TRAITS =====================
-  // PHASE 2: Traits that apply status effects
-
-  epines: {
-    id: "epines",
-    name: "Épines",
-    description: "Renvoie 20% des dégâts reçus à l'attaquant",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.DEFENSE,
-    rarity: ["B", "A", "S", "S+"],
-    effects: [],
-  },
-
-  slowTrait: {
-    id: "slowTrait",
-    name: "Lenteur",
-    description: "Tous les 3 attaques, ralentit la cible de 15% pendant 2 tours",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.UTILITY,
-    rarity: ["C", "B", "A", "S", "S+"],
-    effects: [],
-  },
-
-  coupBas: {
-    id: "coupBas",
-    name: "Coup Bas",
-    description: "Quand HP < 20%, 25% de chance d'étourdir la cible (saut de tour)",
-    type: TraitType.CONDITIONAL,
-    category: TraitCategory.OFFENSE,
-    rarity: ["A", "S", "S+"],
-    effects: [],
-    condition: "HP < 20%",
-    conditionFn: (hpPercent: number) => hpPercent < 0.2,
-  },
-
-  venom: {
-    id: "venom",
-    name: "Venin",
-    description: "30% de chance d'empoisonner la cible (6% dégâts par tour, 3 tours)",
-    type: TraitType.PASSIVE,
-    category: TraitCategory.OFFENSE,
-    rarity: ["B", "A", "S", "S+"],
-    effects: [],
-  },
-};
 
 /**
  * Get trait by ID
  */
-export function getTraitById(traitId: string): Trait | undefined {
+export function getTraitById(traitId: string): StatBoostTrait | undefined {
   return TRAITS[traitId];
 }
 
 /**
  * Get multiple traits by IDs
  */
-export function getTraitsByIds(traitIds: string[]): Trait[] {
+export function getTraitsByIds(traitIds: string[]): StatBoostTrait[] {
   return traitIds
     .map(id => getTraitById(id))
-    .filter((trait): trait is Trait => trait !== undefined);
+    .filter((trait): trait is StatBoostTrait => trait !== undefined);
 }
 
 /**
- * Apply trait stat modifiers to base stats for battle setup
+ * Get random stat for Destin trait at a given level (deterministic based on level)
+ */
+function getRandomStatForLevel(level: number): StatBoostType {
+  const stats: StatBoostType[] = ["hp", "attack", "defense", "speed", "crit"];
+  const index = level % stats.length;
+  return stats[index];
+}
+
+/**
+ * Apply all stat boost traits to stats (for battle setup / display)
  * Returns modified stats and breakdown of bonuses/maluses
- * @param baseStats Base stats from spawn
- * @param traitIds Trait IDs to apply
- * @returns { modifiedStats, breakdown } where breakdown shows trait contributions
  */
 export function applyTraitStatModifiers(
   baseStats: {
@@ -457,7 +192,8 @@ export function applyTraitStatModifiers(
     speed: number;
     crit: number;
   },
-  traitIds: string[]
+  traitIds: string[],
+  level: number
 ): {
   modifiedStats: {
     hp: number;
@@ -483,17 +219,56 @@ export function applyTraitStatModifiers(
   let critMult = 1.0;
 
   for (const trait of traits) {
-    for (const effect of trait.effects) {
-      if (effect.stat === "hp") {
-        hpMult += effect.value;
-      } else if (effect.stat === "attack") {
-        attackMult += effect.value;
-      } else if (effect.stat === "defense") {
-        defenseMult += effect.value;
-      } else if (effect.stat === "speed") {
-        speedMult += effect.value;
-      } else if (effect.stat === "crit") {
-        critMult += effect.value;
+    // statBoosts
+    for (const boost of trait.statBoosts) {
+      let targetStat = boost.stat;
+
+      // Handle Destin trait (Random stat per level)
+      if (targetStat === "random") {
+        targetStat = getRandomStatForLevel(level);
+      }
+
+      const multiplier = 1.0 + (level - 1) * boost.valuePerLevel;
+
+      switch (targetStat) {
+        case "hp":
+          hpMult *= multiplier;
+          break;
+        case "attack":
+          attackMult *= multiplier;
+          break;
+        case "defense":
+          defenseMult *= multiplier;
+          break;
+        case "speed":
+          speedMult *= multiplier;
+          break;
+        case "crit":
+          critMult *= multiplier;
+          break;
+      }
+    }
+
+    // statPenalties
+    for (const penalty of trait.statPenalties || []) {
+      const multiplier = 1.0 + (level - 1) * penalty.valuePerLevel;
+
+      switch (penalty.stat) {
+        case "hp":
+          hpMult *= multiplier;
+          break;
+        case "attack":
+          attackMult *= multiplier;
+          break;
+        case "defense":
+          defenseMult *= multiplier;
+          break;
+        case "speed":
+          speedMult *= multiplier;
+          break;
+        case "crit":
+          critMult *= multiplier;
+          break;
       }
     }
   }
@@ -517,11 +292,9 @@ export function applyTraitStatModifiers(
 }
 
 /**
- * Apply trait effects to battle stats
- * @param stats Base stats
- * @param traitIds Trait IDs to apply
- * @param hpPercent Current HP percentage (for conditional traits)
- * @returns Modified damage multipliers
+ * Apply trait effects during battle
+ * Simplified battle version - stat boosts are already applied via applyTraitStatModifiers
+ * This function returns neutral values since all effects are passive level scaling
  */
 export function applyTraits(
   traitIds: string[],
@@ -535,55 +308,14 @@ export function applyTraits(
   dodgeAdjustment: number;
   regenPerTurn: number;
 } {
-  const traits = getTraitsByIds(traitIds);
-
-  let damageDealtMult = 1.0;
-  let damageReceivedMult = 1.0;
-  let critRateAdjustment = 0;
-  let critMultAdjustment = 0;
-  let dodgeAdjustment = 0;
-  let regenPerTurn = 0;
-
-  for (const trait of traits) {
-    // Check conditional traits
-    if (trait.type === TraitType.CONDITIONAL) {
-      if (!trait.conditionFn || !trait.conditionFn(hpPercent, stats)) {
-        continue;  // Condition not met, skip this trait
-      }
-    }
-
-    // Apply effects
-    for (const effect of trait.effects) {
-      switch (effect.stat) {
-        case "damageDealt":
-          damageDealtMult += effect.value;
-          break;
-        case "damageReceived":
-          damageReceivedMult += effect.value;
-          break;
-        case "critRate":
-          critRateAdjustment += effect.value;
-          break;
-        case "critMult":
-          critMultAdjustment += effect.value;
-          break;
-        case "dodge":
-          dodgeAdjustment += effect.value;
-          break;
-        case "regen":
-          regenPerTurn += effect.value;
-          break;
-        // Direct stat modifications handled elsewhere
-      }
-    }
-  }
-
+  // All 6 traits are passive stat boosts applied at battle start
+  // No conditional effects, AoE, or status effects
   return {
-    damageDealtMult,
-    damageReceivedMult,
-    critRateAdjustment,
-    critMultAdjustment,
-    dodgeAdjustment,
-    regenPerTurn,
+    damageDealtMult: 1.0,
+    damageReceivedMult: 1.0,
+    critRateAdjustment: 0,
+    critMultAdjustment: 0,
+    dodgeAdjustment: 0,
+    regenPerTurn: 0,
   };
 }

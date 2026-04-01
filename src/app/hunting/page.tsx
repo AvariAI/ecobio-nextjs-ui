@@ -1,14 +1,14 @@
 "use client"
 
-// --- TRAITS DISABLED FOR NOW ---
-const SHOW_TRAITS = false; // Change to true to re-enable trait UI display
-// --------------------------
+// --- TRAITS ENABLED ---
+const SHOW_TRAITS = true; // UI display for stat boost traits
+// ----------------------
 
 
 import { useState, useEffect } from "react";
 import { CREATURES, Rank, Creature, generateRandomPersonality, PERSONALITIES, PersonalityType, applyLevelScaling, BaseStats } from "@/lib/database";
 import { getVarianceRange, BattleStats } from "@/lib/battle";
-import { rollRandomTraits, getTraitsByIds } from "@/lib/traits";
+import { rollRandomTraits, getTraitsByIds, applyTraitStatModifiers } from "@/lib/traits";
 import { transformCreatureToEssence } from "@/lib/craft";
 import { loadBreedingEggs, getEggRemainingTime } from "@/lib/breeding";
 import { getExplorationBonus } from "@/lib/exploration";
@@ -130,8 +130,21 @@ function spawnCreature(): HuntedCreature {
   // Level 1 = no scaling applied, stats remain from variance RNG
   const scaledStats = applyLevelScaling({ ...varianceStats }, 1, personality);
 
+  // Apply trait stat modifiers (level-dependent scaling)
+  const { modifiedStats: traitStats } = applyTraitStatModifiers(
+    {
+      hp: scaledStats.hp,
+      attack: scaledStats.attack,
+      defense: scaledStats.defense,
+      speed: scaledStats.speed,
+      crit: scaledStats.crit,
+    },
+    traits,
+    1 // Start at level 1
+  );
+
   const finalStats: BattleStats = {
-    ...scaledStats,
+    ...traitStats,
     rank,
   };
 
@@ -151,7 +164,7 @@ function spawnCreature(): HuntedCreature {
     ...creature,
     id: uniqueId,  // ID unique pour cette créature spécifique
     finalStats,
-    customStats: finalStats,  // Stats POST-variance + personality deviennent la base de cette créature
+    customStats: varianceStats,  // Base variance stats only (level 1, no personality, no traits)
     level: 1, // Start at level 1
     currentXP: 0,
     xpToNextLevel: calculateXPToNextLevel(1),
@@ -252,9 +265,9 @@ function feedCreature(creature: HuntedCreature, foodXP: number): { creature: Hun
     const oldLevel = currentCreature.level;
     const newLevel = oldLevel + 1;
 
-    // Recalculate stats with personality-based level scaling
+    // Recalculate stats with personality-based level scaling + trait modifiers
     // customStats stores the variance stats (level 1 base)
-    // finalStats applies personality scaling for the new level
+    // finalStats applies personality scaling + trait modifiers for the new level
     const varianceStats: BaseStats = {
       hp: currentCreature.customStats.hp,
       attack: currentCreature.customStats.attack,
@@ -265,8 +278,15 @@ function feedCreature(creature: HuntedCreature, foodXP: number): { creature: Hun
 
     const scaledStats = applyLevelScaling(varianceStats, newLevel, currentCreature.personality);
 
+    // Apply trait level-dependent scaling
+    const { modifiedStats: traitStats } = applyTraitStatModifiers(
+      scaledStats,
+      currentCreature.traits || [],
+      newLevel
+    );
+
     const finalStats: BattleStats = {
-      ...scaledStats,
+      ...traitStats,
       rank: currentCreature.finalStats.rank,
     };
 
@@ -858,9 +878,6 @@ export default function HuntingPage() {
                         <div key={trait.id} className="bg-purple-900 bg-opacity-50 rounded p-2">
                           <p className="text-sm font-bold text-purple-100">{trait.name}</p>
                           <p className="text-xs text-purple-200">{trait.description}</p>
-                          {trait.condition && (
-                            <p className="text-xs text-yellow-300 mt-1">Condition: {trait.condition}</p>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -1012,9 +1029,6 @@ export default function HuntingPage() {
                         <div key={trait.id} className="bg-purple-900 bg-opacity-50 rounded p-2">
                           <p className="text-sm font-bold text-purple-100">{trait.name}</p>
                           <p className="text-xs text-purple-200">{trait.description}</p>
-                          {trait.condition && (
-                            <p className="text-xs text-yellow-300 mt-1">Condition: {trait.condition}</p>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -1410,9 +1424,6 @@ export default function HuntingPage() {
                       <div key={trait.id} className="bg-purple-900 bg-opacity-50 rounded p-3">
                         <p className="font-bold text-purple-100">{trait.name}</p>
                         <p className="text-sm text-purple-200">{trait.description}</p>
-                        {trait.condition && (
-                          <p className="text-xs text-yellow-300 mt-1">Condition: {trait.condition}</p>
-                        )}
                       </div>
                     ))}
                   </div>
