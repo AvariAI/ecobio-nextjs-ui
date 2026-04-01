@@ -25,7 +25,7 @@ function getCardImage(geneticType: GeneticType, rank: Rank): string {
 // Check if user has at least one captured creature of this type rank
 function hasCaptured(geneticType: GeneticType, rank: Rank): boolean {
   try {
-    const collection = JSON.parse(localStorage.getItem("ecobio_collection") || "[]");
+    const collection = JSON.parse(localStorage.getItem("ecobio-collection") || "[]");
     const matches = collection.filter((creature: any) =>
       creature.geneticType === geneticType &&
       creature.finalStats.rank === rank
@@ -49,7 +49,7 @@ function hasCaptured(geneticType: GeneticType, rank: Rank): boolean {
 // Get capture count for this type rank
 function getCaptureCount(geneticType: GeneticType, rank: Rank): number {
   try {
-    const collection = JSON.parse(localStorage.getItem("ecobio_collection") || "[]");
+    const collection = JSON.parse(localStorage.getItem("ecobio-collection") || "[]");
     return collection.filter((creature: any) =>
       creature.geneticType === geneticType &&
       creature.finalStats.rank === rank
