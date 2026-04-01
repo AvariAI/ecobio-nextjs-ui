@@ -6,7 +6,7 @@
 // - Higher ranks get more trait slots for more customization
 // - Option C balance: 3.5% personality scaling, 0.6% trait scaling (0.5% for Équilibre)
 
-export type StatBoostType = "hp" | "attack" | "defense" | "speed" | "crit" | "all";
+export type StatBoostType = "hp" | "attack" | "defense" | "speed" | "crit" | "all" | "random";
 
 export interface StatBoostTrait {
   id: string;
@@ -141,7 +141,7 @@ export function applyStatBoostTraits(
     for (const boost of trait.statBoosts) {
       let targetStat = boost.stat;
 
-      // Handle Mystère trait (Random stat per level)
+      // Handle Destin trait (Random stat per level)
       if (targetStat === "random") {
         targetStat = getRandomStatForLevel(level);
       }
@@ -169,6 +169,9 @@ export function applyStatBoostTraits(
           result.defense = Math.floor(result.defense * multiplier);
           result.speed = Math.floor(result.speed * multiplier);
           result.crit = Math.floor(result.crit * multiplier);
+          break;
+        case "random":
+          // Skip "random" case - it should have been converted to a concrete stat before
           break;
       }
     }
