@@ -19,7 +19,9 @@ function getRankBadgeColor(rank: Rank): string {
 
 function getCardImage(geneticType: GeneticType, rank: Rank): string {
   const normalizedType = geneticType.toLowerCase().replace("é", "e").replace("è", "e");
-  return `/creatures/ravaryn_${normalizedType}_e.png`;
+  // Try to load rank-specific image first, fall back to E rank if not available
+  // (Ravaryn images currently only exist for E rank)
+  return `/ecobio-nextjs-ui/creatures/ravaryn_${normalizedType}_e.png`;
 }
 
 // Check if user has at least one captured creature of this type rank
@@ -142,7 +144,7 @@ export default function PokedexPage() {
               <div key={type} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
                 <div className="flex items-center gap-3 mb-4">
                   <img
-                    src={`/creatures/ravaryn_${type.toLowerCase().replace("é", "e").replace("è", "e")}_e.png`}
+                    src={`/ecobio-nextjs-ui/creatures/ravaryn_${type.toLowerCase().replace("é", "e").replace("è", "e")}_e.png`}
                     alt={typeData.name}
                     className="w-16 h-16 rounded-lg border-2 border-gray-300 dark:border-gray-600"
                   />
