@@ -6,7 +6,7 @@ const SHOW_TRAITS = false; // Change to true to re-enable trait UI display
 
 
 import { useState, useEffect } from "react";
-import { CREATURES, Rank, Creature, generateRandomPersonality, PERSONALITIES, PersonalityType, applyLevelScaling, BaseStats, GambleBonus, applyGambleBonuses, shouldTriggerGamble, generateGambleBonus } from "@/lib/database";
+import { CREATURES, Rank, Creature, generateRandomPersonality, PERSONALITIES, PersonalityType, applyLevelScaling, BaseStats } from "@/lib/database";
 import { getVarianceRange, BattleStats } from "@/lib/battle";
 import { rollRandomTraits, getTraitsByIds } from "@/lib/traits";
 import { transformCreatureToEssence } from "@/lib/craft";
@@ -54,7 +54,7 @@ interface HuntedCreature extends Creature {
   battlesTotal: number; // Total battles fought
 
   // Personality identifier (DEPRECATED - use 'personality' field instead)
-  personalityType?: "agressive" | "protective" | "rapide" | "soin_leurre" | "précise" | "balancee" | "mysterieuse";
+  personalityType?: "agressive" | "protective" | "rapide" | "soin_leurre" | "précise" | "mysterieuse";
 
   // Exploration system (NEW)
   explorationXP: number; // Exploration experience points
@@ -68,10 +68,7 @@ interface HuntedCreature extends Creature {
   maxHP: number; // Maximum HP based on stats and level
 
   // Personality system (NEW)
-  personality: "agressive" | "protective" | "rapide" | "soin_leurre" | "précise" | "balancee" | "mysterieuse";
-
-  // Gamble bonuses for mysterieuse personality
-  gambleBonuses?: GambleBonus[];
+  personality: "agressive" | "protective" | "rapide" | "soin_leurre" | "précise" | "mysterieuse";
 }
 
 function rollRarity(): RarityRank {
@@ -194,9 +191,6 @@ function spawnCreature(): HuntedCreature {
     personality: personality,
     personalityType: personality as any, // Type assertion for compatibility
 
-    // Gamble bonuses initialization (mysterieuse only, starts empty)
-    gambleBonuses: [],
-
     // Dual skill system: specimen (species-based) + personality (archetype-based)
     specimenSkill: fullSpecimenSkill,
     personalitySkill: fullPersonalitySkill,
@@ -258,14 +252,6 @@ function feedCreature(creature: HuntedCreature, foodXP: number): { creature: Hun
     const oldLevel = currentCreature.level;
     const newLevel = oldLevel + 1;
 
-    // Check for gamble bonus trigger (mysterieuse only)
-    let gambleBonuses = currentCreature.gambleBonuses || [];
-    if (shouldTriggerGamble(newLevel, currentCreature.personality)) {
-      const newBonus = generateGambleBonus(currentCreature.personality);
-      newBonus.level = newLevel;
-      gambleBonuses = [...gambleBonuses, newBonus];
-    }
-
     // Recalculate stats with personality-based level scaling
     // customStats stores the variance stats (level 1 base)
     // finalStats applies personality scaling for the new level
@@ -279,11 +265,8 @@ function feedCreature(creature: HuntedCreature, foodXP: number): { creature: Hun
 
     const scaledStats = applyLevelScaling(varianceStats, newLevel, currentCreature.personality);
 
-    // Apply gamble bonuses (mysterieuse only)
-    const statsWithGamble = applyGambleBonuses(scaledStats, gambleBonuses);
-
     const finalStats: BattleStats = {
-      ...statsWithGamble,
+      ...scaledStats,
       rank: currentCreature.finalStats.rank,
     };
 
@@ -293,7 +276,6 @@ function feedCreature(creature: HuntedCreature, foodXP: number): { creature: Hun
       currentXP: 0,
       xpToNextLevel: calculateXPToNextLevel(newLevel),
       finalStats,
-      gambleBonuses,
     };
 
     levelUps++;
