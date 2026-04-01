@@ -331,6 +331,7 @@ export function applyPersonalityStats(
 
 // Apply level scaling based on personality
 // Formula: scaledStat = baseStat * (1 + (level - 1) * scalingMultiplier)
+// For mysterieuse: RANDOM stat gets 3.5% scaling each level (deterministic based on level)
 export function applyLevelScaling(
   baseStats: BaseStats,
   level: number,
@@ -339,6 +340,28 @@ export function applyLevelScaling(
   const personalityDef = PERSONALITIES[personality];
   const levelFactor = level - 1; // Level 1 = 0 bonus, Level 50 = 49 bonus levels
 
+  // Mysterieuse: RANDOM stat gets 3.5% scaling each level
+  if (personality === "mysterieuse") {
+    const stats: (keyof BaseStats)[] = ["hp", "attack", "defense", "speed", "crit"];
+    // Deterministic random based on level (same level = same stat)
+    const randomStat = stats[level % stats.length];
+    
+    const result = {
+      hp: baseStats.hp,
+      attack: baseStats.attack,
+      defense: baseStats.defense,
+      speed: baseStats.speed,
+      crit: baseStats.crit,
+    };
+    
+    // Apply 3.5% scaling to RANDOM stat only
+    const multiplier = 1 + levelFactor * personalityDef.scalingMultipliers.hp; // All mysterieuse muls are 0.035
+    result[randomStat] = Math.floor(baseStats[randomStat] * multiplier);
+    
+    return result;
+  }
+
+  // Normal personalities: apply scaling to each stat
   return {
     hp: Math.floor(baseStats.hp * (1 + levelFactor * personalityDef.scalingMultipliers.hp)),
     attack: Math.floor(baseStats.attack * (1 + levelFactor * personalityDef.scalingMultipliers.attack)),
@@ -348,56 +371,4 @@ export function applyLevelScaling(
   };
 }
 
-// Gamble bonus for mysterieuse personality
-export interface GambleBonus {
-  level: number;  // Level when triggered
-  stat: keyof BaseStats;  // Which stat got the bonus
-  bonusPercent: number;  // Bonus percentage (e.g., 15 for +15%)
-}
 
-// Check if gamble trigger at this level for mysterieuse
-export function shouldTriggerGamble(level: number, personality: PersonalityType): boolean {
-  const personalityDef = PERSONALITIES[personality];
-  // Mysterieuse gambles on EVERY level
-  if (personality === "mysterieuse" && level > 1) {
-    return true;
-  }
-  // Other personalities can gamble at specific trigger levels
-  return personalityDef.gambleTriggerLevels?.includes(level) || false;
-}
-
-// Generate random gamble bonus
-export function generateGambleBonus(personality: PersonalityType): GambleBonus {
-  const personalityDef = PERSONALITIES[personality];
-  const stats: (keyof BaseStats)[] = ["hp", "attack", "defense", "speed", "crit"];
-  const stat = stats[Math.floor(Math.random() * stats.length)];
-  let bonusPercent: number;
-
-  if (personality === "mysterieuse" || personalityDef.gambleBonusRange) {
-    // For mysterieuse: fixed +15%
-    // For others with range: random within range
-    const range = personalityDef.gambleBonusRange || [15, 15];
-    bonusPercent = range[0] + Math.random() * (range[1] - range[0]);
-  } else {
-    // Default: 10-25%
-    bonusPercent = 10 + Math.random() * 15;
-  }
-
-  return {
-    level: 0,  // Will be set by caller
-    stat,
-    bonusPercent
-  };
-}
-
-// Apply gamble bonuses to scaled stats
-export function applyGambleBonuses(scaledStats: BaseStats, gambleBonuses: GambleBonus[]): BaseStats {
-  let result = { ...scaledStats };
-
-  for (const bonus of gambleBonuses) {
-    const multiplier = 1 + (bonus.bonusPercent / 100);
-    result[bonus.stat] = Math.floor(result[bonus.stat] * multiplier);
-  }
-
-  return result;
-}
