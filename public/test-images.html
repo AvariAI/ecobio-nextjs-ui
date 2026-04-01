@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Image Loading</title>
+</head>
+<body>
+  <h1>Test Images Ravaryn</h1>
+  <p>Cette page teste si les cartes se chargent correctement</p>
+
+  <h2>Test 1: Direct Path</h2>
+  <img src="/creatures/ravaryn_resilient_e.png" alt="Résilient" style="border: 2px solid red;" width="300">
+  <p>Si l'image ci-dessus s'affiche, le chemin /creatures/ fonctionne
+  <br>Si tu vois un cadre rouge vide, le path est mauvais</p>
+
+  <h2>Test 2: Relative Path</h2>
+  <img src="./creatures/ravaryn_resilient_e.png" alt="Résilient" style="border: 2px solid blue;" width="300">
+  <p>Si l'image ci-dessus s'affiche, le chemin ./creatures/ fonctionne
+  <br>Si tu vois un cadre bleu vide, le path relatif est mauvais</p>
+
+  <h2>Test 3: Full URL</h2>
+  <img src="https://avariai.github.io/ecobio-nextjs-ui/creatures/ravaryn_resilient_e.png" alt="Résilient" style="border: 2px solid green;" width="300">
+  <p>Si l'image ci-dessus s'affiche, l'image existe sur GitHub Pages
+  <br>Si tu vois un cadre vert vide, l'image n'est pas déployée</p>
+
+  <h2>Test 4: All Cards</h2>
+  <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+    <img src="/creatures/ravaryn_resilient_e.png" width="200" style="border: 2px solid orange;">
+    <img src="/creatures/ravaryn_scribeur_e.png" width="200" style="border: 2px solid orange;">
+    <img src="/creatures/ravaryn_symbiote_e.png" width="200" style="border: 2px solid orange;">
+  </div>
+  <p>Toutes les cartes devraient s'afficher avec bordure orange</p>
+
+  <h2>Debug Info</h2>
+  <p>Ouvre la console (F12 → Console) pour voir les erreurs de chargement d'image</p>
+
+</body>
+</html>
