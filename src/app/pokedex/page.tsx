@@ -12,8 +12,8 @@ function getRankBadgeColor(rank: Rank): string {
   if (rank === "S") return "bg-yellow-600";
   if (rank === "A") return "bg-red-600";
   if (rank === "B") return "bg-orange-600";
-  if (rank === "C") return "bg-green-600";
-  if (rank === "D") return "bg-blue-600";
+  if (rank === "C") return "bg-blue-600";
+  if (rank === "D") return "bg-green-600";
   return "bg-gray-600";
 }
 
