@@ -125,6 +125,20 @@ export const CREATURES: Record<string, Creature> = {
     desc: "Créature mutante bizarre avec multiples yeux et des filaments lumineux",
     image: "/images/creatures/spider_mutant_e.png",
   },
+  ravaryn: {
+    id: "ravaryn",
+    name: "Ravaryn",
+    rank: "E",
+    baseStats: {
+      hp: 500,
+      attack: 100,
+      defense: 100,
+      speed: 100,
+      crit: 100,
+    },
+    desc: "Ravaryn - Créature mystérieuse du monde post-apocalyptique",
+    image: "/images/giant_fly.png", // Placeholder
+  },
 };
 
 export const CREATURE_TYPES: string[] = ["Insect", "Mutant"];
