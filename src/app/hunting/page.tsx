@@ -318,7 +318,7 @@ function feedCreature(creature: HuntedCreature, foodXP: number): { creature: Hun
 }
 
 
-function getCreatureImage(creatureId: string, rank: Rank): string {
+function getCreatureImage(creatureId: string, rank: Rank, geneticType?: string): string {
   if (creatureId === "housefly") {
     const rankSuffix = rank === "S+" ? "S+" : rank;
     return `/ecobio-nextjs-ui/creatures/fly-rank-${rankSuffix}.png`;
@@ -334,8 +334,9 @@ function getCreatureImage(creatureId: string, rank: Rank): string {
   if (creatureId === "spider_mutant") {
     return "/ecobio-nextjs-ui/images/creatures/spider_mutant_e.png";
   }
-  if (creatureId === "ravaryn") {
-    return "/ecobio-nextjs-ui/images/giant_fly.png"; // Placeholder
+  if (creatureId === "ravaryn" && geneticType) {
+    const normalizedType = geneticType.toLowerCase().replace("é", "e").replace("è", "e");
+    return `/ecobio-nextjs-ui/images/creatures/ravaryn_${normalizedType}_e.png`;
   }
   return "/ecobio-nextjs-ui/images/giant_fly.png";
 }
@@ -834,7 +835,7 @@ export default function HuntingPage() {
             <div className="flex items-start gap-6 mb-6">
               <div className="w-48 h-48 flex-shrink-0">
                 <img
-                  src={getCreatureImage(huntedCreature.creatureId, huntedCreature.finalStats.rank)}
+                  src={getCreatureImage(huntedCreature.creatureId, huntedCreature.finalStats.rank, huntedCreature.geneticType)}
                   alt={huntedCreature.name}
                   className="w-full h-full object-cover rounded-lg border-2 border-green-600"
                 />
@@ -1198,7 +1199,7 @@ export default function HuntingPage() {
                           {creature.isFavorite ? "❤️" : "🤍"}
                         </button>
                         <img
-                          src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
+                          src={getCreatureImage(creature.creatureId, creature.finalStats.rank, creature.geneticType)}
                           alt={creature.name}
                           className="w-12 h-12 object-cover rounded"
                         />
@@ -1319,7 +1320,7 @@ export default function HuntingPage() {
                     <div className="flex items-start gap-3 mb-2">
                       <div className="w-16 h-16 flex-shrink-0">
                         <img
-                          src={getCreatureImage(c.creatureId, c.finalStats.rank)}
+                          src={getCreatureImage(c.creatureId, c.finalStats.rank, c.geneticType)}
                           alt={c.name}
                           className="w-full h-full object-cover rounded border border-green-700"
                         />
