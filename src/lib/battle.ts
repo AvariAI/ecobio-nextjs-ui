@@ -1539,7 +1539,7 @@ export function executeSkill(
   }
 
   // 5. Special effects
-  if (skill.archetype === "mysterieuse") {
+  if (skill.archetype === "mystérieux") {
     applyRoueDuDestinCooldownReset(ctx, targets);
   }
 
