@@ -1270,8 +1270,8 @@ export function executeAttack(
     attacker.kills = (attacker.kills || 0) + 1;
   }
 
-  // Track damage for soin_leurre Bouclier Temporel (if active)
-  if (defender.personality === "soin_leurre" && defender.activePersonalityBuff?.id === "buff_bouclier_temporel") {
+  // Track damage for stratège Bouclier Temporel (if active)
+  if (defender.personality === "stratège" && defender.activePersonalityBuff?.id === "buff_bouclier_temporel") {
     trackDamageForSoinLeurre(defender, damage);
   }
 
