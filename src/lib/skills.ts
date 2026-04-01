@@ -276,9 +276,9 @@ export function getSkillAtLevel(skill: Skill, level: number): Skill {
 function getSkillDescription(baseSkill: Skill, level: number): string {
   const levelBonus = `Lvl ${level}: `;
   switch (baseSkill.archetype) {
-    case "agressive":
+    case "agressif":
       return `${baseSkill.description}${level > 1 ? " Lvl5: 175% damage, 15% recoil" : ""}`;
-    case "protective":
+    case "protecteur":
       return `${baseSkill.description}${level > 1 ? " Lvl5: 60% redirect, -30% reduced damage" : ""}`;
     case "rapide":
       return `${baseSkill.description}${level > 1 ? " Lvl5: +50%, 2 allies, dodge crit heals 10% maxHP" : ""}`;
