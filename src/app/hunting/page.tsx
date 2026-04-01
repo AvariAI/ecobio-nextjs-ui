@@ -938,7 +938,7 @@ export default function HuntingPage() {
             <div className="flex items-start gap-6 mb-6">
               <div className="w-48 h-48 flex-shrink-0">
                 <img
-                  src={getCreatureImage(selectedCreature.creatureId, selectedRank || selectedCreature.finalStats.rank)}
+                  src={getCreatureImage(selectedCreature.creatureId, selectedRank || selectedCreature.finalStats.rank, selectedCreature.geneticType)}
                   alt={selectedCreature.name}
                   className="w-full h-full object-cover rounded-lg border-2 border-green-600"
                 />
@@ -1418,7 +1418,7 @@ export default function HuntingPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <img
-                    src={getCreatureImage(peekingCreature.creatureId, peekingCreature.finalStats.rank)}
+                    src={getCreatureImage(peekingCreature.creatureId, peekingCreature.finalStats.rank, peekingCreature.geneticType)}
                     alt={peekingCreature.name}
                     className="w-full rounded-lg border-2 border-green-600"
                   />
