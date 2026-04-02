@@ -213,17 +213,25 @@ export function getTeamBattleWinner(playerTeam: BattleTeam, enemyTeam: BattleTea
 export function getAllBattleElements(playerTeam: BattleTeam, enemyTeam: BattleTeam): BattleElement[] {
   const playerElements: BattleElement[] = playerTeam.creatures.map(c => ({
     creature: c,
-    team: "player",
+    team: "player" as const,
     name: c.name,
   }));
 
   const enemyElements: BattleElement[] = enemyTeam.creatures.map(c => ({
     creature: c,
-    team: "enemy",
+    team: "enemy" as const,
     name: c.name,
   }));
 
-  return [...playerElements, ...enemyElements];
+  // All creatures sorted by effective speed (higher speed goes first)
+  const allElements = [...playerElements, ...enemyElements];
+
+  // Sort by effective speed (higher speed = earlier turn)
+  return allElements.sort((a, b) => {
+    const speedA = getEffectiveSpeed(a.creature);
+    const speedB = getEffectiveSpeed(b.creature);
+    return speedB - speedA; // Descending: higher speed first
+  });
 }
 
 /**
