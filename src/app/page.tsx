@@ -13,7 +13,7 @@ export default function Home() {
           </p>
         </header>
 
-        <div className="grid md:grid-cols-3 gap-8 mb-8">
+        <div className="grid md:grid-cols-2 gap-8 mb-8">
           <Link href="/pokedex">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-green-400">
               <div className="text-6xl mb-4">📚</div>
@@ -22,18 +22,6 @@ export default function Home() {
               </h2>
               <p className="text-gray-600 dark:text-gray-300">
                 Explore toutes les créatures, leurs stats et leurs capacités spéciales.
-              </p>
-            </div>
-          </Link>
-
-          <Link href="/battle">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-red-400">
-              <div className="text-6xl mb-4">⚔️</div>
-              <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
-                Battle Arena
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300">
-                Simule des combats entre créatures et teste leur puissance.
               </p>
             </div>
           </Link>
@@ -98,18 +86,6 @@ export default function Home() {
               </h2>
               <p className="text-gray-600 dark:text-gray-300">
                 Craft ressources pour breeding.
-              </p>
-            </div>
-          </Link>
-
-          <Link href="/battle">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-cyan-500">
-              <div className="text-6xl mb-4">🕸️</div>
-              <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
-                Battle Arena
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300">
-                Entraînement 5v5 contre Rank E pour XP (+100/créature, bloqué si ★).
               </p>
             </div>
           </Link>
