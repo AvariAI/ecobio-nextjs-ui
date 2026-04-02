@@ -132,7 +132,7 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     },
     passive: {
       name: "Cible Arrière",
-      description: "Au début de chaque combat, ton attaque cible la DERNIÈRE position dans la queue (au lieu de la position 1)",
+      description: "Attaque la cible en derniere position",
     },
     weight: 100,
   },
