@@ -92,7 +92,7 @@ const RANK_ORDER: Record<Rank, number> = {
 export default function TrainingPage() {
   const router = useRouter();
   const [collection, setCollection] = useState<HuntedCreature[]>([]);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<(string | null)[]>([null, null, null, null, null]);
   const [sortBy, setSortBy] = useState<SortBy>("name");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
@@ -107,19 +107,29 @@ export default function TrainingPage() {
   const handleToggleCreature = (id: string) => {
     setSelectedIds(prev => {
       if (prev.includes(id)) {
-        // Remove and maintain order of remaining
-        return prev.filter(i => i !== id);
+        // Remove and keep others in slots (use null for empty slots)
+        return prev.map(p => p === id ? null : p);
       }
-      // Add to end (maintains selection order = team position)
-      if (prev.length >= 5) return prev;
-      return [...prev, id];
+      // Find first empty slot and add there
+      const newTeam = [...prev];
+      for (let i = 0; i < newTeam.length; i++) {
+        if (newTeam[i] === null) {
+          newTeam[i] = id;
+          return newTeam as string[];
+        }
+      }
+      // No empty slots, add to end
+      if (newTeam.length >= 5) return prev;
+      newTeam.push(id);
+      return newTeam as string[];
     });
   };
 
   const handleStartBattle = () => {
-    if (selectedIds.length === 5) {
-      // Store team order in sessionStorage
-      sessionStorage.setItem("battle-team", JSON.stringify(selectedIds));
+    const activeSlots = selectedIds.filter(id => id !== null) as string[];
+    if (activeSlots.length === 5) {
+      // Store team order in sessionStorage (positions 1-5 preserved)
+      sessionStorage.setItem("battle-team", JSON.stringify(activeSlots));
       router.push("/arena/battle");
     }
   };
@@ -146,7 +156,8 @@ export default function TrainingPage() {
     return sortOrder === "desc" ? comparison : -comparison;
   });
 
-  const selectedCreatures = collection.filter(c => selectedIds.includes(c.id));
+  const activeSlots = selectedIds.filter(id => id !== null) as string[];
+  const selectedCreatures = collection.filter(c => activeSlots.includes(c.id));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-blue-900 p-6">
@@ -204,16 +215,16 @@ export default function TrainingPage() {
             </div>
             
             <div className="flex items-center gap-4 ml-auto">
-              <span className="text-blue-800 dark:text-blue-200 font-bold">Sélection: {selectedIds.length}/5</span>
-              {selectedIds.length > 0 && (
+              <span className="text-blue-800 dark:text-blue-200 font-bold">Sélection: {activeSlots.length}/5</span>
+              {activeSlots.length > 0 && (
                 <button
-                  onClick={() => setSelectedIds([])}
+                  onClick={() => setSelectedIds([null, null, null, null, null])}
                   className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold"
                 >
                   Effacer
                 </button>
               )}
-              {selectedIds.length === 5 && (
+              {activeSlots.length === 5 && (
                 <button
                   onClick={handleStartBattle}
                   className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-bold shadow-lg"
@@ -226,26 +237,34 @@ export default function TrainingPage() {
         </div>
 
         {/* Selected Team Preview */}
-        {selectedCreatures.length > 0 && (
+        {activeSlots.length > 0 && (
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-800 dark:to-blue-900 rounded-xl p-4 mb-6 border-2 border-blue-500">
             <div className="grid grid-cols-5 gap-2">
-              {selectedCreatures.map(c => (
-                <div key={c.id} className="bg-blue-500 dark:bg-blue-900 rounded-lg p-2 text-center border border-blue-400">
-                  <img
-                    src={getCreatureImage(c.creatureId, c.finalStats?.rank || c.rank || "E", c.geneticType)}
-                    alt={c.name}
-                    className="w-12 h-12 mx-auto mb-1 object-contain"
-                  />
-                  <p className="text-xs font-bold truncate text-white">{c.name}</p>
-                  <p className="text-xs text-blue-100">R{c.rank} N{c.level || c.customStats?.level || 1}</p>
-                </div>
-              ))}
-              {Array(5 - selectedCreatures.length).fill(0).map((_, i) => (
-                <div key={i} className="bg-blue-800 dark:bg-blue-950 rounded-lg p-2 text-center border border-dashed border-blue-600">
-                  <div className="w-12 h-12 mx-auto mb-1 flex items-center justify-center text-blue-400 text-2xl">?</div>
-                  <p className="text-xs text-blue-400">Vide</p>
-                </div>
-              ))}
+              {selectedIds.map((id, index) => {
+                if (!id) {
+                  return (
+                    <div key={`slot-${index}`} className="bg-blue-800 dark:bg-blue-950 rounded-lg p-2 text-center border border-dashed border-blue-600">
+                      <div className="text-blue-400 text-lg mb-1">#{index + 1}</div>
+                      <div className="w-12 h-12 mx-auto mb-1 flex items-center justify-center text-blue-400 text-2xl">?</div>
+                      <p className="text-xs text-blue-400">Vide</p>
+                    </div>
+                  );
+                }
+                const c = selectedCreatures.find(sc => sc.id === id);
+                if (!c) return null;
+                return (
+                  <div key={id} className="bg-blue-500 dark:bg-blue-900 rounded-lg p-2 text-center border border-blue-400 relative">
+                    <div className="text-yellow-300 text-xs absolute top-1 left-1 font-bold">#{index + 1}</div>
+                    <img
+                      src={getCreatureImage(c.creatureId, c.finalStats?.rank || c.rank || "E", c.geneticType)}
+                      alt={c.name}
+                      className="w-12 h-12 mx-auto mb-1 object-contain"
+                    />
+                    <p className="text-xs font-bold truncate text-white">{c.name}</p>
+                    <p className="text-xs text-blue-100">R{c.rank} N{c.level || c.customStats?.level || 1}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -258,15 +277,17 @@ export default function TrainingPage() {
             {sortedCollection.map(c => {
               const rank = c.finalStats?.rank || c.rank || "E";
               const stats = c.finalStats || c.customStats || c.baseStats;
-              const isSelected = selectedIds.includes(c.id);
+              const slotIndex = activeSlots.indexOf(c.id);
+              const isSelected = slotIndex !== -1;
+              const slotNumber = isSelected ? slotIndex + 1 : null;
 
               return (
                 <button
                   key={c.id}
                   onClick={() => handleToggleCreature(c.id)}
-                  disabled={!isSelected && selectedIds.length >= 5}
+                  disabled={!isSelected && activeSlots.length >= 5}
                   className={`bg-gradient-to-br ${isSelected ? 'from-blue-800 to-blue-900 border-blue-500' : 'from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 border-gray-300 dark:border-gray-600'} rounded-lg p-4 pt-12 border-2 transition-all relative hover:scale-105 hover:shadow-xl ${
-                    !isSelected && selectedIds.length >= 5 ? "opacity-40 cursor-not-allowed" : ""
+                    !isSelected && activeSlots.length >= 5 ? "opacity-40 cursor-not-allowed" : ""
                   }`}
                 >
                   {/* Favorite badge */}
@@ -274,8 +295,11 @@ export default function TrainingPage() {
                     {c.isFavorite ? "❤️" : "🤍"}
                   </div>
 
-                  {isSelected && (
-                    <div className="absolute bottom-3 right-3 text-green-400 text-2xl font-bold z-10">✓</div>
+                  {/* Slot number badge */}
+                  {slotNumber && (
+                    <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded-lg font-bold z-10">
+                      #{slotNumber}
+                    </div>
                   )}
 
                   <div className="flex items-start gap-3 mb-2">
