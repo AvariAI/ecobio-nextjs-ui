@@ -208,7 +208,6 @@ function BattlePageContent() {
     let nextIndex = (currentTurnIndex + 1) % order.length;
     let attempts = 0;
 
-    // Skip dead and cycle
     while (attempts < order.length + 1) {
       if (nextIndex < order.length && !order[nextIndex].isDead) {
         setCurrentTurnIndex(nextIndex);
@@ -221,9 +220,9 @@ function BattlePageContent() {
           { text: `🎯 Tour ${newTurnCount}: ${nextCreature.name} (${nextCreature.team === "player" ? "Joueur" : "Ennemi"})`, type: "info" },
         ]);
 
-        // If enemy turn, IMMEDIATELY execute attack
+        // Direct enemy attack execution if current turn is for enemy
         if (nextCreature.team === "enemy") {
-          setTimeout(() => executeEnemyAttack(nextCreature), 500);
+          executeEnemyAttackDirect(nextCreature);
         }
 
         return;
@@ -245,13 +244,13 @@ function BattlePageContent() {
       ]);
 
       if (nextCreature?.team === "enemy") {
-        setTimeout(() => executeEnemyAttack(nextCreature), 500);
+        executeEnemyAttackDirect(nextCreature);
       }
     }
   };
 
-  const executeEnemyAttack = (enemy: BattleCreature) => {
-    if (!playerTeam || isProcessing || winner) return;
+  const executeEnemyAttackDirect = (enemy: BattleCreature) => {
+    if (!playerTeam || enemy.team !== "enemy" || isProcessing || winner) return;
 
     const alivePlayers = playerTeam.filter(c => !c.isDead);
     if (alivePlayers.length === 0) return;
@@ -259,7 +258,6 @@ function BattlePageContent() {
     const target = alivePlayers.reduce((prev, curr) => (curr.currentHP < prev.currentHP ? curr : prev));
 
     const { damage, isCrit } = calculateDamage(enemy, target);
-    const beforeHP = target.currentHP;
     target.currentHP = Math.max(0, target.currentHP - damage);
     if (target.currentHP === 0) {
       target.isDead = true;
@@ -272,7 +270,6 @@ function BattlePageContent() {
       { text: `${isCrit ? "💥 CRIT! " : ""}-${damage} HP (${target.currentHP}/${target.stats.hp})`, type: isCrit ? "crit" : "info" },
     ]);
 
-    // Check win
     const playersAlive = playerTeam.some(c => !c.isDead);
     const enemiesAlive = enemyTeam?.some(c => !c.isDead) ?? true;
 
@@ -287,13 +284,6 @@ function BattlePageContent() {
     }
   };
 
-  const selectedCreatures = collection.filter(c => selectedIds.includes(c.id));
-  const currentCreature = getCurrentCreature();
-  const playerTurn = currentCreature?.team === "player";
-
-  if (mode === "home") {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 p-6">
         <div className="max-w-6xl mx-auto">
           <div className="mb-6">
             <Link href="/" className="inline-block px-4 py-2 mb-4 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">← Retour</Link>
@@ -424,13 +414,23 @@ function BattlePageContent() {
 
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 border-2 border-gray-300 dark:border-gray-600">
             <h2 className="text-xl font-bold mb-3">📜 Journal</h2>
-            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 max-h-96 overflow-y-auto">
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 max-h-96 overflow-y-auto mb-4">
               {log.map((entry, i) => (
                 <p key={i} className={`mb-1 ${entry.type === "crit" ? "text-yellow-600 dark:text-yellow-400 font-bold" : entry.type === "victory" ? "text-green-600 dark:text-green-400 font-bold" : entry.type === "defeat" ? "text-red-600 dark:text-red-400 font-bold" : "text-gray-600 dark:text-gray-300"}`}>
                   {entry.text}
                 </p>
               ))}
             </div>
+            {/* DEBUG: Manual Next button */}
+            {phase === "battle" && (
+              <button
+                onClick={advanceTurn}
+                disabled={phase === "complete"}
+                className="w-full p-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors"
+              >
+                ➡️ SUIVANT (Debug: force avance tour)
+              </button>
+            )}
           </div>
         </div>
       </div>
