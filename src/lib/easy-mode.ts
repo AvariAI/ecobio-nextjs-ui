@@ -57,7 +57,8 @@ export function spawnEasyModeEnemy(): {
   name: string;
   traits?: string[];
 } {
-  const creaturePool = ["ant", "housefly", "honeybee", "spider_mutant"];
+  // Temporary fix: use only 'ravaryn' for easy mode until more creatures are added
+  const creaturePool = ["ravaryn"];
   const creatureId = creaturePool[Math.floor(Math.random() * creaturePool.length)];
   const creature: any = CREATURES[creatureId];
 
