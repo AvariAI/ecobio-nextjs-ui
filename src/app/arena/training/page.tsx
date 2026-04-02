@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Rank } from "@/lib/database";
+import { Rank, PERSONALITIES, PersonalityType } from "@/lib/database";
+import { getTraitsByIds } from "@/lib/traits";
 
 interface HuntedCreature {
   id: string;
@@ -19,11 +20,20 @@ interface HuntedCreature {
   };
   finalStats?: {
     rank: Rank;
+    hp: number;
+    attack: number;
+    defense: number;
+    speed: number;
+    crit: number;
   };
   baseStats: { hp: number; attack: number; defense: number; speed: number; crit: number; };
   geneticType?: string;
   traits?: string[];
   stars?: number;
+  personality?: string;
+  level?: number;
+  currentHP?: number;
+  maxHP?: number;
 }
 
 function getCreatureImage(creatureId: string, rank: Rank, geneticType?: string): string {
@@ -48,6 +58,27 @@ function getCreatureImage(creatureId: string, rank: Rank, geneticType?: string):
   }
   return "/ecobio-nextjs-ui/images/creatures/spider_mutant_e.png";
 }
+
+function getRankBadgeColor(rank: Rank): string {
+  const colors: Record<Rank, string> = {
+    "E": "bg-gray-600",
+    "D": "bg-green-700",
+    "C": "bg-blue-600",
+    "B": "bg-purple-600",
+    "A": "bg-orange-600",
+    "S": "bg-pink-600",
+    "S+": "bg-gradient-to-r from-yellow-500 to-orange-500",
+  };
+  return colors[rank] || "bg-gray-600";
+}
+
+const renderStars = (stars: number) => {
+  return Array(5).fill(0).map((_, i) => (
+    <span key={i} className={i < stars ? "text-yellow-400" : "text-gray-600"}>
+      ★
+    </span>
+  ));
+};
 
 export default function TrainingPage() {
   const [collection, setCollection] = useState<HuntedCreature[]>([]);
@@ -91,14 +122,14 @@ export default function TrainingPage() {
             {selectedCreatures.length > 0 && (
               <div className="mb-4 grid grid-cols-5 gap-2">
                 {selectedCreatures.map(c => (
-                  <div key={c.id} className="bg-blue-50 dark:bg-blue-900 rounded-lg p-2 text-center border-2 border-blue-300">
+                  <div key={c.id} className="bg-blue-600 dark:bg-blue-800 rounded-lg p-2 text-center border-2 border-blue-400">
                     <img
                       src={getCreatureImage(c.creatureId, c.finalStats?.rank || c.rank || "E", c.geneticType)}
                       alt={c.name}
                       className="w-12 h-12 mx-auto mb-1 object-contain"
                     />
-                    <p className="text-xs font-bold truncate">{c.name}</p>
-                    <p className="text-xs text-gray-600">{c.rank} N{c.customStats?.level || 1}</p>
+                    <p className="text-xs font-bold truncate text-white">{c.name}</p>
+                    <p className="text-xs text-blue-100">R{c.rank} N{c.customStats?.level || 1}</p>
                   </div>
                 ))}
               </div>
@@ -108,32 +139,107 @@ export default function TrainingPage() {
               {collection.length === 0 ? (
                 <p className="text-center text-gray-500 py-8">Aucune créature.</p>
               ) : (
-                collection.map(c => (
-                  <button
-                    key={c.id}
-                    onClick={() => handleToggleCreature(c.id)}
-                    disabled={!selectedIds.includes(c.id) && selectedIds.length >= 5}
-                    className={`w-full text-left p-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
-                      selectedIds.includes(c.id)
-                        ? "bg-blue-100 border-blue-500 dark:bg-blue-900"
-                        : "bg-gray-50 border-gray-200 dark:bg-gray-700"
-                    } ${
-                      !selectedIds.includes(c.id) && selectedIds.length >= 5
-                        ? "opacity-40 cursor-not-allowed"
-                        : "hover:shadow-md"
-                    }`}
-                  >
-                    <img
-                      src={getCreatureImage(c.creatureId, c.finalStats?.rank || c.rank || "E", c.geneticType)}
-                      alt={c.name}
-                      className="w-12 h-12 object-contain flex-shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold truncate">{c.name}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">R{c.rank || "E"} • N{c.customStats?.level || 1}</p>
-                    </div>
-                  </button>
-                ))
+                collection.map(c => {
+                  const rank = c.finalStats?.rank || c.rank || "E";
+                  const stats = c.finalStats || c.customStats || c.baseStats;
+                  const isSelected = selectedIds.includes(c.id);
+
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => handleToggleCreature(c.id)}
+                      disabled={!isSelected && selectedIds.length >= 5}
+                      className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                        isSelected
+                          ? "bg-blue-100 border-blue-500 dark:bg-blue-900 dark:border-blue-400"
+                          : "bg-gray-50 border-gray-200 dark:bg-gray-700"
+                      } ${
+                        !isSelected && selectedIds.length >= 5
+                          ? "opacity-40 cursor-not-allowed"
+                          : "hover:shadow-md hover:scale-102"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-12 h-12 flex-shrink-0">
+                          <img
+                            src={getCreatureImage(c.creatureId, rank, c.geneticType)}
+                            alt={c.name}
+                            className="w-full h-full object-cover rounded border border-blue-300"
+                          />
+                        </div>
+
+                        <div className="flex-1 min-w-0 pr-4">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-bold truncate text-gray-900 dark:text-white">{c.name}</h3>
+                            <span className={`font-bold ${getRankBadgeColor(rank)} text-white px-2 py-0.5 rounded-full text-xs`}>
+                              {rank}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-sm text-gray-600 dark:text-gray-300">N{c.level || c.customStats?.level || 1}</p>
+                            {c.personality && (() => {
+                              const p = PERSONALITIES[c.personality as PersonalityType];
+                              return (
+                                <span className="px-1.5 py-0.5 rounded bg-purple-700 text-purple-200 text-xs">
+                                  {p.emoji} {p.name}
+                                </span>
+                              );
+                            })()}
+                          </div>
+
+                          <div className="flex items-center gap-1 mt-1">
+                            {renderStars(c.stars || 0)}
+                          </div>
+
+                          {c.traits && c.traits.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {getTraitsByIds(c.traits).slice(0, 2).map(trait => (
+                                <span key={trait.id} className="px-1 py-0.5 text-xs rounded bg-purple-700 text-white">
+                                  {trait.name}
+                                </span>
+                              ))}
+                              {c.traits.length > 2 && (
+                                <span className="px-1 py-0.5 text-xs rounded bg-purple-900 text-purple-200">
+                                  +{c.traits.length - 2}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-5 gap-1 mt-2 text-center text-xs">
+                            <div className="bg-gray-200 dark:bg-gray-600 rounded p-1">
+                              <p className="text-gray-600 dark:text-gray-300">HP</p>
+                              <p className="font-bold text-gray-900 dark:text-white">
+                                {c.currentHP || stats.hp}/{c.maxHP || stats.hp}
+                              </p>
+                            </div>
+                            <div className="bg-gray-200 dark:bg-gray-600 rounded p-1">
+                              <p className="text-gray-600 dark:text-gray-300">ATK</p>
+                              <p className="font-bold text-gray-900 dark:text-white">{stats.attack}</p>
+                            </div>
+                            <div className="bg-gray-200 dark:bg-gray-600 rounded p-1">
+                              <p className="text-gray-600 dark:text-gray-300">DEF</p>
+                              <p className="font-bold text-gray-900 dark:text-white">{stats.defense}</p>
+                            </div>
+                            <div className="bg-gray-200 dark:bg-gray-600 rounded p-1">
+                              <p className="text-gray-600 dark:text-gray-300">SPD</p>
+                              <p className="font-bold text-gray-900 dark:text-white">{stats.speed}</p>
+                            </div>
+                            <div className="bg-gray-200 dark:bg-gray-600 rounded p-1">
+                              <p className="text-gray-600 dark:text-gray-300">CRIT</p>
+                              <p className="font-bold text-gray-900 dark:text-white">{stats.crit}%</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {isSelected && (
+                          <span className="text-green-600 text-2xl font-bold ml-2">✓</span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })
               )}
             </div>
           </div>
