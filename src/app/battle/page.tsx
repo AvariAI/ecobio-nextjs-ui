@@ -409,7 +409,10 @@ function BattlePageContent() {
                 <p className="text-lg font-bold">
                   Tour de: <span className={stableCurrentCreature.team === "player" ? "text-blue-700 dark:text-blue-300" : "text-red-700 dark:text-red-300"}>{stableCurrentCreature.name}</span> ({stableCurrentCreature.team})
                 </p>
-                <p className="text-sm text-gray-600 mt-2">{playerTurn ? "→ Sélectionne un ennemi" : "...activer avec le bouton SUIVANT si bloqué"}</p>
+                <p className="text-sm text-gray-600 mt-2">
+                  DEBUG: playerTurn={String(playerTurn)} | stableCreatureId={stableCurrentCreature.id}
+                </p>
+                <p className="text-sm text-gray-600 mt-2">{playerTurn ? "→ Sélectionne un ennemi" : "...C'est l'ennemi donc pas d'action"}</p>
               </div>
             </div>
           )}
