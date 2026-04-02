@@ -7,10 +7,11 @@ import { CREATURES, Rank } from "@/lib/database";
 import { spawnEasyModeEnemy } from "@/lib/easy-mode";
 import { BattleCreature, getEffectiveSpeed, BattleElement } from "@/lib/battle";
 import { applyTraitStatModifiers } from "@/lib/traits";
-import { BattleTeam, getAllBattleElements, isTeamBattleOver, getTeamBattleWinner } from "@/lib/battle-multi";
+import { BattleTeam, getAllBattleElements } from "@/lib/battle-multi";
 
 /**
- * ÉcoBio Battle Arena - Entraînement Mode
+ * ÉcoBio Battle Arena
+ * Mode selector: Entraînement (5v5 vs Rank E)
  */
 
 interface HuntedCreature {
@@ -49,7 +50,7 @@ type BattlePhase = "setup" | "battle" | "complete";
 
 function BattlePageContent() {
   const searchParams = useSearchParams();
-  const mode = searchParams.get("mode") || "training"; // Default training mode
+  const mode = searchParams.get("mode") || "home"; // home | training
 
   // Setup state
   const [collection, setCollection] = useState<HuntedCreature[]>([]);
@@ -100,10 +101,10 @@ function BattlePageContent() {
     setSelectedIds([]);
   };
 
-  const canStart = selectedIds.length === 5;
+  const canStartTraining = selectedIds.length === 5;
 
   const startTraining = async () => {
-    if (!canStart || isStarting) return;
+    if (!canStartTraining || isStarting) return;
     setIsStarting(true);
 
     // Get selected creatures
@@ -167,11 +168,12 @@ function BattlePageContent() {
           rank: creature.rank,
         },
         statModifiers: statMods.breakdown,
-        // Required fields
-        attackCounter: 0,
-        damageDealt: 0,
-        kills: 0,
-        id: `player-${i}-${Date.now()}`,
+        required fields: {
+          attackCounter: 0,
+          damageDealt: 0,
+          kills: 0,
+          id: `player-${i}-${Date.now()}`,
+        },
       };
     });
 
@@ -245,8 +247,8 @@ function BattlePageContent() {
 
   const selectedCreatures = collection.filter(c => selectedIds.includes(c.id));
 
-  // SETUP PHASE
-  if (phase === "setup") {
+  // HOME PAGE - Mode selector
+  if (mode === "home") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 p-6">
         <div className="max-w-6xl mx-auto">
@@ -256,6 +258,66 @@ function BattlePageContent() {
             </Link>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               🕸️ Battle Arena
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300 mt-2">
+              Sélectionne un mode de combat
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <Link href="/battle?mode=training" className="block">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-cyan-500 cursor-pointer">
+                <div className="text-6xl mb-4">🎮</div>
+                <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
+                  Entraînement
+                </h2>
+                <p className="text-gray-600 dark:text-gray-300 mb-4">
+                  Combats 5v5 contre Rank E (Niveau 1)
+                </p>
+                <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+                  <li>• Sélectionne 5 créatures de ta collection</li>
+                  <li>• +100 XP par créature survivante</li>
+                  <li>• ❌ XP bloqué si créature a ★</li>
+                </ul>
+              </div>
+            </Link>
+
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border-2 border-gray-200 dark:border-gray-700 opacity-50">
+              <div className="text-6xl mb-4">⚔️</div>
+              <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
+                PvP Matchmaking
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
+                Combat contre d'autres joueurs (bientôt)
+              </p>
+              <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+                <li>• Affronte d'autres trainers en temps réel</li>
+                <li>• Classement全球化</li>
+                <li>• Récompenses exclusive</li>
+              </ul>
+              <div className="mt-4 px-4 py-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg text-center">
+                <p className="text-sm text-yellow-800 dark:text-yellow-200 font-bold">
+                  🚧 Bientôt disponible
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // TRAINING SETUP PHASE
+  if (mode === "training" && phase === "setup") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-6">
+            <Link href="/battle" className="inline-block px-4 py-2 mb-4 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
+              ← Retour
+            </Link>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              🎮 Entraînement
             </h1>
             <p className="text-gray-600 dark:text-gray-300 mt-2">
               Sélectionne 5 créatures de ta collection • Affronte 5 créatures Rank E (Niveau 1) • +100 XP par créature (si pas d'étoile ★)
@@ -378,9 +440,9 @@ function BattlePageContent() {
 
               <button
                 onClick={startTraining}
-                disabled={!canStart || isStarting}
+                disabled={!canStartTraining || isStarting}
                 className={`w-full mt-6 px-8 py-4 text-white text-xl font-bold rounded-xl shadow-lg transition-all ${
-                  canStart && !isStarting
+                  canStartTraining && !isStarting
                     ? "bg-gradient-to-r from-green-500 to-green-600 hover:shadow-xl transform hover:scale-105"
                     : "from-gray-400 to-gray-500 cursor-not-allowed opacity-50"
                 }`}
@@ -394,12 +456,12 @@ function BattlePageContent() {
     );
   }
 
-  // BATTLE PHASE
+  // BATTLE PHASE (skeleton)
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 p-4">
       <div className="max-w-7xl mx-auto">
         <div className="mb-4">
-          <Link href="/" className="inline-block px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm">
+          <Link href="/battle?mode=training" className="inline-block px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm">
             ← Retour
           </Link>
         </div>
@@ -422,7 +484,6 @@ function BattlePageContent() {
             </div>
           )}
 
-          {/* Battle log */}
           <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 max-h-96 overflow-y-auto mb-4 border-2 border-gray-300 dark:border-gray-600">
             {log.map((entry, i) => (
               <p key={i} className={entry.type === "info" ? "text-gray-600 dark:text-gray-300" : "text-black dark:text-white"}>
