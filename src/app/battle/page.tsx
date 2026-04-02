@@ -238,7 +238,14 @@ function BattlePageContent() {
       ]);
       setPhase("complete");
     } else {
-      advanceTurn();
+      // Reset processing before advancing turn (enemy AI needs to execute)
+      setIsProcessing(false);
+
+      // Small delay then advance
+      setTimeout(() => {
+        advanceTurn();
+      }, 300);
+      return; // Don't reset isProcessing again below
     }
 
     setIsProcessing(false);
@@ -269,7 +276,9 @@ function BattlePageContent() {
         ]);
 
         if (nextCreature && nextCreature.team === "enemy" && phase === "battle") {
-          setTimeout(() => executeEnemyAI(), 500);
+          setTimeout(() => {
+            executeEnemyAI();
+          }, 800);
         }
 
         return;
@@ -294,16 +303,34 @@ function BattlePageContent() {
 
   const executeEnemyAI = () => {
     const enemy = getCurrentCreature();
-    if (!enemy || enemy.team !== "enemy" || !playerTeam || isProcessing) return;
+    if (!enemy || enemy.team !== "enemy" || !playerTeam || isProcessing) {
+      console.log("Could not execute enemy AI:", {
+        hasEnemy: !!enemy,
+        isEnemy: enemy?.team === "enemy",
+        hasPlayerTeam: !!playerTeam,
+        isProcessing,
+      });
+      return;
+    }
 
     const alivePlayers = playerTeam.filter(c => !c.isDead);
-    if (alivePlayers.length === 0) return;
+    if (alivePlayers.length === 0) {
+      console.log("No alive players to target");
+      return;
+    }
 
     const target = alivePlayers.reduce((prev, curr) =>
       curr.currentHP < prev.currentHP ? curr : prev
     );
 
-    performAttack(playerTeam.indexOf(target));
+    setLog(prev => [
+      ...prev,
+      { text: `🤖 ${enemy.name} (Ennemi) prépare l'attaque...`, type: "info" },
+    ]);
+
+    setTimeout(() => {
+      performAttack(playerTeam.indexOf(target));
+    }, 500);
   };
 
   const selectedCreatures = collection.filter(c => selectedIds.includes(c.id));
