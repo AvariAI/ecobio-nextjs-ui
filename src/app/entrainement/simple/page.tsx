@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Rank } from "@/lib/database";
 import { spawnEasyModeEnemy } from "@/lib/easy-mode";
 import { BattleTeam } from "@/lib/battle";
@@ -31,6 +32,7 @@ interface HuntedCreature {
 }
 
 export default function EntrainementSimplePage() {
+  const router = useRouter();
   const [collection, setCollection] = useState<HuntedCreature[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [enemyTeam, setEnemyTeam] = useState<BattleTeam | null>(null);
@@ -110,13 +112,33 @@ export default function EntrainementSimplePage() {
   const canStart = selectedIds.length === 5;
 
   const startTraining = () => {
-    if (!canStart || isTraining) return;
+    if (!canStart || isTraining || !enemyTeam) return;
 
     setIsTraining(true);
-    // TODO: Navigate to battle page with training flag
-    // For now, just log
-    console.log("Starting training with creatures:", selectedIds);
-    console.log("VS enemy team:", enemyTeam);
+
+    // Get selected creatures
+    const selectedCreatures = collection.filter(c => selectedIds.includes(c.id));
+
+    // Store data in sessionStorage for battle page
+    const battleData = {
+      mode: "training",
+      playerIds: selectedIds,
+      playerCreatures: selectedCreatures,
+      enemyCreatures: enemyTeam.creatures.map(c => ({
+        creatureId: c.creature.id,
+        stats: c.stats,
+        name: c.name,
+        traits: c.traits,
+      })),
+    };
+
+    // Store in sessionStorage (cleans up after battle)
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.setItem("ecobio-training-battle", JSON.stringify(battleData));
+    }
+
+    // Navigate to battle page
+    router.push("/battle?mode=training");
   };
 
   // Get selected creatures

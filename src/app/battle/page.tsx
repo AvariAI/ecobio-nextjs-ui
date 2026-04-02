@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { CREATURES, Rank, RANKS, Creature } from "@/lib/database";
 import { getSpecimenSkill } from "@/lib/skills";
 import {
@@ -93,9 +94,12 @@ function formatBuffChange(
   return `${buffType} ${sign}${diffNumeric.toFixed(0)}%`;
 }
 
-export default function BattlePage() {
-  // Mode: "test" (default, brute stats) or "easy" (use hunting creatures)
-  const [battleMode, setBattleMode] = useState<"test" | "easy">("test");
+function BattlePageContent() {
+  const searchParams = useSearchParams();
+
+  // Mode: "test" (default, brute stats), "easy" (use hunting creatures), or "training"
+  const [battleMode, setBattleMode] = useState<"test" | "easy" | "training">(searchParams.get("mode") as "training" || "test");
+  const [trainingData, setTrainingData] = useState<any>(null);
 
   // Team size: 1v1, 3v3, or 5v5
   const [teamSize, setTeamSize] = useState<TeamSize>(1);
@@ -170,6 +174,28 @@ export default function BattlePage() {
       }
     }
   }, []);
+
+  // Load training data from sessionStorage when in training mode
+  useEffect(() => {
+    if (battleMode === "training" && typeof sessionStorage !== "undefined") {
+      const saved = sessionStorage.getItem("ecobio-training-battle");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setTrainingData(parsed);
+        } catch (e) {
+          console.error("Failed to load training data", e);
+        }
+      }
+    }
+  }, [battleMode]);
+
+  // Auto-start training battle when data is loaded
+  useEffect(() => {
+    if (battleMode === "training" && trainingData && phase === "setup") {
+      startTrainingBattle();
+    }
+  }, [battleMode, trainingData, phase]);
 
   // Apply XP rewards when battle ends (in collection mode only)
   useEffect(() => {
@@ -416,6 +442,95 @@ export default function BattlePage() {
       }
     }
   }, [phase, turn, currentActingCreature, teamSize]);
+
+  const startTrainingBattle = () => {
+    if (!trainingData) return;
+
+    // Training mode: Fixed 5v5
+    setTeamSize(5);
+
+    // Create player team from training data
+    const playerCreatures = trainingData.playerCreatures.map((creature: any, i: number) => {
+      const creatureTemplate = CREATURES[creature.creatureId];
+      const statMods = applyTraitStatModifiers(
+        {
+          hp: creature.customStats?.hp || creature.baseStats?.hp,
+          attack: creature.customStats?.attack || creature.baseStats?.attack,
+          defense: creature.customStats?.defense || creature.baseStats?.defense,
+          speed: creature.customStats?.speed || creature.baseStats?.speed,
+          crit: creature.customStats?.crit || creature.baseStats?.crit,
+        },
+        creature.traits || [],
+        creature.customStats?.level || 1
+      );
+
+      const bc = createBattleCreature(
+        creatureTemplate,
+        {
+          hp: statMods.modifiedStats.hp,
+          attack: statMods.modifiedStats.attack,
+          defense: statMods.modifiedStats.defense,
+          speed: statMods.modifiedStats.speed,
+          crit: statMods.modifiedStats.crit,
+          rank: creature.rank,
+        },
+        creature.name,
+        creature.traits || []
+      );
+      bc.position = i;
+      bc.baseStats = {
+        hp: creature.customStats?.hp || creature.baseStats?.hp,
+        attack: creature.customStats?.attack || creature.baseStats?.attack,
+        defense: creature.customStats?.defense || creature.baseStats?.defense,
+        speed: creature.customStats?.speed || creature.baseStats?.speed,
+        crit: creature.customStats?.crit || creature.baseStats?.crit,
+        rank: creature.rank,
+      };
+      bc.statModifiers = statMods.breakdown;
+      return bc;
+    });
+
+    // Create enemy team from training data (Rank E, Level 1)
+    const enemyCreatures = trainingData.enemyCreatures.map((enemy: any, i: number) => {
+      const bc = createBattleCreature(
+        CREATURES[enemy.creatureId],
+        enemy.stats,
+        enemy.name,
+        enemy.traits || []
+      );
+      bc.position = i;
+      return bc;
+    });
+
+    const newPlayerTeam: BattleTeam = {
+      teamId: "player",
+      creatures: playerCreatures,
+    };
+
+    const newEnemyTeam: BattleTeam = {
+      teamId: "enemy",
+      creatures: enemyCreatures,
+    };
+
+    setPlayerTeam(newPlayerTeam);
+    setEnemyTeam(newEnemyTeam);
+
+    // Create turn order
+    const newTurnOrder = getAllBattleElements(newPlayerTeam, newEnemyTeam);
+    setTurnOrder(newTurnOrder);
+
+    // Set initial state
+    setCurrentActingCreature(newTurnOrder[0]?.creature || null);
+    setTurn(newTurnOrder[0]?.team === "player" ? "player" : "enemy");
+    setRound(1);
+    setLog([{ text: "🎮 Entraînement 5v5 commence!", type: "info" }]);
+    setPhase("battle");
+
+    // Clear sessionStorage to prevent re-opening battle on refresh
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.removeItem("ecobio-training-battle");
+    }
+  };
 
   const startBattle = () => {
     // Check team size validation for multi-creature mode
@@ -2600,5 +2715,16 @@ function CollectionSelector({
         </div>
       </div>
     </div>
+  );
+}
+
+
+export default function BattlePage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
+      <div className="text-2xl font-bold">Chargement...</div>
+    </div>}>
+      <BattlePageContent />
+    </Suspense>
   );
 }
