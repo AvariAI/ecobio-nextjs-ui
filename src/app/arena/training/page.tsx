@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Rank, PERSONALITIES, PersonalityType } from "@/lib/database";
 import { getTraitsByIds } from "@/lib/traits";
 
@@ -89,6 +90,7 @@ const RANK_ORDER: Record<Rank, number> = {
 };
 
 export default function TrainingPage() {
+  const router = useRouter();
   const [collection, setCollection] = useState<HuntedCreature[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortBy>("name");
@@ -104,10 +106,22 @@ export default function TrainingPage() {
 
   const handleToggleCreature = (id: string) => {
     setSelectedIds(prev => {
-      if (prev.includes(id)) return prev.filter(i => i !== id);
+      if (prev.includes(id)) {
+        // Remove and maintain order of remaining
+        return prev.filter(i => i !== id);
+      }
+      // Add to end (maintains selection order = team position)
       if (prev.length >= 5) return prev;
       return [...prev, id];
     });
+  };
+
+  const handleStartBattle = () => {
+    if (selectedIds.length === 5) {
+      // Store team order in sessionStorage
+      sessionStorage.setItem("battle-team", JSON.stringify(selectedIds));
+      router.push("/arena/battle");
+    }
   };
 
   const sortedCollection = [...collection].sort((a, b) => {
@@ -201,7 +215,7 @@ export default function TrainingPage() {
               )}
               {selectedIds.length === 5 && (
                 <button
-                  onClick={() => alert(`Battle démarré avec ${selectedIds.length} créatures!`)}
+                  onClick={handleStartBattle}
                   className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-bold shadow-lg"
                 >
                   🗡️ DÉMARRER
