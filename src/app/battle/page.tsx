@@ -465,17 +465,61 @@ export default function BattlePage() {
           []  // Test mode: no traits
         );
       } else if (battleMode === "easy") {
-        // Easy mode: Both player and enemy are auto-generated
-        // Player: auto-generated random creature
-        const randomPlayer = spawnEasyModeEnemy();
-        p = createBattleCreature(
-          randomPlayer.creatureTemplate,
-          randomPlayer.stats,
-          randomPlayer.name,
-          randomPlayer.traits || []
-        );
+        // Easy mode: Player from collection if available, enemy auto-generated
+        if (selectedPlayer) {
+          // Collection mode: Use selected creature
+          const playerStatMods = applyTraitStatModifiers(
+            {
+              hp: selectedPlayer.finalStats.hp,
+              attack: selectedPlayer.finalStats.attack,
+              defense: selectedPlayer.finalStats.defense,
+              speed: selectedPlayer.finalStats.speed,
+              crit: selectedPlayer.finalStats.crit,
+            },
+            selectedPlayer.traits || [],
+            selectedPlayer.level || 1
+          );
 
-        // Enemy: auto-generated random creature
+          const playerCreatureWithSkills = {
+            ...CREATURES[selectedPlayer.creatureId],
+            specimenSkill: selectedPlayer.specimenSkill,
+            personalitySkill: selectedPlayer.personalitySkill,
+          };
+
+          p = createBattleCreature(
+            playerCreatureWithSkills,
+            {
+              hp: playerStatMods.modifiedStats.hp,
+              attack: playerStatMods.modifiedStats.attack,
+              defense: playerStatMods.modifiedStats.defense,
+              speed: playerStatMods.modifiedStats.speed,
+              crit: playerStatMods.modifiedStats.crit,
+              rank: selectedPlayer.finalStats.rank,
+            },
+            `${selectedPlayer.name} (R${selectedPlayer.finalStats.rank} L${selectedPlayer.level})`,
+            selectedPlayer.traits || []
+          );
+          p.baseStats = {
+            hp: selectedPlayer.finalStats.hp,
+            attack: selectedPlayer.finalStats.attack,
+            defense: selectedPlayer.finalStats.defense,
+            speed: selectedPlayer.finalStats.speed,
+            crit: selectedPlayer.finalStats.crit,
+            rank: selectedPlayer.finalStats.rank,
+          };
+          p.statModifiers = playerStatMods.breakdown;
+        } else {
+          // Auto-generate player creature if no collection
+          const randomPlayer = spawnEasyModeEnemy();
+          p = createBattleCreature(
+            randomPlayer.creatureTemplate,
+            randomPlayer.stats,
+            randomPlayer.name,
+            randomPlayer.traits || []
+          );
+        }
+
+        // Enemy: always auto-generated
         const randomEnemy = spawnEasyModeEnemy();
         e = createBattleCreature(
           randomEnemy.creatureTemplate,
@@ -1782,24 +1826,33 @@ export default function BattlePage() {
 
         {phase === "setup" && battleMode === "easy" && teamSize === 1 && (
           <div className="grid md:grid-cols-2 gap-8 mb-8">
-            {/* Easy Mode 1v1: Random player - no selector needed */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-2 border-blue-400 hover:shadow-2xl transition-all">
-              <h2 className="text-3xl font-bold mb-4">🔵 Player Creature</h2>
-              <div className="bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900 dark:to-cyan-900 rounded-xl p-6 min-h-64 flex flex-col items-center justify-center">
-                <div className="text-6xl mb-4">🎲</div>
-                <p className="text-lg text-blue-700 dark:text-blue-300 font-semibold text-center">
-                  Joueur aléatoire
-                </p>
-                <p className="text-sm text-blue-600 dark:text-blue-400 text-center mt-2">
-                  Généré automatiquement
-                </p>
-                <div className="mt-4 text-xs text-blue-500 dark:text-blue-300">
-                  <p>• Rang aléatoire (poids E)</p>
-                  <p>• Niveau 1</p>
-                  <p>• Traits RNG</p>
+            {selectedPlayer ? (
+              <CollectionSelector
+                label="🔵 Your Creature (or leave empty for auto)"
+                collection={collection}
+                selectedId={selectedPlayerId}
+                onSelect={setSelectedPlayerId}
+                accent="blue"
+              />
+            ) : (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-2 border-blue-400 hover:shadow-2xl transition-all">
+                <h2 className="text-3xl font-bold mb-4">🔵 Player Creature</h2>
+                <div className="bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900 dark:to-cyan-900 rounded-xl p-6 min-h-64 flex flex-col items-center justify-center">
+                  <div className="text-6xl mb-4">🎲</div>
+                  <p className="text-lg text-blue-700 dark:text-blue-300 font-semibold text-center">
+                    Joueur aléatoire
+                  </p>
+                  <p className="text-sm text-blue-600 dark:text-blue-400 text-center mt-2">
+                    Généré automatiquement
+                  </p>
+                  <div className="mt-4 text-xs text-blue-500 dark:text-blue-300">
+                    <p>• Rang aléatoire (poids E)</p>
+                    <p>• Niveau 1</p>
+                    <p>• Traits RNG</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Easy Mode 1v1: Random enemy - no selector needed */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-2 border-red-400 hover:shadow-2xl transition-all">
