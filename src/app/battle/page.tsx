@@ -128,7 +128,7 @@ function BattlePageContent() {
 
   const calculateDamage = (attacker: SlotCreature, defender: SlotCreature): { damage: number; isCrit: boolean } => {
     const isCrit = Math.random() * 100 < attacker.stats.crit;
-    const damage = Math.max(1, Math.floor(attacker.stats.attack * (isCrit ? 2 : 1) - defender.stats.defense * 0.3));
+    const damage = Math.max(1, Math.floor(attacker.stats.attack * (isCrit ? 2 : 1) - defender.stats.defense * 0.5));
     return { damage, isCrit };
   };
 
