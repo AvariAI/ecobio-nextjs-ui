@@ -14,14 +14,14 @@ export default function Home() {
         </header>
 
         <div className="grid md:grid-cols-2 gap-8 mb-8">
-          <Link href="/pokedex">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-green-400">
-              <div className="text-6xl mb-4">📚</div>
+          <Link href="/arena">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-red-400">
+              <div className="text-6xl mb-4">⚔️</div>
               <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
-                Pokedex
+                Arena
               </h2>
               <p className="text-gray-600 dark:text-gray-300">
-                Explore toutes les créatures, leurs stats et leurs capacités spéciales.
+                Entraînement et PvP.
               </p>
             </div>
           </Link>
@@ -40,6 +40,18 @@ export default function Home() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 mb-8">
+          <Link href="/pokedex">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-green-400">
+              <div className="text-6xl mb-4">📚</div>
+              <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
+                Pokedex
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                Explore toutes les créatures et leurs stats.
+              </p>
+            </div>
+          </Link>
+
           <Link href="/breeding">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-pink-400">
               <div className="text-6xl mb-4">🧬</div>
@@ -63,7 +75,9 @@ export default function Home() {
               </p>
             </div>
           </Link>
+        </div>
 
+        <div className="grid md:grid-cols-2 gap-8 mb-8">
           <Link href="/inventory">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-emerald-500">
               <div className="text-6xl mb-4">📦</div>
@@ -75,9 +89,7 @@ export default function Home() {
               </p>
             </div>
           </Link>
-        </div>
 
-        <div className="grid md:grid-cols-3 gap-8 mb-8">
           <Link href="/craft">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-teal-500">
               <div className="text-6xl mb-4">🧪</div>
@@ -89,7 +101,9 @@ export default function Home() {
               </p>
             </div>
           </Link>
+        </div>
 
+        <div className="grid md:grid-cols-2 gap-8 mb-8">
           <Link href="/formulas">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-cyan-500">
               <div className="text-6xl mb-4">📐</div>
