@@ -269,16 +269,22 @@ function BattlePageContent() {
         const newTurnCount = turnCount + 1;
         setTurnCount(newTurnCount);
 
-        setLog(prev => [
-          ...prev,
-          { text: `—`.repeat(40), type: "info" },
-          { text: `🎯 Tour ${newTurnCount}: ${nextCreature.name} (${nextCreature.team === "player" ? "Joueur" : "Ennemi"})`, type: "info" },
-        ]);
+        const logUpdate = {
+          text: `—`.repeat(40),
+          type: "info" as const,
+        };
+        const turnLog = {
+          text: `🎯 Tour ${newTurnCount}: ${nextCreature.name} (${nextCreature.team === "player" ? "Joueur" : "Ennemi"})`,
+          type: "info" as const,
+        };
 
+        // First update state with turn info
+        setLog(prev => [...prev, logUpdate, turnLog]);
+
+        // If enemy turn, execute immediately
         if (nextCreature && nextCreature.team === "enemy" && phase === "battle") {
-          setTimeout(() => {
-            executeEnemyAI();
-          }, 800);
+          // Small delay for UI to render
+          setTimeout(() => executeEnemyAI(), 500);
         }
 
         return;
@@ -302,20 +308,18 @@ function BattlePageContent() {
   };
 
   const executeEnemyAI = () => {
-    const enemy = getCurrentCreature();
+    // Force check fresh state from getTurnOrder
+    const order = getTurnOrder();
+    if (order.length === 0 || currentTurnIndex >= order.length) return;
+
+    const enemy = order[currentTurnIndex];
+
     if (!enemy || enemy.team !== "enemy" || !playerTeam || isProcessing) {
-      console.log("Could not execute enemy AI:", {
-        hasEnemy: !!enemy,
-        isEnemy: enemy?.team === "enemy",
-        hasPlayerTeam: !!playerTeam,
-        isProcessing,
-      });
       return;
     }
 
     const alivePlayers = playerTeam.filter(c => !c.isDead);
     if (alivePlayers.length === 0) {
-      console.log("No alive players to target");
       return;
     }
 
@@ -325,11 +329,22 @@ function BattlePageContent() {
 
     setLog(prev => [
       ...prev,
-      { text: `🤖 ${enemy.name} (Ennemi) prépare l'attaque...`, type: "info" },
+      { text: `🤖 ${enemy.name} (Ennemi) attaque ${target.name}!`, type: "info" },
     ]);
 
+    // Execute attack directly with fresh target index
     setTimeout(() => {
-      performAttack(playerTeam.indexOf(target));
+      const freshPlayerTeam = playerTeam.filter(c => !c.isDead);
+      if (freshPlayerTeam.length === 0) return;
+
+      const freshTarget = freshPlayerTeam.reduce((prev, curr) =>
+        curr.currentHP < prev.currentHP ? curr : prev
+      );
+
+      const targetIndex = playerTeam.indexOf(freshTarget);
+      if (targetIndex !== -1 && !isProcessing) {
+        performAttack(targetIndex);
+      }
     }, 500);
   };
 
