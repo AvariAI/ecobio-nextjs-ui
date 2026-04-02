@@ -132,7 +132,7 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     },
     passive: {
       name: "Cible Arrière",
-      description: "Attaque la cible en derniere position",
+      description: "Attaque la dernière cible vivante en priorité (si la 5 meurt, attaque la 4, etc.)",
     },
     weight: 100,
   },
