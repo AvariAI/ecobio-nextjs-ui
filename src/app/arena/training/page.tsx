@@ -37,6 +37,7 @@ interface HuntedCreature {
   level?: number;
   currentHP?: number;
   maxHP?: number;
+  isFavorite?: boolean;
 }
 
 function getCreatureImage(creatureId: string, rank: Rank, geneticType?: string): string {
@@ -110,6 +111,10 @@ export default function TrainingPage() {
   };
 
   const sortedCollection = [...collection].sort((a, b) => {
+    // Favorites first
+    if (a.isFavorite && !b.isFavorite) return -1;
+    if (!a.isFavorite && b.isFavorite) return 1;
+    
     let comparison = 0;
     
     if (sortBy === "name") {
@@ -138,7 +143,20 @@ export default function TrainingPage() {
           <p className="text-gray-600 dark:text-gray-300 mt-2">Sélectionne 5 créatures pour affronter des Rank E</p>
         </div>
 
-        {/* Sort Controls */}
+        {/* Collection/Favorites Sort Controls */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-4 border-2 border-blue-400">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => {
+                setSortBy("rank");
+                setSortOrder("desc");
+              }}
+              className="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded font-bold"
+            >
+              ❤️ Favoris
+            </button>
+          </div>
+        </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-6 border-2 border-blue-400">
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
@@ -237,6 +255,11 @@ export default function TrainingPage() {
                     !isSelected && selectedIds.length >= 5 ? "opacity-40 cursor-not-allowed" : ""
                   }`}
                 >
+                  {/* Favorite badge */}
+                  <div className="absolute top-2 right-2 text-2xl">
+                    {c.isFavorite ? "❤️" : "🤍"}
+                  </div>
+
                   {isSelected && (
                     <div className="absolute bottom-3 right-3 text-green-400 text-2xl font-bold z-10">✓</div>
                   )}
