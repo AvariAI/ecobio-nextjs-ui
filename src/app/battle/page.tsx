@@ -3,11 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CREATURES, Rank } from "@/lib/database";
-import { spawnEasyModeEnemy } from "@/lib/easy-mode";
-import { BattleCreature, getEffectiveSpeed, BattleElement } from "@/lib/battle";
-import { applyTraitStatModifiers } from "@/lib/traits";
-import { BattleTeam, getAllBattleElements } from "@/lib/battle-multi";
+import { Rank } from "@/lib/database";
 
 /**
  * ÉcoBio Battle Arena
@@ -36,35 +32,15 @@ interface HuntedCreature {
   traits?: string[];
   stars?: number;
   statusEffects: any[];
-  finalStats?: {
-    hp: number;
-    attack: number;
-    defense: number;
-    speed: number;
-    crit: number;
-    rank: Rank;
-  };
 }
-
-type BattlePhase = "setup" | "battle" | "complete";
 
 function BattlePageContent() {
   const searchParams = useSearchParams();
   const mode = searchParams.get("mode") || "home"; // home | training
 
-  // Setup state
+  // Training setup state
   const [collection, setCollection] = useState<HuntedCreature[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [isStarting, setIsStarting] = useState(false);
-
-  // Battle state
-  const [phase, setPhase] = useState<BattlePhase>("setup");
-  const [playerTeam, setPlayerTeam] = useState<BattleTeam | null>(null);
-  const [enemyTeam, setEnemyTeam] = useState<BattleTeam | null>(null);
-  const [log, setLog] = useState<{ text: string; type?: string }[]>([]);
-  const [round, setRound] = useState(1);
-  const [turnOrder, setTurnOrder] = useState<BattleElement[]>([]);
-  const [currentActingCreature, setCurrentActingCreature] = useState<BattleCreature | null>(null);
 
   // Load collection
   useEffect(() => {
@@ -79,13 +55,6 @@ function BattlePageContent() {
     }
   }, []);
 
-  // Auto-start battle if mode=training
-  useEffect(() => {
-    if (mode === "training" && phase === "battle" && playerTeam && enemyTeam) {
-      initializeTurnOrder();
-    }
-  }, [phase, playerTeam, enemyTeam]);
-
   const handleToggleCreature = (id: string) => {
     setSelectedIds(prev => {
       if (prev.includes(id)) {
@@ -99,150 +68,6 @@ function BattlePageContent() {
 
   const handleClearSelection = () => {
     setSelectedIds([]);
-  };
-
-  const canStartTraining = selectedIds.length === 5;
-
-  const startTraining = async () => {
-    if (!canStartTraining || isStarting) return;
-    setIsStarting(true);
-
-    // Get selected creatures
-    const selectedCreatures = collection.filter(c => selectedIds.includes(c.id));
-
-    // Generate enemy team
-    const enemyTemplates = [];
-    for (let i = 0; i < 5; i++) {
-      enemyTemplates.push(spawnEasyModeEnemy());
-    }
-
-    const enemyCreatures = enemyTemplates.map((template, i) => ({
-      creatureId: template.creatureTemplate.id,
-      stats: {
-        ...template.stats,
-        rank: template.stats.rank || "E",
-        level: 1,
-      },
-      name: template.name,
-      traits: template.traits || [],
-    }));
-
-    // Create player team
-    const playerCreatures = selectedCreatures.map((creature, i) => {
-      const creatureTemplate = CREATURES[creature.id];
-      const statMods = applyTraitStatModifiers(
-        {
-          hp: creature.customStats?.hp || creature.baseStats.hp,
-          attack: creature.customStats?.attack || creature.baseStats.attack,
-          defense: creature.customStats?.defense || creature.baseStats.defense,
-          speed: creature.customStats?.speed || creature.baseStats.speed,
-          crit: creature.customStats?.crit || creature.baseStats.crit,
-        },
-        creature.traits || [],
-        creature.customStats?.level || 1
-      );
-
-      return {
-        creature: creatureTemplate,
-        stats: {
-          hp: statMods.modifiedStats.hp,
-          attack: statMods.modifiedStats.attack,
-          defense: statMods.modifiedStats.defense,
-          speed: statMods.modifiedStats.speed,
-          crit: statMods.modifiedStats.crit,
-          rank: creature.rank,
-        },
-        currentHP: statMods.modifiedStats.hp,
-        skillCooldowns: {},
-        buffs: {},
-        name: creature.name,
-        traits: creature.traits || [],
-        statusEffects: [],
-        position: i,
-        baseStats: {
-          hp: creature.customStats?.hp || creature.baseStats.hp,
-          attack: creature.customStats?.attack || creature.baseStats.attack,
-          defense: creature.customStats?.defense || creature.baseStats.defense,
-          speed: creature.customStats?.speed || creature.baseStats.speed,
-          crit: creature.customStats?.crit || creature.baseStats.crit,
-          rank: creature.rank,
-        },
-        statModifiers: statMods.breakdown,
-        required fields: {
-          attackCounter: 0,
-          damageDealt: 0,
-          kills: 0,
-          id: `player-${i}-${Date.now()}`,
-        },
-      };
-    });
-
-    // Create enemy team
-    const enemyBattleCreatures = enemyCreatures.map((enemy, i) => {
-      const bc = (() => {
-        const template = CREATURES[enemy.creatureId];
-        const battleCreature: BattleCreature = {
-          creature: template,
-          stats: enemy.stats,
-          currentHP: enemy.stats.hp,
-          skillCooldowns: {},
-          buffs: {},
-          name: enemy.name,
-          traits: enemy.traits,
-          statusEffects: [],
-          position: i,
-          baseStats: enemy.stats,
-          statModifiers: {
-            hpBonus: 0,
-            attackBonus: 0,
-            defenseBonus: 0,
-            speedBonus: 0,
-            critBonus: 0,
-          },
-          attackCounter: 0,
-          damageDealt: 0,
-          kills: 0,
-          id: `enemy-${i}-${Date.now()}`,
-        };
-        return battleCreature;
-      })();
-      return bc;
-    });
-
-    const newPlayerTeam: BattleTeam = {
-      teamId: "player",
-      creatures: playerCreatures as BattleCreature[],
-    };
-
-    const newEnemyTeam: BattleTeam = {
-      teamId: "enemy",
-      creatures: enemyBattleCreatures,
-    };
-
-    setPlayerTeam(newPlayerTeam);
-    setEnemyTeam(newEnemyTeam);
-    setPhase("battle");
-    setIsStarting(false);
-  };
-
-  const initializeTurnOrder = () => {
-    if (!playerTeam || !enemyTeam) return;
-
-    const newTurnOrder = getAllBattleElements(playerTeam, enemyTeam);
-
-    setTurnOrder(newTurnOrder);
-    setCurrentActingCreature(newTurnOrder[0]?.creature || null);
-    setRound(1);
-
-    setLog([
-      { text: `⚔️ Entraînement 5v5 commence!`, type: "info" },
-      { text: `—`.repeat(40), type: "info" },
-      { text: `Tour order (par vitesse):`, type: "info" },
-      ...newTurnOrder.map((el, i) => ({
-        text: `  ${i + 1}. ${el.name} (${el.team === "player" ? "Joueur" : "Ennemi"})`,
-        type: "info" as const,
-      })),
-    ]);
   };
 
   const selectedCreatures = collection.filter(c => selectedIds.includes(c.id));
@@ -308,7 +133,7 @@ function BattlePageContent() {
   }
 
   // TRAINING SETUP PHASE
-  if (mode === "training" && phase === "setup") {
+  if (mode === "training") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 p-6">
         <div className="max-w-6xl mx-auto">
@@ -439,16 +264,19 @@ function BattlePageContent() {
               </div>
 
               <button
-                onClick={startTraining}
-                disabled={!canStartTraining || isStarting}
+                disabled={selectedIds.length !== 5}
                 className={`w-full mt-6 px-8 py-4 text-white text-xl font-bold rounded-xl shadow-lg transition-all ${
-                  canStartTraining && !isStarting
+                  selectedIds.length === 5
                     ? "bg-gradient-to-r from-green-500 to-green-600 hover:shadow-xl transform hover:scale-105"
                     : "from-gray-400 to-gray-500 cursor-not-allowed opacity-50"
                 }`}
               >
-                {isStarting ? "⏳ Chargement..." : "🗡️ DÉMARRER L'ENTRAÎNEMENT"}
+                🗡️ DÉMARRER L'ENTRAÎNEMENT
               </button>
+
+              <div className="mt-4 text-center text-gray-500 text-sm">
+                <p>Battle system en cours de reconstruction...</p>
+              </div>
             </div>
           </div>
         </div>
@@ -456,49 +284,7 @@ function BattlePageContent() {
     );
   }
 
-  // BATTLE PHASE (skeleton)
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 p-4">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-4">
-          <Link href="/battle?mode=training" className="inline-block px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm">
-            ← Retour
-          </Link>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-4">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              ⚔️ Entraînement en cours
-            </h1>
-            <div className="text-lg font-bold text-gray-600 dark:text-gray-300">
-              Round {round}
-            </div>
-          </div>
-
-          {currentActingCreature && (
-            <div className="bg-blue-50 dark:bg-blue-900 rounded-lg p-4 mb-4 border-2 border-blue-300 dark:border-blue-700">
-              <p className="text-lg font-bold">
-                Tour de: <span className="text-blue-700 dark:text-blue-300">{currentActingCreature.name}</span> ({getEffectiveSpeed(currentActingCreature)} VIT)
-              </p>
-            </div>
-          )}
-
-          <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 max-h-96 overflow-y-auto mb-4 border-2 border-gray-300 dark:border-gray-600">
-            {log.map((entry, i) => (
-              <p key={i} className={entry.type === "info" ? "text-gray-600 dark:text-gray-300" : "text-black dark:text-white"}>
-                {entry.text}
-              </p>
-            ))}
-          </div>
-
-          <div className="text-center text-gray-500">
-            <p>Battle system en cours de développement...</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return <div>Unknown mode</div>;
 }
 
 export default function BattlePage() {
