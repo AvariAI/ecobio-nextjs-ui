@@ -137,18 +137,41 @@ export default function BattlePage() {
         // Generate enemy team (5 Rank E creatures)
         const enemyTeam: Creature[] = Array(5).fill(0).map((_, i) => {
           const creature = CREATURES[0]; // Use first creature for simplicity
-          const baseHP = creature.baseStats.hp;
+          
+          // Defensive: Handle undefined creature
+          if (!creature) {
+            console.error("Creature reference is undefined!");
+            return {
+              id: `enemy-${Math.random()}`,
+              name: "Fourmi",
+              creatureId: "ant",
+              finalStats: {
+                rank: "E",
+                hp: 100,
+                attack: 15,
+                defense: 10,
+                speed: 12,
+                crit: 5
+              },
+              level: 1,
+              currentHP: 100,
+              maxHP: 100
+            };
+          }
+
+          const baseHP = creature.baseStats?.hp || 100;
+          
           return {
             id: `enemy-${Math.random()}`,
-            name: creature.name,
-            creatureId: creature.id,
+            name: creature.name || "Fourmi",
+            creatureId: creature.id || "ant",
             finalStats: {
               rank: "E",
               hp: baseHP,
-              attack: creature.baseStats.attack,
-              defense: creature.baseStats.defense,
-              speed: creature.baseStats.speed,
-              crit: creature.baseStats.crit
+              attack: creature.baseStats?.attack || 15,
+              defense: creature.baseStats?.defense || 10,
+              speed: creature.baseStats?.speed || 12,
+              crit: creature.baseStats?.crit || 5
             },
             level: 1,
             currentHP: baseHP,
