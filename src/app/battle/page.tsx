@@ -51,13 +51,10 @@ type BattlePhase = "setup" | "battle" | "complete";
 
 function BattlePageContent() {
   const searchParams = useSearchParams();
-  const mode = searchParams.get("mode") || "home"; // home | training | battle
+  const mode = searchParams.get("mode") || "home";
 
-  // Setup state
   const [collection, setCollection] = useState<HuntedCreature[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
-  // Battle state
   const [phase, setPhase] = useState<BattlePhase>("setup");
   const [playerTeam, setPlayerTeam] = useState<BattleCreature[] | null>(null);
   const [enemyTeam, setEnemyTeam] = useState<BattleCreature[] | null>(null);
@@ -68,7 +65,6 @@ function BattlePageContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [turnCount, setTurnCount] = useState(0);
 
-  // Load collection
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = localStorage.getItem("ecobio-collection");
@@ -92,32 +88,19 @@ function BattlePageContent() {
     });
   };
 
-  const handleClearSelection = () => {
-    setSelectedIds([]);
-  };
+  const handleClearSelection = () => setSelectedIds([]);
 
   const startBattle = () => {
     const selectedCreatures = collection.filter(c => selectedIds.includes(c.id));
+    const enemyTemplates = Array(5).fill(null).map(() => spawnEasyModeEnemy());
 
-    // Generate enemy team
-    const enemyTemplates = [];
-    for (let i = 0; i < 5; i++) {
-      enemyTemplates.push(spawnEasyModeEnemy());
-    }
-
-    // Create player creatures
     const playerCreatures: BattleCreature[] = selectedCreatures.map((creature, i) => {
       const template = CREATURES[creature.id];
       const hp = creature.customStats?.hp || creature.baseStats.hp;
-      const attack = creature.customStats?.attack || creature.baseStats.attack;
-      const defense = creature.customStats?.defense || creature.baseStats.defense;
-      const speed = creature.customStats?.speed || creature.baseStats.speed;
-      const crit = creature.customStats?.crit || creature.baseStats.crit;
-
       return {
         id: `player-${i}`,
         name: creature.name,
-        stats: { hp, attack, defense, speed, crit, rank: creature.rank || "E" },
+        stats: { hp, attack: creature.customStats?.attack || creature.baseStats.attack, defense: creature.customStats?.defense || creature.baseStats.defense, speed: creature.customStats?.speed || creature.baseStats.speed, crit: creature.customStats?.crit || creature.baseStats.crit, rank: creature.rank || "E" },
         currentHP: hp,
         team: "player",
         position: i,
@@ -125,29 +108,17 @@ function BattlePageContent() {
       };
     });
 
-    // Create enemy creatures
-    const enemyCreatures: BattleCreature[] = enemyTemplates.map((template, i) => {
-      const bc: BattleCreature = {
-        id: `enemy-${i}`,
-        name: template.name,
-        stats: {
-          hp: template.stats.hp,
-          attack: template.stats.attack,
-          defense: template.stats.defense,
-          speed: template.stats.speed,
-          crit: template.stats.crit,
-          rank: template.stats.rank,
-        },
-        currentHP: template.stats.hp,
-        team: "enemy",
-        position: i,
-        isDead: false,
-      };
-      return bc;
-    });
+    const enemyCreatures: BattleCreature[] = enemyTemplates.map((template, i) => ({
+      id: `enemy-${i}`,
+      name: template.name,
+      stats: { hp: template.stats.hp, attack: template.stats.attack, defense: template.stats.defense, speed: template.stats.speed, crit: template.stats.crit, rank: template.stats.rank },
+      currentHP: template.stats.hp,
+      team: "enemy",
+      position: i,
+      isDead: false,
+    }));
 
-    const allCreatures = [...playerCreatures, ...enemyCreatures];
-    allCreatures.sort((a, b) => b.stats.speed - a.stats.speed);
+    const allCreatures = [...playerCreatures, ...enemyCreatures].sort((a, b) => b.stats.speed - a.stats.speed);
 
     setPlayerTeam(playerCreatures);
     setEnemyTeam(enemyCreatures);
@@ -156,31 +127,28 @@ function BattlePageContent() {
     setTurnCount(0);
     setPhase("battle");
     setWinner(null);
-
     setLog([
       { text: `⚔️ 5v5 Battle commence!`, type: "info" },
-      { text: `—`.repeat(40), type: "info" },
-      { text: `Tour order (trié par vitesse):`, type: "info" },
-      ...allCreatures.map((el, i) => ({
-        text: `  ${i + 1}. ${el.name} (${el.team === "player" ? "Joueur" : "Ennemi"}) - ${el.stats.speed} VIT`,
-        type: "info" as const,
-      })),
-      { text: `—`.repeat(40), type: "info" },
+      { text: `Tour order: ${allCreatures.map((el, i) => `${i + 1}. ${el.name} (${el.stats.speed} VIT) ${el.team === "player" ? "J" : "E"}`).join(", ")}`, type: "info" },
       { text: `🎯 Tour 1: ${allCreatures[0]?.name} (${allCreatures[0]?.team === "player" ? "Joueur" : "Ennemi"})`, type: "info" },
     ]);
   };
 
   const getTurnOrder = (): BattleCreature[] => {
     if (!playerTeam || !enemyTeam) return [];
-    return [...playerTeam, ...enemyTeam]
-      .filter(c => !c.isDead)
-      .sort((a, b) => b.stats.speed - a.stats.speed);
+    return [...playerTeam, ...enemyTeam].filter(c => !c.isDead).sort((a, b) => b.stats.speed - a.stats.speed);
   };
 
   const getCurrentCreature = (): BattleCreature | null => {
     const order = getTurnOrder();
     if (order.length === 0 || currentTurnIndex >= order.length) return null;
     return order[currentTurnIndex];
+  };
+
+  const calculateDamage = (attacker: BattleCreature, defender: BattleCreature): { damage: number; isCrit: boolean } => {
+    const isCrit = Math.random() * 100 < attacker.stats.crit;
+    const damage = Math.max(1, Math.floor(attacker.stats.attack * (isCrit ? 2 : 1) - defender.stats.defense * 0.5));
+    return { damage, isCrit };
   };
 
   const performAttack = (targetIndex: number) => {
@@ -196,13 +164,7 @@ function BattlePageContent() {
       return;
     }
 
-    const critRoll = Math.random() * 100;
-    const isCrit = critRoll < attacker.stats.crit;
-    const critMultiplier = isCrit ? 2 : 1;
-
-    const baseDamage = attacker.stats.attack * critMultiplier;
-    const damage = Math.max(1, Math.floor(baseDamage - target.stats.defense * 0.5));
-
+    const { damage, isCrit } = calculateDamage(attacker, target);
     target.currentHP = Math.max(0, target.currentHP - damage);
     if (target.currentHP === 0) {
       target.isDead = true;
@@ -216,75 +178,52 @@ function BattlePageContent() {
 
     setLog(prev => [
       ...prev,
-      { text: `💥 ${attacker.name} (${attacker.team}) attaque ${target.name} (${target.team})!`, type: "info" },
-      { text: `   ${isCrit ? "💥 CRIT!" : ""} -${damage} HP (${target.currentHP}/${target.stats.hp})`, type: isCrit ? "crit" : "info" },
+      { text: `💥 ${attacker.name} (${attacker.team === "player" ? "J" : "E"}) attaque ${target.name} (${target.team === "player" ? "J" : "E"})!`, type: "info" },
+      { text: `${isCrit ? "💥 CRIT! " : ""}-${damage} HP (${target.currentHP}/${target.stats.hp})`, type: isCrit ? "crit" : "info" },
     ]);
 
+    // Check win/loss
     const playersAlive = playerTeam.some(c => !c.isDead);
     const enemiesAlive = enemyTeam.some(c => !c.isDead);
 
     if (!playersAlive) {
       setWinner("enemy");
-      setLog(prev => [
-        ...prev,
-        { text: `💀 Défaite! Toutes tes créatures sont tombées.`, type: "defeat" },
-      ]);
       setPhase("complete");
+      setLog(prev => [...prev, { text: `💀 Défaite!`, type: "defeat" }]);
     } else if (!enemiesAlive) {
       setWinner("player");
-      setLog(prev => [
-        ...prev,
-        { text: `🏆 Victoire! Tu élimines toutes les créatures ennemies!`, type: "victory" },
-      ]);
       setPhase("complete");
-    } else {
-      // Reset processing before advancing turn (enemy AI needs to execute)
-      setIsProcessing(false);
-
-      // Small delay then advance
-      setTimeout(() => {
-        advanceTurn();
-      }, 300);
-      return; // Don't reset isProcessing again below
+      setLog(prev => [...prev, { text: `🏆 Victoire!`, type: "victory" }]);
     }
 
     setIsProcessing(false);
+
+    // DO NOT call advanceTurn here - it causes recursion issues
   };
 
   const advanceTurn = () => {
     const order = getTurnOrder();
-
-    if (order.length === 0) {
-      return;
-    }
+    if (order.length === 0) return;
 
     let nextIndex = (currentTurnIndex + 1) % order.length;
-    const maxAttempts = order.length + 1;
     let attempts = 0;
 
-    while (attempts < maxAttempts) {
+    // Skip dead and cycle
+    while (attempts < order.length + 1) {
       if (nextIndex < order.length && !order[nextIndex].isDead) {
         setCurrentTurnIndex(nextIndex);
         const nextCreature = order[nextIndex];
         const newTurnCount = turnCount + 1;
         setTurnCount(newTurnCount);
 
-        const logUpdate = {
-          text: `—`.repeat(40),
-          type: "info" as const,
-        };
-        const turnLog = {
-          text: `🎯 Tour ${newTurnCount}: ${nextCreature.name} (${nextCreature.team === "player" ? "Joueur" : "Ennemi"})`,
-          type: "info" as const,
-        };
+        setLog(prev => [
+          ...prev,
+          { text: `🎯 Tour ${newTurnCount}: ${nextCreature.name} (${nextCreature.team === "player" ? "Joueur" : "Ennemi"})`, type: "info" },
+        ]);
 
-        // First update state with turn info
-        setLog(prev => [...prev, logUpdate, turnLog]);
-
-        // If enemy turn, execute immediately
-        if (nextCreature && nextCreature.team === "enemy" && phase === "battle") {
-          // Small delay for UI to render
-          setTimeout(() => executeEnemyAI(), 500);
+        // If enemy turn, IMMEDIATELY execute attack
+        if (nextCreature.team === "enemy") {
+          setTimeout(() => executeEnemyAttack(nextCreature), 500);
         }
 
         return;
@@ -293,6 +232,7 @@ function BattlePageContent() {
       attempts++;
     }
 
+    // Fallback
     if (order.length > 0) {
       setCurrentTurnIndex(0);
       const nextCreature = order[0];
@@ -301,51 +241,50 @@ function BattlePageContent() {
 
       setLog(prev => [
         ...prev,
-        { text: `—`.repeat(40), type: "info" },
-        { text: `🎯 Tour ${newTurnCount}: ${nextCreature?.name} (${nextCreature?.team === "player" ? "Joueur" : "Ennemi"}) [Reset]`, type: "info" },
+        { text: `🎯 Tour ${newTurnCount}: ${nextCreature?.name} (${nextCreature?.team === "player" ? "Joueur" : "Ennemi"}) [Rest]`, type: "info" },
       ]);
+
+      if (nextCreature?.team === "enemy") {
+        setTimeout(() => executeEnemyAttack(nextCreature), 500);
+      }
     }
   };
 
-  const executeEnemyAI = () => {
-    // Force check fresh state from getTurnOrder
-    const order = getTurnOrder();
-    if (order.length === 0 || currentTurnIndex >= order.length) return;
-
-    const enemy = order[currentTurnIndex];
-
-    if (!enemy || enemy.team !== "enemy" || !playerTeam || isProcessing) {
-      return;
-    }
+  const executeEnemyAttack = (enemy: BattleCreature) => {
+    if (!playerTeam || isProcessing || winner) return;
 
     const alivePlayers = playerTeam.filter(c => !c.isDead);
-    if (alivePlayers.length === 0) {
-      return;
+    if (alivePlayers.length === 0) return;
+
+    const target = alivePlayers.reduce((prev, curr) => (curr.currentHP < prev.currentHP ? curr : prev));
+
+    const { damage, isCrit } = calculateDamage(enemy, target);
+    const beforeHP = target.currentHP;
+    target.currentHP = Math.max(0, target.currentHP - damage);
+    if (target.currentHP === 0) {
+      target.isDead = true;
     }
 
-    const target = alivePlayers.reduce((prev, curr) =>
-      curr.currentHP < prev.currentHP ? curr : prev
-    );
-
+    setPlayerTeam([...playerTeam]);
     setLog(prev => [
       ...prev,
       { text: `🤖 ${enemy.name} (Ennemi) attaque ${target.name}!`, type: "info" },
+      { text: `${isCrit ? "💥 CRIT! " : ""}-${damage} HP (${target.currentHP}/${target.stats.hp})`, type: isCrit ? "crit" : "info" },
     ]);
 
-    // Execute attack directly with fresh target index
-    setTimeout(() => {
-      const freshPlayerTeam = playerTeam.filter(c => !c.isDead);
-      if (freshPlayerTeam.length === 0) return;
+    // Check win
+    const playersAlive = playerTeam.some(c => !c.isDead);
+    const enemiesAlive = enemyTeam?.some(c => !c.isDead) ?? true;
 
-      const freshTarget = freshPlayerTeam.reduce((prev, curr) =>
-        curr.currentHP < prev.currentHP ? curr : prev
-      );
-
-      const targetIndex = playerTeam.indexOf(freshTarget);
-      if (targetIndex !== -1 && !isProcessing) {
-        performAttack(targetIndex);
-      }
-    }, 500);
+    if (!playersAlive) {
+      setWinner("enemy");
+      setPhase("complete");
+      setLog(prev => [...prev, { text: `💀 Défaite!`, type: "defeat" }]);
+    } else if (!enemiesAlive) {
+      setWinner("player");
+      setPhase("complete");
+      setLog(prev => [...prev, { text: `🏆 Victoire!`, type: "victory" }]);
+    }
   };
 
   const selectedCreatures = collection.filter(c => selectedIds.includes(c.id));
@@ -358,9 +297,7 @@ function BattlePageContent() {
         <div className="max-w-6xl mx-auto">
           <div className="mb-6">
             <Link href="/" className="inline-block px-4 py-2 mb-4 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">← Retour</Link>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              🕸️ Battle Arena
-            </h1>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">🕸️ Battle Arena</h1>
             <p className="text-gray-600 dark:text-gray-300 mt-2">Sélectionne un mode de combat</p>
           </div>
           <div className="grid md:grid-cols-2 gap-6">
@@ -371,18 +308,10 @@ function BattlePageContent() {
                 <p className="text-gray-600 dark:text-gray-300 mb-4">Combats 5v5 contre Rank E (Niveau 1)</p>
                 <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
                   <li>• Sélectionne 5 créatures de ta collection</li>
-                  <li>• Simple battle engine</li>
+                  <li>• Battle engine synchrone</li>
                 </ul>
               </div>
             </Link>
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border-2 border-gray-200 dark:border-gray-700 opacity-50">
-              <div className="text-6xl mb-4">⚔️</div>
-              <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">PvP Matchmaking</h2>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">Combat contre d'autres joueurs (bientôt)</p>
-              <div className="mt-4 px-4 py-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg text-center">
-                <p className="text-sm text-yellow-800 dark:text-yellow-200 font-bold">🚧 Bientôt disponible</p>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -395,94 +324,38 @@ function BattlePageContent() {
         <div className="max-w-6xl mx-auto">
           <div className="mb-6">
             <Link href="/battle" className="inline-block px-4 py-2 mb-4 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">← Retour</Link>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              🎮 Entraînement
-            </h1>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">🎮 Entraînement</h1>
             <p className="text-gray-600 dark:text-gray-300 mt-2">Sélectionne 5 créatures de ta collection • Affronte 5 créatures Rank E (Niveau 1)</p>
           </div>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-2 border-blue-400 hover:shadow-2xl transition-all">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold">🔵 Ton Équipe ({selectedIds.length}/5)</h2>
-                {selectedIds.length > 0 && (
-                  <button onClick={handleClearSelection} className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg transition-colors">Effacer</button>
-                )}
+                {selectedIds.length > 0 && <button onClick={handleClearSelection} className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg transition-colors">Effacer</button>}
               </div>
-              {selectedCreatures.length > 0 && (
-                <div className="mb-4 grid grid-cols-5 gap-2">
-                  {selectedCreatures.map(creature => (
-                    <div key={creature.id} className="bg-blue-50 dark:bg-blue-900 rounded-lg p-2 text-center border-2 border-blue-300 dark:border-blue-700">
-                      <div className="text-2xl mb-1">🪲</div>
-                      <p className="text-xs font-bold truncate">{creature.name}</p>
-                      <p className="text-xs text-gray-500">N{creature.customStats?.level || 1}</p>
-                    </div>
-                  ))}
+              {selectedCreatures.length > 0 && <div className="mb-4 grid grid-cols-5 gap-2">{selectedCreatures.map(creature => (
+                <div key={creature.id} className="bg-blue-50 dark:bg-blue-900 rounded-lg p-2 text-center border-2 border-blue-300 dark:border-blue-700">
+                  <div className="text-2xl mb-1">🪲</div>
+                  <p className="text-xs font-bold truncate">{creature.name}</p>
+                  <p className="text-xs text-gray-500">N{creature.customStats?.level || 1}</p>
                 </div>
-              )}
+              ))}</div>}
               <div className="max-h-96 overflow-y-auto space-y-2">
-                {collection.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">Aucune créature dans ta collection. Commence par faire du hunting!</p>
-                ) : (
-                  collection.map(creature => (
-                    <button
-                      key={creature.id}
-                      onClick={() => handleToggleCreature(creature.id)}
-                      disabled={!selectedIds.includes(creature.id) && selectedIds.length >= 5}
-                      className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
-                        selectedIds.includes(creature.id) ? "bg-blue-100 dark:bg-blue-900 border-blue-500 dark:border-blue-500" : "bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-700"
-                      } ${!selectedIds.includes(creature.id) && selectedIds.length >= 5 ? "opacity-40 cursor-not-allowed" : ""}`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">🪲</span>
-                          <div>
-                            <p className="font-bold">{creature.name}</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              R{creature.rank || "E"} • N{creature.customStats?.level || 1} • HP: {creature.customStats?.hp || creature.baseStats.hp}
-                            </p>
-                            <div className="flex gap-1">
-                              {creature.traits?.slice(0, 3).map((trait, i) => (
-                                <span key={i} className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 text-xs rounded-full">{trait}</span>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">{selectedIds.includes(creature.id) && <span className="text-2xl">✅</span>}</div>
-                      </div>
-                    </button>
-                  ))
-                )}
+                {collection.length === 0 ? <p className="text-center text-gray-500 py-8">Aucune créature dans ta collection.</p> : collection.map(creature => (
+                  <button key={creature.id} onClick={() => handleToggleCreature(creature.id)} disabled={!selectedIds.includes(creature.id) && selectedIds.length >= 5} className={`w-full text-left p-3 rounded-lg border-2 transition-all ${selectedIds.includes(creature.id) ? "bg-blue-100 dark:bg-blue-900 border-blue-500" : "bg-gray-50 dark:bg-gray-700 border-gray-200 hover:border-blue-300"} ${!selectedIds.includes(creature.id) && selectedIds.length >= 5 ? "opacity-40 cursor-not-allowed" : ""}`}>
+                    <div className="flex justify-between items-center"><div className="flex items-center gap-3"><span className="text-2xl">🪲</span><div><p className="font-bold">{creature.name}</p><p className="text-sm text-gray-600 dark:text-gray-300">R{creature.rank || "E"} • N{creature.customStats?.level || 1} • HP: {creature.customStats?.hp || creature.baseStats.hp}</p></div></div><div className="text-right">{selectedIds.includes(creature.id) && <span className="text-2xl">✅</span>}</div></div>
+                  </button>
+                ))}
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-2 border-red-400 hover:shadow-2xl transition-all">
               <h2 className="text-2xl font-bold mb-4">⚔️ Ennemis (5 × Rank E, Niveau 1)</h2>
               <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border-2 border-gray-300 dark:border-gray-600">
-                <div className="mt-4 space-y-2">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="bg-red-50 dark:bg-red-900 rounded-lg p-3 border-2 border-red-300 dark:border-red-700 opacity-50">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">🪲</span>
-                          <div>
-                            <p className="font-bold">Créature #{i}</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">Rank E • Niveau 1</p>
-                          </div>
-                        </div>
-                        <span className="text-xl">🎯</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <div className="mt-4 space-y-2">{[1, 2, 3, 4, 5].map((i) => <div key={i} className="bg-red-50 dark:bg-red-900 rounded-lg p-3 border-2 border-red-300 dark:border-red-700 opacity-50">
+                  <div className="flex justify-between items-center"><div className="flex items-center gap-3"><span className="text-2xl">🪲</span><div><p className="font-bold">Créature #{i}</p><p className="text-sm text-gray-600 dark:text-gray-300">Rank E • Niveau 1</p></div></div><span className="text-xl">🎯</span></div>
+                </div>)}</div>
               </div>
-              <button
-                disabled={selectedIds.length !== 5}
-                className={`w-full mt-6 p-8 text-white text-xl font-bold rounded-xl shadow-lg transition-all ${
-                  selectedIds.length === 5 ? "bg-gradient-to-r from-green-500 to-green-600 hover:shadow-xl transform hover:scale-105" : "from-gray-400 to-gray-500 cursor-not-allowed opacity-50"
-                }`}
-                onClick={startBattle}
-              >
-                🗡️ DÉMARRER LE COMBAT
-              </button>
+              <button disabled={selectedIds.length !== 5} className={`w-full mt-6 p-8 text-white text-xl font-bold rounded-xl shadow-lg transition-all ${selectedIds.length === 5 ? "bg-gradient-to-r from-green-500 to-green-600 hover:shadow-xl transform hover:scale-105" : "from-gray-400 to-gray-500 cursor-not-allowed opacity-50"}`} onClick={startBattle}>🗡️ DÉMARRER</button>
             </div>
           </div>
         </div>
@@ -507,18 +380,12 @@ function BattlePageContent() {
             </div>
           )}
 
-          {/* Turn Indicator */}
           {phase === "battle" && currentCreature && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 mb-4 border-2 border-gray-300 dark:border-gray-600">
               <div className="text-center">
                 <p className="text-2xl font-bold mb-2">🎯 Tour {turnCount}</p>
-                <p className="text-lg font-bold">
-                  Tour de: <span className={`${currentCreature.team === "player" ? "text-blue-700 dark:text-blue-300" : "text-red-700 dark:text-red-300"}`}>{currentCreature.name}</span>
-                  {currentCreature.team === "player" ? " (Joueur)" : " (Ennemi)"}
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
-                  {playerTurn ? "→ Sélectionne un ennemi pour attaquer" : "...calculating enemy action"}
-                </p>
+                <p className="text-lg font-bold">Tour de: <span className={currentCreature.team === "player" ? "text-blue-700 dark:text-blue-300" : "text-red-700 dark:text-red-300"}>{currentCreature.name}</span> ({currentCreature.team === "player" ? "Joueur" : "Ennemi"})</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">{playerTurn ? "→ Sélectionne un ennemi" : "...attaque en cours"}</p>
               </div>
             </div>
           )}
@@ -543,12 +410,7 @@ function BattlePageContent() {
               <h2 className="text-xl font-bold mb-3">⚔️ Ennemis</h2>
               <div className="space-y-2">
                 {enemyTeam?.map((creature, i) => (
-                  <button
-                    key={creature.id}
-                    disabled={!playerTurn || phase === "complete" || creature.isDead}
-                    onClick={() => performAttack(i)}
-                    className={`w-full p-3 rounded-lg text-left transition-all ${!playerTurn || phase === "complete" || creature.isDead ? "bg-gray-100 dark:bg-gray-900 opacity-50 cursor-not-allowed" : "bg-red-50 dark:bg-red-900 hover:border-red-500 border-2 border-red-300 dark:border-red-700 cursor-pointer"}`}
-                  >
+                  <button key={creature.id} disabled={!playerTurn || phase === "complete" || creature.isDead} onClick={() => performAttack(i)} className={`w-full p-3 rounded-lg text-left transition-all ${!playerTurn || phase === "complete" || creature.isDead ? "bg-gray-100 dark:bg-gray-900 opacity-50 cursor-not-allowed" : "bg-red-50 dark:bg-red-900 hover:border-red-500 border-2 border-red-300 dark:border-red-700 cursor-pointer"}`}>
                     <div className="flex justify-between items-center">
                       <span className="font-bold">🪲 {creature.name}</span>
                       <span className="text-sm text-gray-600 dark:text-gray-300">HP: {creature.currentHP}/{creature.stats.hp}</span>
@@ -561,7 +423,7 @@ function BattlePageContent() {
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 border-2 border-gray-300 dark:border-gray-600">
-            <h2 className="text-xl font-bold mb-3">📜 Journal de Combat</h2>
+            <h2 className="text-xl font-bold mb-3">📜 Journal</h2>
             <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 max-h-96 overflow-y-auto">
               {log.map((entry, i) => (
                 <p key={i} className={`mb-1 ${entry.type === "crit" ? "text-yellow-600 dark:text-yellow-400 font-bold" : entry.type === "victory" ? "text-green-600 dark:text-green-400 font-bold" : entry.type === "defeat" ? "text-red-600 dark:text-red-400 font-bold" : "text-gray-600 dark:text-gray-300"}`}>
@@ -579,9 +441,5 @@ function BattlePageContent() {
 }
 
 export default function BattlePage() {
-  return (
-    <Suspense fallback={<div>Chargement...</div>}>
-      <BattlePageContent />
-    </Suspense>
-  );
+  return <Suspense fallback={<div>Chargement...</div>}><BattlePageContent /></Suspense>;
 }
