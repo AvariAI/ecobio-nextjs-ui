@@ -121,7 +121,13 @@ function BattlePageContent() {
       isDead: false,
     }));
 
-    const ordered = [...pCreatures, ...eCreatures].sort((a, b) => b.stats.speed - a.stats.speed);
+    const sorted = [...pCreatures, ...eCreatures].sort((a, b) => b.stats.speed - a.stats.speed);
+    // FORCED: Player creatures first in turn order (regardless of speed)
+    const ordered = [...pCreatures, ...eCreatures].sort((a, b) => {
+      if (a.team === "player" && b.team === "enemy") return -1;
+      if (a.team === "enemy" && b.team === "player") return 1;
+      return b.stats.speed - a.stats.speed;
+    });
 
     setPlayerTeam(pCreatures);
     setEnemyTeam(eCreatures);
