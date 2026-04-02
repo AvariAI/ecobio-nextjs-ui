@@ -124,9 +124,18 @@ function BattlePageContent() {
     const sorted = [...pCreatures, ...eCreatures].sort((a, b) => b.stats.speed - a.stats.speed);
     // FORCED: Player creatures first in turn order (regardless of speed)
     const ordered = [...pCreatures, ...eCreatures].sort((a, b) => {
-      if (a.team === "player" && b.team === "enemy") return -1;
-      if (a.team === "enemy" && b.team === "player") return 1;
-      return b.stats.speed - a.stats.speed;
+      console.log(`Comparing: ${a.name} (${a.team}) vs ${b.name} (${b.team})`);
+      if (a.team === "player" && b.team === "enemy") {
+        console.log(`  -> Player +1 (force player-first)`);
+        return -1;
+      }
+      if (a.team === "enemy" && b.team === "player") {
+        console.log(`  -> Enemy -1 (force player-first)`);
+        return 1;
+      }
+      const speedDiff = b.stats.speed - a.stats.speed;
+      console.log(`  -> Same team: speed ${b.stats.speed} - ${a.stats.speed} = ${speedDiff}`);
+      return speedDiff;
     });
 
     setPlayerTeam(pCreatures);
@@ -136,10 +145,14 @@ function BattlePageContent() {
     setTurnCount(0);
     setPhase("battle");
     setWinner(null);
+
+    // DEBUG: Log turn order to verify sorting
+    console.log("DEBUG: Initial turn order:", ordered.map((c, i) => `${i}: ${c.name} (${c.team})`).join(", "));
+
     setLog([
       { text: `⚔️ 5v5 Battle commence!`, type: "info" },
-      { text: `Ordre tour (vitesse): ${ordered.map((e, i) => `${i + 1}.${e.name} (${e.stats.speed})`).join()}`, type: "info" },
-      { text: `🎯 Tour 1: ${ordered[0]?.name} (${ordered[0]?.team})`, type: "info" },
+      { text: `Ordre tour (vitesse/game): ${ordered.map((e, i) => `${i + 1}.${e.name.split(" ")[0]} (${e.team === "player" ? "P" : "E"})`).join(", ")}`, type: "info" },
+      { text: `🎯 Tour 1: ${ordered[0]?.name.split(" ")[0]} (${ordered[0]?.team})`, type: "info" },
     ]);
   };
 
