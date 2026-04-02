@@ -228,7 +228,7 @@ export default function TrainingPage() {
                             </div>
                             <div className="bg-gray-200 dark:bg-gray-600 rounded p-1">
                               <p className="text-gray-600 dark:text-gray-300">CRIT</p>
-                              <p className="font-bold text-gray-900 dark:text-white">{stats.crit}%</p>
+                              <p className="font-bold text-gray-900 dark:text-white">{stats.crit}</p>
                             </div>
                           </div>
                         </div>
