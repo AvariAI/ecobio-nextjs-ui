@@ -447,7 +447,7 @@ function BattlePageContent() {
               ))}
             </div>
             {phase === "battle" && (
-              <button onClick={advanceTurn} disabled={phase === "complete"} className="w-full p-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg">
+              <button onClick={advanceTurn} disabled={phase === "complete" as any} className="w-full p-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg">
                 ➡️ SUIVANT (Debug: avance si bloqué)
               </button>
             )}
