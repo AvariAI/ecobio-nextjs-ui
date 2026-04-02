@@ -1877,24 +1877,14 @@ export default function BattlePage() {
 
         {phase === "setup" && battleMode === "easy" && teamSize > 1 && (
           <div className="grid md:grid-cols-2 gap-8 mb-8">
-            {/* Easy Mode: Random player team - no selector needed */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-2 border-blue-400 hover:shadow-2xl transition-all">
-              <h2 className="text-2xl font-bold mb-4">🔵 Équipe Joueur ({teamSize} créatures)</h2>
-              <div className="bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900 dark:to-cyan-900 rounded-xl p-6 min-h-64 flex flex-col items-center justify-center">
-                <div className="text-6xl mb-4">🎲</div>
-                <p className="text-lg text-blue-700 dark:text-blue-300 font-semibold text-center">
-                  Joueurs aléatoires
-                </p>
-                <p className="text-sm text-blue-600 dark:text-blue-400 text-center mt-2">
-                  {teamSize} créatures générées automatiquement
-                </p>
-                <div className="mt-4 text-xs text-blue-500 dark:text-blue-300">
-                  <p>• Rangs E-S+</p>
-                  <p>• Niveaux aléatoires</p>
-                  <p>• Traits variés</p>
-                </div>
-              </div>
-            </div>
+            <MultiCreatureCollectionSelector
+              label={`🔵 Équipe Joueur (${teamSize} créatures)`}
+              collection={collection}
+              teamIds={playerTeamIds}
+              onTeamSelect={handlePlayerTeamSelect}
+              teamSize={teamSize}
+              accent="blue"
+            />
 
             {/* Easy Mode: Random enemies - no selector needed */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-2 border-red-400 hover:shadow-2xl transition-all">
@@ -1922,12 +1912,15 @@ export default function BattlePage() {
             <button
               onClick={startBattle}
               disabled={
-                // Easy mode: always enabled (both teams auto-generated)
-                // Collection mode 1v1: need both player and enemy selected
+                // Easy mode 1v1: need player creature selected from collection
+                (teamSize === 1 && battleMode === "easy" && !selectedPlayerId) ||
+                // Collection mode 1v1: need both player and enemy selected (default mode)
                 (teamSize === 1 && battleMode !== "easy" && battleMode !== "test" && (!selectedPlayerId || !selectedEnemyId)) ||
                 // Test mode multi-creature: need valid configs for both teams
                 (teamSize > 1 && battleMode === "test" && (!validateTestSlotConfigs(playerSlotConfigs, teamSize) || !validateTestSlotConfigs(enemySlotConfigs, teamSize))) ||
-                // Collection mode multi-creature: need valid teams for both sides
+                // Easy mode multi-creature: need valid player team selection from collection
+                (teamSize > 1 && battleMode === "easy" && !validateTeamSize(playerTeamIds, teamSize)) ||
+                // Collection mode multi-creature: need valid teams for both sides (default mode)
                 (teamSize > 1 && battleMode !== "easy" && battleMode !== "test" && (!validateTeamSize(playerTeamIds, teamSize) || !validateTeamSize(enemyTeamIds, teamSize)))
               }
               className="px-12 py-4 bg-gradient-to-r from-red-600 to-purple-600 text-white text-2xl font-bold rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
