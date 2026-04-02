@@ -38,8 +38,10 @@ export default function EntrainementSimplePage() {
   const [enemyTeam, setEnemyTeam] = useState<BattleTeam | null>(null);
   const [isTraining, setIsTraining] = useState(false);
 
-  // Load collection on mount
+  // Load collection on mount (client-side only)
   useEffect(() => {
+    if (typeof window === "undefined") return; // Skip SSR
+
     const saved = localStorage.getItem("ecobio-collection");
     if (saved) {
       try {
