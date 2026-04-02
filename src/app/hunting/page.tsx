@@ -891,6 +891,24 @@ export default function HuntingPage() {
                     </div>
                   )}
                 </div>
+
+                <div className="space-y-2 mb-3">
+                  <span className="text-sm text-purple-200">Passif:</span>
+                  {huntedCreature.geneticType && (() => {
+                    const gt = getGeneticType(huntedCreature.geneticType);
+                    if (gt && gt.passive) {
+                      return (
+                        <div className="bg-cyan-700 bg-opacity-50 rounded-lg p-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-purple-100">✨ {gt.passive.name}</span>
+                          </div>
+                          <p className="text-xs text-gray-200 mt-1">{gt.passive.description}</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
                 {SHOW_TRAITS && huntedCreature.traits && huntedCreature.traits.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
                     <span className="text-sm text-purple-200">✨ Traits:</span>
@@ -1033,6 +1051,24 @@ export default function HuntingPage() {
                       <p className="text-xs text-blue-200 mt-1">{selectedCreature.personalitySkill.description}</p>
                     </div>
                   )}
+                </div>
+
+                <div className="space-y-2 mb-3">
+                  <span className="text-sm text-purple-200">Passif:</span>
+                  {selectedCreature.geneticType && (() => {
+                    const gt = getGeneticType(selectedCreature.geneticType);
+                    if (gt && gt.passive) {
+                      return (
+                        <div className="bg-cyan-700 bg-opacity-50 rounded-lg p-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-purple-100">✨ {gt.passive.name}</span>
+                          </div>
+                          <p className="text-xs text-gray-200 mt-1">{gt.passive.description}</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
 
                 {SHOW_TRAITS && selectedCreature.traits && selectedCreature.traits.length > 0 && (
