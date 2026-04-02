@@ -13,15 +13,17 @@ export default function ArenaPage() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border-2 border-blue-400">
-            <h2 className="text-2xl font-bold mb-4">Entraînement</h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              Combats contre des créatures Rank E pour gagner de l'XP.
-            </p>
-            <button className="w-full p-4 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg">
-              Démarrer
-            </button>
-          </div>
+          <Link href="/arena/training">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border-2 border-blue-400 hover:shadow-2xl transition-all hover:scale-105">
+              <h2 className="text-2xl font-bold mb-4">Entraînement</h2>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
+                Combats contre des créatures Rank E pour gagner de l'XP.
+              </p>
+              <div className="p-4 bg-blue-500 hover:bg-blue-600 text-white text-center font-bold rounded-lg">
+                Démarrer
+              </div>
+            </div>
+          </Link>
 
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border-2 border-green-400 opacity-50">
             <h2 className="text-2xl font-bold mb-4">PvP</h2>
