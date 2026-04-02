@@ -33,7 +33,6 @@ interface HuntedCreature {
 export default function EntrainementSimplePage() {
   const [collection, setCollection] = useState<HuntedCreature[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [enemyTeam, setEnemyTeam] = useState<BattleTeam | null>(null);
   const [isTraining, setIsTraining] = useState(false);
 
   // Load collection on mount (client-side only)
@@ -49,46 +48,6 @@ export default function EntrainementSimplePage() {
         console.error("Failed to load collection", e);
       }
     }
-  }, []);
-
-  // Generate weak enemy team (Rank E, Level 1)
-  useEffect(() => {
-    const enemyTemplates = [];
-    for (let i = 0; i < 5; i++) {
-      enemyTemplates.push(spawnEasyModeEnemy());
-    }
-
-    setEnemyTeam({
-      teamId: "enemy",
-      creatures: enemyTemplates.map((template, i) => ({
-        creature: template.creatureTemplate,
-        stats: {
-          ...template.stats,
-          rank: template.stats.rank || "E",
-          level: 1,
-        },
-        currentHP: template.stats.hp,
-        skillCooldowns: {},
-        buffs: {},
-        name: template.name,
-        traits: template.traits || [],
-        statusEffects: [],
-        position: i,
-        baseStats: template.stats,
-        statModifiers: {
-          hpBonus: 0,
-          attackBonus: 0,
-          defenseBonus: 0,
-          speedBonus: 0,
-          critBonus: 0,
-        },
-        // Required fields for BattleCreature
-        attackCounter: 0,
-        damageDealt: 0,
-        kills: 0,
-        id: `enemy-${i}-${Date.now()}`,
-      })),
-    });
   }, []);
 
   const handleToggleCreature = (id: string) => {
@@ -112,24 +71,36 @@ export default function EntrainementSimplePage() {
   const canStart = selectedIds.length === 5;
 
   const startTraining = () => {
-    if (!canStart || isTraining || !enemyTeam) return;
+    if (!canStart || isTraining) return;
 
     setIsTraining(true);
 
     // Get selected creatures
     const selectedCreatures = collection.filter(c => selectedIds.includes(c.id));
 
+    // Generate enemy team on-the-fly (Rank E, Level 1)
+    const enemyTemplates = [];
+    for (let i = 0; i < 5; i++) {
+      enemyTemplates.push(spawnEasyModeEnemy());
+    }
+
+    const enemyCreatures = enemyTemplates.map((template, i) => ({
+      creatureId: template.creatureTemplate.id,
+      stats: {
+        ...template.stats,
+        rank: template.stats.rank || "E",
+        level: 1,
+      },
+      name: template.name,
+      traits: template.traits || [],
+    }));
+
     // Store data in sessionStorage for battle page
     const battleData = {
       mode: "training",
       playerIds: selectedIds,
       playerCreatures: selectedCreatures,
-      enemyCreatures: enemyTeam.creatures.map(c => ({
-        creatureId: c.creature.id,
-        stats: c.stats,
-        name: c.name,
-        traits: c.traits,
-      })),
+      enemyCreatures,
     };
 
     // Store in sessionStorage (cleans up after battle)
@@ -247,17 +218,20 @@ export default function EntrainementSimplePage() {
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-2 border-red-400 hover:shadow-2xl transition-all">
             <h2 className="text-2xl font-bold mb-4">⚔️ Ennemis (5 × Rank E, Niveau 1)</h2>
 
-            {enemyTeam ? (
-              <div className="space-y-2">
-                {enemyTeam.creatures.map((creature, i) => (
-                  <div key={i} className="bg-red-50 dark:bg-red-900 rounded-lg p-3 border-2 border-red-300 dark:border-red-700">
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border-2 border-gray-300 dark:border-gray-600">
+              <p className="text-center text-gray-500">
+                🎲 5 créatures Rank E (Niveau 1) seront générées aléatoirement au démarrage.
+              </p>
+              <div className="mt-4 space-y-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="bg-red-50 dark:bg-red-900 rounded-lg p-3 border-2 border-red-300 dark:border-red-700 opacity-50">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">🪲</span>
                         <div>
-                          <p className="font-bold">{creature.name}</p>
+                          <p className="font-bold">Créature #{i}</p>
                           <p className="text-sm text-gray-600 dark:text-gray-300">
-                            R{creature.stats.rank} • HP: {creature.stats.hp} • ATK: {creature.stats.attack}
+                            Rank E • Niveau 1
                           </p>
                         </div>
                       </div>
@@ -266,9 +240,7 @@ export default function EntrainementSimplePage() {
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-center text-gray-500 py-8">Chargement...</p>
-            )}
+            </div>
 
             {/* XP Info */}
             <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900 rounded-lg border-2 border-yellow-300 dark:border-yellow-700">
