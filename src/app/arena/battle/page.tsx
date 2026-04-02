@@ -326,218 +326,82 @@ export default function BattlePage() {
             <span className="text-red-400 font-bold text-xs">ENNEMIS ({enemyAlive}/5)</span>
           </div>
 
-          {/* Battle grid - V formation with depth offset */}
-          <div className="grid grid-cols-5 gap-x-2 mb-8 items-center">
-            {/* Front row - positions 1 & 2 - NO OFFSET */}
-            <div className="col-span-2 flex justify-start gap-2 pl-4">
-              {battleState.playerTeam.find(c => c.position === 1) && (
+          {/* Battle grid - simple vertical formation */}
+          <div className="grid grid-cols-5 gap-3 mb-6">
+            {/* Player team - left, vertical */}
+            <div className="col-span-2 flex flex-col gap-2">
+              {battleState.playerTeam.map((creature) => (
                 <button
-                  onClick={() => !battleState.winner && setSelectedCreature(battleState.playerTeam.find(c => c.position === 1)!)}
-                  className="relative bg-gradient-to-br from-blue-900/90 to-blue-950 rounded-xl p-2 cursor-pointer transition-all hover:scale-105 shadow-lg z-10"
+                  key={creature.id}
+                  onClick={() => !battleState.winner && setSelectedCreature(creature)}
+                  className={`relative bg-gradient-to-br from-blue-900/90 to-blue-950 rounded-xl p-2 cursor-pointer transition-all hover:scale-105 shadow-lg ${
+                    creature.currentHP <= 0 ? "opacity-40" : ""
+                  }`}
                 >
-                  {battleState.playerTeam.find(c => c.position === 1)!.currentHP <= 0 && (
+                  {creature.currentHP <= 0 && (
                     <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
                       <span className="text-xl">💀</span>
                     </div>
                   )}
-                  {damageNumbers.find(dn => dn.id === battleState.playerTeam.find(c => c.position === 1)!.id) && (
+                  {damageNumbers.find(dn => dn.id === creature.id) && (
                     <div className="absolute -top-1 left-1/2 -translate-x-1/2 text-lg font-bold text-red-500 animate-[float-up_1s_ease-out_forwards]">
-                      {damageNumbers.find(dn => dn.id === battleState.playerTeam.find(c => c.position === 1)!.id)?.damage}
+                      {damageNumbers.find(dn => dn.id === creature.id)?.damage}
                     </div>
                   )}
-                  <img
-                    src={getCreatureImage(battleState.playerTeam.find(c => c.position === 1)!.creatureId, battleState.playerTeam.find(c => c.position === 1)!.finalStats.rank)}
-                    alt={battleState.playerTeam.find(c => c.position === 1)!.name}
-                    className="w-16 h-16 object-contain"
-                  />
-                  <div className="w-16 bg-gray-700 rounded-full h-1.5 mt-1 mx-auto">
-                    <div className="h-full rounded-full from-green-500 to-green-600" style={{ width: `${(battleState.playerTeam.find(c => c.position === 1)!.currentHP / battleState.playerTeam.find(c => c.position === 1)!.maxHP) * 100}%` }} />
+                  <div className="flex items-center gap-2">
+                    <span className="text-yellow-400 text-xs font-bold">#{creature.position}</span>
+                    <img
+                      src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
+                      alt={creature.name}
+                      className="w-14 h-14 object-contain"
+                    />
+                    <div className="flex-1">
+                      <p className="text-white font-bold text-xs">{creature.name}</p>
+                      <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
+                        <div className="h-full rounded-full from-green-500 to-green-600" style={{ width: `${(creature.currentHP / creature.maxHP) * 100}%` }} />
+                      </div>
+                    </div>
                   </div>
                 </button>
-              )}
-              {battleState.playerTeam.find(c => c.position === 2) && (
-                <button
-                  onClick={() => !battleState.winner && setSelectedCreature(battleState.playerTeam.find(c => c.position === 2)!)}
-                  className="relative bg-gradient-to-br from-blue-900/90 to-blue-950 rounded-xl p-2 cursor-pointer transition-all hover:scale-105 shadow-lg z-10"
-                >
-                  {battleState.playerTeam.find(c => c.position === 2)!.currentHP <= 0 && (
-                    <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
-                      <span className="text-xl">💀</span>
-                    </div>
-                  )}
-                  {damageNumbers.find(dn => dn.id === battleState.playerTeam.find(c => c.position === 2)!.id) && (
-                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 text-lg font-bold text-red-500 animate-[float-up_1s_ease-out_forwards]">
-                      {damageNumbers.find(dn => dn.id === battleState.playerTeam.find(c => c.position === 2)!.id)?.damage}
-                    </div>
-                  )}
-                  <img
-                    src={getCreatureImage(battleState.playerTeam.find(c => c.position === 2)!.creatureId, battleState.playerTeam.find(c => c.position === 2)!.finalStats.rank)}
-                    alt={battleState.playerTeam.find(c => c.position === 2)!.name}
-                    className="w-16 h-16 object-contain"
-                  />
-                  <div className="w-16 bg-gray-700 rounded-full h-1.5 mt-1 mx-auto">
-                    <div className="h-full rounded-full from-green-500 to-green-600" style={{ width: `${(battleState.playerTeam.find(c => c.position === 2)!.currentHP / battleState.playerTeam.find(c => c.position === 2)!.maxHP) * 100}%` }} />
-                  </div>
-                </button>
-              )}
-            </div>
-            
-            <div className="col-span-1 flex items-center justify-center z-20">
-              <div className="text-3xl animate-[pulse_2s_ease-in-out_infinite]">⚔️</div>
-            </div>
-            
-            <div className="col-span-2 flex justify-end gap-2 pr-4">
-              {battleState.enemyTeam[0] && (
-                <button
-                  onClick={() => !battleState.winner && setSelectedCreature(battleState.enemyTeam[0])}
-                  className="relative bg-gradient-to-br from-red-900/90 to-red-950 rounded-xl p-2 cursor-pointer transition-all hover:scale-105 shadow-lg z-10"
-                >
-                  {battleState.enemyTeam[0].currentHP <= 0 && (
-                    <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
-                      <span className="text-xl">💀</span>
-                    </div>
-                  )}
-                  <img
-                    src={getCreatureImage(battleState.enemyTeam[0].creatureId, battleState.enemyTeam[0].finalStats.rank)}
-                    alt={battleState.enemyTeam[0].name}
-                    className="w-16 h-16 object-contain"
-                  />
-                  <div className="w-16 bg-gray-700 rounded-full h-1.5 mt-1 mx-auto">
-                    <div className="h-full rounded-full from-green-500 to-green-600" style={{ width: `${(battleState.enemyTeam[0].currentHP / battleState.enemyTeam[0].maxHP) * 100}%` }} />
-                  </div>
-                </button>
-              )}
-              {battleState.enemyTeam[1] && (
-                <button
-                  onClick={() => !battleState.winner && setSelectedCreature(battleState.enemyTeam[1])}
-                  className="relative bg-gradient-to-br from-red-900/90 to-red-950 rounded-xl p-2 cursor-pointer transition-all hover:scale-105 shadow-lg z-10"
-                >
-                  {battleState.enemyTeam[1].currentHP <= 0 && (
-                    <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
-                      <span className="text-xl">💀</span>
-                    </div>
-                  )}
-                  <img
-                    src={getCreatureImage(battleState.enemyTeam[1].creatureId, battleState.enemyTeam[1].finalStats.rank)}
-                    alt={battleState.enemyTeam[1].name}
-                    className="w-16 h-16 object-contain"
-                  />
-                  <div className="w-16 bg-gray-700 rounded-full h-1.5 mt-1 mx-auto">
-                    <div className="h-full rounded-full from-green-500 to-green-600" style={{ width: `${(battleState.enemyTeam[1].currentHP / battleState.enemyTeam[1].maxHP) * 100}%` }} />
-                  </div>
-                </button>
-              )}
+              ))}
             </div>
 
-            {/* Back row - positions 3, 4, 5 - OFFSET back */}
-            <div className="col-span-2 flex justify-start gap-2 pl-4 opacity-70" style={{ transform: "translateY(20px)" }}>
-              {battleState.playerTeam.find(c => c.position === 3) && (
-                <button
-                  onClick={() => !battleState.winner && setSelectedCreature(battleState.playerTeam.find(c => c.position === 3)!)}
-                  className="relative bg-gradient-to-br from-blue-900/70 to-blue-950/90 rounded-xl p-2 cursor-pointer transition-all hover:scale-105"
-                >
-                  {battleState.playerTeam.find(c => c.position === 3)!.currentHP <= 0 && (
-                    <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
-                      <span className="text-xl">💀</span>
-                    </div>
-                  )}
-                  <img
-                    src={getCreatureImage(battleState.playerTeam.find(c => c.position === 3)!.creatureId, battleState.playerTeam.find(c => c.position === 3)!.finalStats.rank)}
-                    alt={battleState.playerTeam.find(c => c.position === 3)!.name}
-                    className="w-16 h-16 object-contain"
-                  />
-                </button>
-              )}
-              {battleState.playerTeam.find(c => c.position === 4) && (
-                <button
-                  onClick={() => !battleState.winner && setSelectedCreature(battleState.playerTeam.find(c => c.position === 4)!)}
-                  className="relative bg-gradient-to-br from-blue-900/70 to-blue-950/90 rounded-xl p-2 cursor-pointer transition-all hover:scale-105"
-                >
-                  {battleState.playerTeam.find(c => c.position === 4)!.currentHP <= 0 && (
-                    <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
-                      <span className="text-xl">💀</span>
-                    </div>
-                  )}
-                  <img
-                    src={getCreatureImage(battleState.playerTeam.find(c => c.position === 4)!.creatureId, battleState.playerTeam.find(c => c.position === 4)!.finalStats.rank)}
-                    alt={battleState.playerTeam.find(c => c.position === 4)!.name}
-                    className="w-16 h-16 object-contain"
-                  />
-                </button>
-              )}
-              {battleState.playerTeam.find(c => c.position === 5) && (
-                <button
-                  onClick={() => !battleState.winner && setSelectedCreature(battleState.playerTeam.find(c => c.position === 5)!)}
-                  className="relative bg-gradient-to-br from-blue-900/70 to-blue-950/90 rounded-xl p-2 cursor-pointer transition-all hover:scale-105"
-                >
-                  {battleState.playerTeam.find(c => c.position === 5)!.currentHP <= 0 && (
-                    <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
-                      <span className="text-xl">💀</span>
-                    </div>
-                  )}
-                  <img
-                    src={getCreatureImage(battleState.playerTeam.find(c => c.position === 5)!.creatureId, battleState.playerTeam.find(c => c.position === 5)!.finalStats.rank)}
-                    alt={battleState.playerTeam.find(c => c.position === 5)!.name}
-                    className="w-16 h-16 object-contain"
-                  />
-                </button>
-              )}
+            {/* VS indicator - middle */}
+            <div className="col-span-1 flex items-center justify-center">
+              <div className="text-3xl animate-[pulse_2s_ease-in-out_infinite]">⚔️</div>
             </div>
-            
-            <div className="col-span-1" />
-            
-            <div className="col-span-2 flex justify-end gap-2 pr-4 opacity-70" style={{ transform: "translateY(20px)" }}>
-              {battleState.enemyTeam[2] && (
+
+            {/* Enemy team - right, vertical */}
+            <div className="col-span-2 flex flex-col gap-2">
+              {battleState.enemyTeam.map((creature) => (
                 <button
-                  onClick={() => !battleState.winner && setSelectedCreature(battleState.enemyTeam[2])}
-                  className="relative bg-gradient-to-br from-red-900/70 to-red-950/90 rounded-xl p-2 cursor-pointer transition-all hover:scale-105"
+                  key={creature.id}
+                  onClick={() => !battleState.winner && setSelectedCreature(creature)}
+                  className={`relative bg-gradient-to-br from-red-900/90 to-red-950 rounded-xl p-2 cursor-pointer transition-all hover:scale-105 shadow-lg ${
+                    creature.currentHP <= 0 ? "opacity-40" : ""
+                  }`}
                 >
-                  {battleState.enemyTeam[2].currentHP <= 0 && (
+                  {creature.currentHP <= 0 && (
                     <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
                       <span className="text-xl">💀</span>
                     </div>
                   )}
-                  <img
-                    src={getCreatureImage(battleState.enemyTeam[2].creatureId, battleState.enemyTeam[2].finalStats.rank)}
-                    alt={battleState.enemyTeam[2].name}
-                    className="w-16 h-16 object-contain"
-                  />
-                </button>
-              )}
-              {battleState.enemyTeam[3] && (
-                <button
-                  onClick={() => !battleState.winner && setSelectedCreature(battleState.enemyTeam[3])}
-                  className="relative bg-gradient-to-br from-red-900/70 to-red-950/90 rounded-xl p-2 cursor-pointer transition-all hover:scale-105"
-                >
-                  {battleState.enemyTeam[3].currentHP <= 0 && (
-                    <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
-                      <span className="text-xl">💀</span>
+                  <div className="flex items-center gap-2 justify-end">
+                    <div className="flex-1 text-right">
+                      <p className="text-white font-bold text-xs">{creature.name}</p>
+                      <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1 ml-auto">
+                        <div className="h-full rounded-full from-green-500 to-green-600" style={{ width: `${(creature.currentHP / creature.maxHP) * 100}%` }} />
+                      </div>
                     </div>
-                  )}
-                  <img
-                    src={getCreatureImage(battleState.enemyTeam[3].creatureId, battleState.enemyTeam[3].finalStats.rank)}
-                    alt={battleState.enemyTeam[3].name}
-                    className="w-16 h-16 object-contain"
-                  />
+                    <img
+                      src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
+                      alt={creature.name}
+                      className="w-14 h-14 object-contain"
+                    />
+                    <span className="text-red-400 text-xs font-bold">#{(creature.id.split('-')[1] || '1')}</span>
+                  </div>
                 </button>
-              )}
-              {battleState.enemyTeam[4] && (
-                <button
-                  onClick={() => !battleState.winner && setSelectedCreature(battleState.enemyTeam[4])}
-                  className="relative bg-gradient-to-br from-red-900/70 to-red-950/90 rounded-xl p-2 cursor-pointer transition-all hover:scale-105"
-                >
-                  {battleState.enemyTeam[4].currentHP <= 0 && (
-                    <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
-                      <span className="text-xl">💀</span>
-                    </div>
-                  )}
-                  <img
-                    src={getCreatureImage(battleState.enemyTeam[4].creatureId, battleState.enemyTeam[4].finalStats.rank)}
-                    alt={battleState.enemyTeam[4].name}
-                    className="w-16 h-16 object-contain"
-                  />
-                </button>
-              )}
+              ))}
             </div>
           </div>
 
