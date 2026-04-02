@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Rank } from "@/lib/database";
 import { spawnEasyModeEnemy } from "@/lib/easy-mode";
 import { BattleTeam } from "@/lib/battle";
@@ -32,7 +31,6 @@ interface HuntedCreature {
 }
 
 export default function EntrainementSimplePage() {
-  const router = useRouter();
   const [collection, setCollection] = useState<HuntedCreature[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [enemyTeam, setEnemyTeam] = useState<BattleTeam | null>(null);
@@ -135,12 +133,11 @@ export default function EntrainementSimplePage() {
     };
 
     // Store in sessionStorage (cleans up after battle)
-    if (typeof sessionStorage !== "undefined") {
+    if (typeof window !== "undefined" && typeof sessionStorage !== "undefined") {
       sessionStorage.setItem("ecobio-training-battle", JSON.stringify(battleData));
+      // Navigate using window.location.href
+      window.location.href = "/battle?mode=training";
     }
-
-    // Navigate to battle page
-    router.push("/battle?mode=training");
   };
 
   // Get selected creatures
