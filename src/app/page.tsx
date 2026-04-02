@@ -102,7 +102,7 @@ export default function Home() {
             </div>
           </Link>
 
-          <Link href="/battle/setup/entrainement">
+          <Link href="/battle">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-cyan-500">
               <div className="text-6xl mb-4">🕸️</div>
               <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
