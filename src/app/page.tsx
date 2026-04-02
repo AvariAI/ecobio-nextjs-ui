@@ -102,6 +102,18 @@ export default function Home() {
             </div>
           </Link>
 
+          <Link href="/entrainement/simple">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-cyan-500">
+              <div className="text-6xl mb-4">🏋️</div>
+              <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
+                Entraînement
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                Combats 5v5 contre Rank E pour XP (+100/créature, bloqué si ★).
+              </p>
+            </div>
+          </Link>
+
           <Link href="/formulas">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all hover:scale-105 border-2 border-transparent hover:border-cyan-500">
               <div className="text-6xl mb-4">📐</div>
