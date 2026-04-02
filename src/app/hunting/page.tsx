@@ -532,6 +532,10 @@ export default function HuntingPage() {
   }, [collection]);
 
   const sortedCollection = [...collection].sort((a, b) => {
+    // Favorites first
+    if (a.isFavorite && !b.isFavorite) return -1;
+    if (!a.isFavorite && b.isFavorite) return 1;
+    
     let comparison = 0;
     switch (sortBy) {
       case "name": comparison = a.name.localeCompare(b.name); break;
