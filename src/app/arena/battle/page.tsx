@@ -321,30 +321,30 @@ export default function BattlePage() {
           </div>
 
           {/* Battle grid - horizontal layout */}
-          <div className="grid grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-5 gap-3 mb-6">
             {/* Player team (left) */}
-            <div className="col-span-2 space-y-4">
-              <h2 className="text-blue-400 font-bold text-sm mb-4">TON ÉQUIPE ({playerAlive}/5)</h2>
-              <div className="grid grid-cols-1 gap-3">
+            <div className="col-span-2 space-y-2">
+              <h2 className="text-blue-400 font-bold text-xs mb-2">TON ÉQUIPE ({playerAlive}/5)</h2>
+              <div className="grid grid-cols-1 gap-2">
                 {battleState.playerTeam.map((creature) => (
                   <div
                     key={creature.id}
                     onClick={() => !battleState.winner && setSelectedCreature(creature)}
-                    className={`relative bg-gradient-to-br from-blue-900/80 to-blue-950/80 rounded-2xl p-4 cursor-pointer transition-all hover:scale-105 hover:shadow-2xl ${
+                    className={`relative bg-gradient-to-br from-blue-900/80 to-blue-950/80 rounded-xl p-2 cursor-pointer transition-all hover:scale-105 hover:shadow-xl ${
                       creature.currentHP <= 0 ? "opacity-40 grayscale" : ""
                     }`}
                   >
                     {/* Shield/KO overlay */}
                     {creature.currentHP <= 0 && (
-                      <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center">
-                        <span className="text-4xl">💀</span>
+                      <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
+                        <span className="text-2xl">💀</span>
                       </div>
                     )}
 
                     {/* Damage popup */}
                     {damageNumbers.find(dn => dn.id === creature.id) && (
                       <div 
-                        className="absolute -top-8 left-1/2 -translate-x-1/2 text-2xl font-bold animate-[float-up_1s_ease-out_forwards]"
+                        className="absolute -top-4 left-1/2 -translate-x-1/2 text-lg font-bold animate-[float-up_1s_ease-out_forwards]"
                         style={{ color: "red" }}
                       >
                         {damageNumbers.find(dn => dn.id === creature.id)?.damage}
@@ -354,18 +354,18 @@ export default function BattlePage() {
                     <img
                       src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
                       alt={creature.name}
-                      className="w-24 h-24 mx-auto mb-3 object-contain"
+                      className="w-16 h-16 mx-auto mb-2 object-contain"
                     />
 
-                    <p className="text-white font-bold text-center">{creature.name}</p>
+                    <p className="text-white font-bold text-center text-sm">{creature.name}</p>
 
                     {/* HP bar */}
-                    <div className="mt-2">
-                      <div className="flex justify-between text-xs text-gray-400 mb-1">
+                    <div className="mt-1">
+                      <div className="flex justify-between text-xs text-gray-400 mb-0.5">
                         <span>HP</span>
                         <span>{creature.currentHP}/{creature.maxHP}</span>
                       </div>
-                      <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+                      <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-300 ${
                             creature.currentHP > creature.maxHP * 0.5
@@ -385,32 +385,32 @@ export default function BattlePage() {
 
             {/* VS indicator (middle) */}
             <div className="flex items-center justify-center">
-              <div className="text-6xl animate-[pulse_2s_ease-in-out_infinite]">⚔️</div>
+              <div className="text-4xl animate-[pulse_2s_ease-in-out_infinite]">⚔️</div>
             </div>
 
             {/* Enemy team (right) */}
-            <div className="col-span-2 space-y-4">
-              <h2 className="text-red-400 font-bold text-sm mb-4">ENNEMIS ({enemyAlive}/5)</h2>
-              <div className="grid grid-cols-1 gap-3">
+            <div className="col-span-2 space-y-2">
+              <h2 className="text-red-400 font-bold text-xs mb-2">ENNEMIS ({enemyAlive}/5)</h2>
+              <div className="grid grid-cols-1 gap-2">
                 {battleState.enemyTeam.map((creature) => (
                   <div
                     key={creature.id}
                     onClick={() => !battleState.winner && setSelectedCreature(creature)}
-                    className={`relative bg-gradient-to-br from-red-900/80 to-red-950/80 rounded-2xl p-4 cursor-pointer transition-all hover:scale-105 hover:shadow-2xl ${
+                    className={`relative bg-gradient-to-br from-red-900/80 to-red-950/80 rounded-xl p-2 cursor-pointer transition-all hover:scale-105 hover:shadow-xl ${
                       creature.currentHP <= 0 ? "opacity-40 grayscale" : ""
                     }`}
                   >
                     {/* Shield/KO overlay */}
                     {creature.currentHP <= 0 && (
-                      <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center">
-                        <span className="text-4xl">💀</span>
+                      <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
+                        <span className="text-2xl">💀</span>
                       </div>
                     )}
 
                     {/* Damage popup */}
                     {damageNumbers.find(dn => dn.id === creature.id) && (
                       <div 
-                        className="absolute -top-8 left-1/2 -translate-x-1/2 text-2xl font-bold animate-[float-up_1s_ease-out_forwards]"
+                        className="absolute -top-4 left-1/2 -translate-x-1/2 text-lg font-bold animate-[float-up_1s_ease-out_forwards]"
                         style={{ color: "red" }}
                       >
                         {damageNumbers.find(dn => dn.id === creature.id)?.damage}
@@ -420,18 +420,18 @@ export default function BattlePage() {
                     <img
                       src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
                       alt={creature.name}
-                      className="w-24 h-24 mx-auto mb-3 object-contain"
+                      className="w-16 h-16 mx-auto mb-2 object-contain"
                     />
 
-                    <p className="text-white font-bold text-center">{creature.name}</p>
+                    <p className="text-white font-bold text-center text-sm">{creature.name}</p>
 
                     {/* HP bar */}
-                    <div className="mt-2">
-                      <div className="flex justify-between text-xs text-gray-400 mb-1">
+                    <div className="mt-1">
+                      <div className="flex justify-between text-xs text-gray-400 mb-0.5">
                         <span>HP</span>
                         <span>{creature.currentHP}/{creature.maxHP}</span>
                       </div>
-                      <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+                      <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-300 ${
                             creature.currentHP > creature.maxHP * 0.5
@@ -456,7 +456,7 @@ export default function BattlePage() {
               <button
                 onClick={processTurn}
                 disabled={isProcessing}
-                className="px-12 py-5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-2xl font-bold rounded-2xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl"
+                className="px-12 py-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-xl font-bold rounded-2xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl"
               >
                 {isProcessing ? "⚡ Attaque..." : "🗡️ ATTAQUER"}
               </button>
