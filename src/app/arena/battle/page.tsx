@@ -60,13 +60,14 @@ export default function BattlePage() {
   const [battleState, setBattleState] = useState<BattleState | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCreature, setSelectedCreature] = useState<Creature | null>(null);
+  const [damageNumbers, setDamageNumbers] = useState<Array<{ id: string; damage: number; isCrit: boolean; x: number; y: number }>>([]);
 
   useEffect(() => {
     const initBattle = async () => {
       if (typeof window === "undefined") return;
 
       try {
-        // Load team from sessionStorage
         const teamIdsJson = sessionStorage.getItem("battle-team");
         if (!teamIdsJson) {
           setError("Aucune équipe trouvée. Redirection vers la sélection...");
@@ -77,7 +78,6 @@ export default function BattlePage() {
         const teamIds = JSON.parse(teamIdsJson) as string[];
         console.log("Team IDs loaded:", teamIds);
 
-        // Load collection
         const saved = localStorage.getItem("ecobio-collection");
         if (!saved) {
           setError("Collection vide. Redirection vers l'home...");
@@ -88,7 +88,6 @@ export default function BattlePage() {
         const collection = JSON.parse(saved) as any[];
         console.log("Collection loaded:", collection.length, "creatures");
 
-        // Build player team with all required fields
         const playerTeam: Creature[] = [];
         
         for (let i = 0; i < teamIds.length; i++) {
@@ -100,10 +99,7 @@ export default function BattlePage() {
             continue;
           }
 
-          // Get stats - prioritize finalStats, then customStats, then baseStats
           const stats = c.finalStats || c.customStats || c.baseStats || c.baseStats;
-          
-          // Handle health - use currentHP if available, else maxHP or stats.hp
           const hp = c.currentHP || c.maxHP || stats?.hp || 100;
           const maxHP = c.maxHP || stats?.hp || 100;
 
@@ -134,11 +130,9 @@ export default function BattlePage() {
           return;
         }
 
-        // Generate enemy team (5 Rank E creatures)
         const enemyTeam: Creature[] = Array(5).fill(0).map((_, i) => {
-          const creature = CREATURES[0]; // Use first creature for simplicity
+          const creature = CREATURES[0];
           
-          // Defensive: Handle undefined creature
           if (!creature) {
             console.error("Creature reference is undefined!");
             return {
@@ -181,7 +175,6 @@ export default function BattlePage() {
 
         console.log("Enemy team generated");
 
-        // Initialize player team with preserved HP
         const playerTeamWithHP = [...playerTeam];
 
         setBattleState({
@@ -235,6 +228,20 @@ export default function BattlePage() {
       const isCrit = isCriticalHit(attacker.finalStats.crit);
       const damage = calculateDamage(attacker, target, isCrit);
 
+      // Add damage number animation
+      setDamageNumbers(prev => [...prev, {
+        id: `damage-${Date.now()}`,
+        damage,
+        isCrit,
+        x: Math.random() * 50 - 25, // Random offset
+        y: Math.random() * 20 - 10
+      }]);
+
+      // Remove damage number after animation
+      setTimeout(() => {
+        setDamageNumbers(prev => prev.filter(d => d.id !== `damage-${Date.now()}`));
+      }, 1500);
+
       if (attacker.owner === "player") {
         const targetIndex = newEnemyTeam.findIndex(c => c.id === target.id);
         newEnemyTeam[targetIndex] = { ...target, currentHP: Math.max(0, target.currentHP - damage) };
@@ -243,8 +250,8 @@ export default function BattlePage() {
         newPlayerTeam[targetIndex] = { ...target, currentHP: Math.max(0, target.currentHP - damage) };
       }
 
-      const attackerName = attacker.owner === "player" ? `${attacker.position}. ${attacker.name}` : `Ennemi ${attacker.name}`;
-      const targetName = attacker.owner === "player" ? target.name : `Ennemi ${target.name}`;
+      const attackerName = attacker.owner === "player" ? `${attacker.name}` : `Ennemi`;
+      const targetName = attacker.owner === "player" ? target.name : `Ennemi`;
       const critText = isCrit ? " **CRITIQUE!**" : "";
       newLog.push(`${attackerName} → ${targetName}: ${damage} dégâts${critText}`);
     }
@@ -272,123 +279,280 @@ export default function BattlePage() {
   }
 
   if (!battleState) {
-    return <div className="min-h-screen bg-gray-900 text-white p-6">Chargement du combat...</div>;
+    return <div className="min-h-screen bg-gray-900 text-white p-6">Chargement...</div>;
   }
 
   const playerAlive = battleState.playerTeam.filter(c => c.currentHP > 0).length;
   const enemyAlive = battleState.enemyTeam.filter(c => c.currentHP > 0).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-900 to-orange-900 dark:from-black dark:to-gray-900 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-red-950 via-orange-950 to-purple-950 p-6">
       <div className="max-w-7xl mx-auto">
-        <Link href="/arena/training" className="inline-block px-4 py-2 mb-4 bg-gray-600 hover:bg-gray-700 text-white rounded-lg">← Retour</Link>
+        {/* Back button */}
+        <Link href="/arena/training" className="inline-block px-4 py-2 mb-4 bg-black/30 hover:bg-black/50 text-white rounded-lg transition-colors">
+          ← Retour
+        </Link>
 
-        <h1 className="text-4xl font-bold text-white mb-4">⚔️ Combat</h1>
-        <p className="text-gray-300 mb-6">Tour {battleState.turn}</p>
+        {/* Title */}
+        <h1 className="text-3xl font-bold text-white mb-6 text-center">⚔️ Combat</h1>
 
-        {battleState.winner ? (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 mb-6 text-center">
-            <h2 className={`text-4xl font-bold mb-4 ${battleState.winner === "player" ? "text-green-600" : "text-red-600"}`}>
-              {battleState.winner === "player" ? "🎉 VICTOIRE!" : "💀 DÉFAITE!"}
-            </h2>
-            {battleState.winner === "player" && (
-              <div className="text-gray-600 dark:text-gray-300">
-                Survivants: {playerAlive}/5
-              </div>
-            )}
+        {/* Winner/Victory modal */}
+        {battleState.winner && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-12 text-center animate-[bounce_0.5s_ease-out]">
+              <h2 className={`text-6xl font-bold mb-4 ${battleState.winner === "player" ? "text-green-600" : "text-red-600"}`}>
+                {battleState.winner === "player" ? "🎉 VICTOIRE!" : "💀 DÉFAITE!"}
+              </h2>
+              {battleState.winner === "player" && (
+                <p className="text-xl text-gray-600 dark:text-gray-300 mb-6">Survivants: {playerAlive}/5</p>
+              )}
+              <Link href="/arena/training" className="inline-block px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-xl font-bold rounded-xl transition-all">
+                Continuer
+              </Link>
+            </div>
           </div>
-        ) : (
-          <button
-            onClick={processTurn}
-            disabled={isProcessing}
-            className="w-full p-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-xl mb-6 text-xl"
-          >
-            {isProcessing ? "⚡ En cours..." : "🗡️ Attaquer"}
-          </button>
         )}
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Player Team */}
-          <div className="bg-blue-900 bg-opacity-50 rounded-2xl p-4">
-            <h2 className="text-2xl font-bold text-blue-300 mb-4">🔵 Ton Équipe ({playerAlive}/5)</h2>
-            <div className="space-y-2">
-              {battleState.playerTeam.map((creature) => (
-                <div
-                  key={creature.id}
-                  className="bg-gray-800 dark:bg-gray-700 rounded-lg p-3 flex items-center gap-3"
-                >
-                  <span className="text-2xl font-bold text-blue-400">#{creature.position}</span>
-                  <img
-                    src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
-                    alt={creature.name}
-                    className="w-12 h-12 object-contain"
-                  />
-                  <div className="flex-1">
-                    <div className="flex justify-between">
-                      <p className="font-bold text-white">{creature.name}</p>
-                      <p className="text-sm text-gray-300">
-                        {creature.currentHP > 0 ? `${creature.currentHP}/${creature.maxHP}` : "💀 K.O."}
-                      </p>
-                    </div>
-                    <div className="w-full bg-gray-600 rounded h-2 mt-1">
-                      <div
-                        className={`h-2 rounded ${creature.currentHP > 0 ? "bg-gradient-to-r from-green-500 to-green-600" : "bg-red-600"}`}
-                        style={{ width: `${Math.max(0, (creature.currentHP / creature.maxHP) * 100)}%` }}
-                      />
+        {/* Battle arena */}
+        <div className="bg-black/20 rounded-3xl p-8 backdrop-blur-sm">
+          {/* Turn indicator */}
+          <div className="text-center mb-6">
+            <span className="text-gray-300 text-sm">Tour {battleState.turn}</span>
+          </div>
+
+          {/* Battle grid - horizontal layout */}
+          <div className="grid grid-cols-5 gap-4 mb-8">
+            {/* Player team (left) */}
+            <div className="col-span-2 space-y-4">
+              <h2 className="text-blue-400 font-bold text-sm mb-4">TON ÉQUIPE ({playerAlive}/5)</h2>
+              <div className="grid grid-cols-1 gap-3">
+                {battleState.playerTeam.map((creature) => (
+                  <div
+                    key={creature.id}
+                    onClick={() => !battleState.winner && setSelectedCreature(creature)}
+                    className={`relative bg-gradient-to-br from-blue-900/80 to-blue-950/80 rounded-2xl p-4 cursor-pointer transition-all hover:scale-105 hover:shadow-2xl ${
+                      creature.currentHP <= 0 ? "opacity-40 grayscale" : ""
+                    }`}
+                  >
+                    {/* Shield/KO overlay */}
+                    {creature.currentHP <= 0 && (
+                      <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center">
+                        <span className="text-4xl">💀</span>
+                      </div>
+                    )}
+
+                    {/* Damage popup */}
+                    {damageNumbers.find(dn => dn.id === creature.id) && (
+                      <div 
+                        className="absolute -top-8 left-1/2 -translate-x-1/2 text-2xl font-bold animate-[float-up_1s_ease-out_forwards]"
+                        style={{ color: "red" }}
+                      >
+                        {damageNumbers.find(dn => dn.id === creature.id)?.damage}
+                      </div>
+                    )}
+
+                    <img
+                      src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
+                      alt={creature.name}
+                      className="w-24 h-24 mx-auto mb-3 object-contain"
+                    />
+
+                    <p className="text-white font-bold text-center">{creature.name}</p>
+
+                    {/* HP bar */}
+                    <div className="mt-2">
+                      <div className="flex justify-between text-xs text-gray-400 mb-1">
+                        <span>HP</span>
+                        <span>{creature.currentHP}/{creature.maxHP}</span>
+                      </div>
+                      <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            creature.currentHP > creature.maxHP * 0.5
+                              ? "from-green-500 to-green-600"
+                              : creature.currentHP > creature.maxHP * 0.25
+                              ? "from-yellow-500 to-orange-500"
+                              : "from-red-500 to-red-600"
+                          }`}
+                          style={{ width: `${(creature.currentHP / creature.maxHP) * 100}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
+
+            {/* VS indicator (middle) */}
+            <div className="flex items-center justify-center">
+              <div className="text-6xl animate-[pulse_2s_ease-in-out_infinite]">⚔️</div>
+            </div>
+
+            {/* Enemy team (right) */}
+            <div className="col-span-2 space-y-4">
+              <h2 className="text-red-400 font-bold text-sm mb-4">ENNEMIS ({enemyAlive}/5)</h2>
+              <div className="grid grid-cols-1 gap-3">
+                {battleState.enemyTeam.map((creature) => (
+                  <div
+                    key={creature.id}
+                    onClick={() => !battleState.winner && setSelectedCreature(creature)}
+                    className={`relative bg-gradient-to-br from-red-900/80 to-red-950/80 rounded-2xl p-4 cursor-pointer transition-all hover:scale-105 hover:shadow-2xl ${
+                      creature.currentHP <= 0 ? "opacity-40 grayscale" : ""
+                    }`}
+                  >
+                    {/* Shield/KO overlay */}
+                    {creature.currentHP <= 0 && (
+                      <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center">
+                        <span className="text-4xl">💀</span>
+                      </div>
+                    )}
+
+                    {/* Damage popup */}
+                    {damageNumbers.find(dn => dn.id === creature.id) && (
+                      <div 
+                        className="absolute -top-8 left-1/2 -translate-x-1/2 text-2xl font-bold animate-[float-up_1s_ease-out_forwards]"
+                        style={{ color: "red" }}
+                      >
+                        {damageNumbers.find(dn => dn.id === creature.id)?.damage}
+                      </div>
+                    )}
+
+                    <img
+                      src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
+                      alt={creature.name}
+                      className="w-24 h-24 mx-auto mb-3 object-contain"
+                    />
+
+                    <p className="text-white font-bold text-center">{creature.name}</p>
+
+                    {/* HP bar */}
+                    <div className="mt-2">
+                      <div className="flex justify-between text-xs text-gray-400 mb-1">
+                        <span>HP</span>
+                        <span>{creature.currentHP}/{creature.maxHP}</span>
+                      </div>
+                      <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            creature.currentHP > creature.maxHP * 0.5
+                              ? "from-green-500 to-green-600"
+                              : creature.currentHP > creature.maxHP * 0.25
+                              ? "from-yellow-500 to-orange-500"
+                              : "from-red-500 to-red-600"
+                          }`}
+                          style={{ width: `${(creature.currentHP / creature.maxHP) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Enemy Team */}
-          <div className="bg-red-900 bg-opacity-50 rounded-2xl p-4">
-            <h2 className="text-2xl font-bold text-red-300 mb-4">⚔️ Ennemis ({enemyAlive}/5)</h2>
-            <div className="space-y-2">
-              {battleState.enemyTeam.map((creature) => (
-                <div
-                  key={creature.id}
-                  className="bg-gray-800 dark:bg-gray-700 rounded-lg p-3 flex items-center gap-3"
-                >
-                  <img
-                    src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
-                    alt={creature.name}
-                    className="w-12 h-12 object-contain"
-                  />
-                  <div className="flex-1">
-                    <p className="font-bold text-white">{creature.name}</p>
-                    <div className="flex justify-between">
-                      <p className="text-sm text-gray-300">
-                        {creature.currentHP > 0 ? `${creature.currentHP}/${creature.maxHP}` : "💀 K.O."}
-                      </p>
-                      <p className="text-xs text-gray-400">R{creature.finalStats.rank}</p>
-                    </div>
-                    <div className="w-full bg-gray-600 rounded h-2 mt-1">
-                      <div
-                        className={`h-2 rounded ${creature.currentHP > 0 ? "bg-gradient-to-r from-orange-500 to-red-500" : "bg-gray-500"}`}
-                        style={{ width: `${Math.max(0, (creature.currentHP / creature.maxHP) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
+          {/* Attack button */}
+          {!battleState.winner && (
+            <div className="text-center">
+              <button
+                onClick={processTurn}
+                disabled={isProcessing}
+                className="px-12 py-5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-2xl font-bold rounded-2xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl"
+              >
+                {isProcessing ? "⚡ Attaque..." : "🗡️ ATTAQUER"}
+              </button>
+            </div>
+          )}
+
+          {/* Battle log */}
+          <div className="mt-8 pt-6 border-t border-gray-700">
+            <h3 className="text-gray-400 font-bold text-sm mb-3">JOURNAL DE COMBAT</h3>
+            <div className="bg-black/30 rounded-xl p-4 max-h-40 overflow-y-auto scroll-smooth">
+              <div className="space-y-1">
+                {battleState.log.slice(-10).map((entry, index) => (
+                  <p key={index} className="text-gray-300 text-sm">
+                    {entry}
+                  </p>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Battle Log */}
-        <div className="mt-6 bg-gray-800 dark:bg-gray-900 rounded-2xl p-4 max-h-64 overflow-y-auto">
-          <h3 className="text-xl font-bold text-gray-300 mb-2">📜 Journal</h3>
-          <div className="space-y-1">
-            {battleState.log.map((entry, index) => (
-              <p key={index} className="text-gray-400 text-sm">
-                {entry}
-              </p>
-            ))}
+        {/* Creature details modal */}
+        {selectedCreature && (
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40"
+            onClick={() => setSelectedCreature(null)}
+          >
+            <div 
+              className="bg-gray-800 dark:bg-gray-900 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-center mb-6">
+                <img
+                  src={getCreatureImage(selectedCreature.creatureId, selectedCreature.finalStats.rank)}
+                  alt={selectedCreature.name}
+                  className="w-32 h-32 mx-auto mb-4 object-contain"
+                />
+                <h3 className="text-3xl font-bold text-white">{selectedCreature.name}</h3>
+                {selectedCreature.position && (
+                  <span className="text-yellow-400 text-sm">Position #{selectedCreature.position}</span>
+                )}
+              </div>
+
+              <div className="space-y-4 grid grid-cols-2 gap-4">
+                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-4 text-center">
+                  <p className="text-gray-400 text-sm">HP</p>
+                  <p className="text-2xl font-bold text-white">{selectedCreature.currentHP}</p>
+                  <p className="text-gray-500 text-xs">/ {selectedCreature.maxHP}</p>
+                </div>
+                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-4 text-center">
+                  <p className="text-gray-400 text-sm">ATK</p>
+                  <p className="text-2xl font-bold text-white">{selectedCreature.finalStats.attack}</p>
+                </div>
+                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-4 text-center">
+                  <p className="text-gray-400 text-sm">DEF</p>
+                  <p className="text-2xl font-bold text-white">{selectedCreature.finalStats.defense}</p>
+                </div>
+                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-4 text-center">
+                  <p className="text-gray-400 text-sm">SPD</p>
+                  <p className="text-2xl font-bold text-white">{selectedCreature.finalStats.speed}</p>
+                </div>
+                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-4 text-center">
+                  <p className="text-gray-400 text-sm">CRIT</p>
+                  <p className="text-2xl font-bold text-white">{selectedCreature.finalStats.crit}</p>
+                </div>
+                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-4 text-center">
+                  <p className="text-gray-400 text-sm">Rang</p>
+                  <p className="text-2xl font-bold text-green-400">{selectedCreature.finalStats.rank}</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedCreature(null)}
+                className="w-full mt-6 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-xl font-bold rounded-xl transition-all"
+              >
+                Fermer
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
+
+      <style jsx>{`
+        @keyframes float-up {
+          0% { opacity: 1; transform: translate(-50%, 0); }
+          100% { opacity: 0; transform: translate(-50%, -50px); }
+        }
+        @keyframes bounce {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+        }
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.2); opacity: 0.7; }
+        }
+      `}</style>
     </div>
   );
 }
