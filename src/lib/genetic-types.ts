@@ -1,6 +1,9 @@
 /**
  * ÉcoBio Genetic Types System
  * 8 post-apocalyptic genetic mutation pathways
+ *
+ * Type interactions removed: No +20%/-20% matrix
+ * Combat based on individual type skills and player strategy
  */
 
 export type GeneticType =
@@ -21,89 +24,17 @@ export interface GeneticTypeData {
   origin: string;
   biome: string[];
   characteristic: string;
-  counters: GeneticType[]; // Types this counters (advantage)
-  weakAgainst: GeneticType[]; // Types this is weak against
+  activeSkill?: {
+    name: string;
+    description: string;
+    cooldown: number;
+  };
+  passive?: {
+    name: string;
+    description: string;
+  };
   weight?: number; // Spawning weight (uniform 100 = 12.5% each, total 800)
 }
-
-/**
- * Type Interaction Matrix - CYCLE DE 8 (1 force / 1 faiblesse par type)
- *
- * 📊 CHAQUE TYPE: 1 avantage / 1 faiblesse / 6 neutres
- *
- *                                     Dollars - l'ordre du cycle
- *                Résilient  Scribeur  Symbiote  Radiant  Chimère  Pathogène  Ombre  Sync
- *   ─────────────────────────────────────────────────────────────────────────────────────────────
- *   Résilient         —        perd     neutre    neutre    neutre    gagne   neutre  perd
- *   Scribeur       gaine        —      gagne     neutre    neutre    neutre  neutre  perd
- *   Symbiote       neutre     perd       —      gagne     neutre    neutre  neutre  perd
- *   Radiant        neutre    neutre    perd       —      gagne     neutre  neutre  perd
- *   Chimère        neutre    neutre    neutre    perd       —      neutre  neutre  gagne
- *   Pathogène      perd     gaine     neutre   neutre    neutre      —     neutre  neutre
- *   Ombre          gagne    neutre    neutre   neutre    neutre    neutre      —     perd
- *   Sync           gaine     gaine     gaine     gaine     perd     neutre    gaine    —
- *
- *   LÉGENDE:
- *   - gagne = +20% dégâts infligés (avantage)
- *   - perd = -20% dégâts infligés (faiblesse)
- *   - neutre = 0% (matchup neutre)
- *   - — = matchup vs soi-même (neutre)
- *
- *   CYCLE DE 8 (ordre de transmission):
- *   1. Résilient → counters Pathogènes
- *   2. Pathogènes → counters Scribeur
- *   3. Scribeur → counters Symbiote
- *   4. Symbiote → counters Radiant
- *   5. Radiant → counters Chimère
- *   6. Chimère → counters Synchroniseur
- *   7. Synchroniseur → counters Ombre
- *   8. Ombre → counters Résilient
- *
- *   LORE:
- *   - Résilient → Pathogènes: Enhanced immunity resists toxins
- *   - Pathogènes → Scribeur: Toxic fog impairs cognitive function
- *   - Scribeur → Symbiote: Precision attacks dismantle hybrid structures
- *   - Symbiote → Radiant: Tech absorbs and dissipates radiation
- *   - Radiant → Chimère: High energy disintegrates chaotic biology
- *   - Chimère → Synchroniseur: Wild variance breaks quantum coherence
- *   - Synchroniseur → Ombre: Reality-warping "exposes" stealth creatures
- *   - Ombre → Résilient: Surprise neutralizes persistence
- */
-
-export const TYPE_INTERACTIONS: Record<GeneticType, { counters: GeneticType[]; weak: GeneticType[] }> = {
-  resilient: {
-    counters: ["pathogene"],
-    weak: ["ombre"],
-  },
-  scribeur: {
-    counters: ["symbiote"],
-    weak: ["pathogene"],
-  },
-  symbiote: {
-    counters: ["radiant"],
-    weak: ["scribeur"],
-  },
-  radiant: {
-    counters: ["chimere"],
-    weak: ["symbiote"],
-  },
-  chimere: {
-    counters: ["synchroniseur"],
-    weak: ["radiant"],
-  },
-  pathogene: {
-    counters: ["scribeur"],
-    weak: ["resilient"],
-  },
-  synchroniseur: {
-    counters: ["ombre"],
-    weak: ["chimere"],
-  },
-  ombre: {
-    counters: ["resilient"],
-    weak: ["synchroniseur"],
-  },
-};
 
 /**
  * The 8 Genetic Types
@@ -116,9 +47,7 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     description: "Survivants d'environnements hostiles, adaptation carapacée",
     origin: "Survivors of harsh environments, radiation-adapted carapaces",
     biome: ["Ruines urbaines", "Zones contaminées"],
-    characteristic: "Persistence — Reinforce all ongoing effects (buffs/debuffs duration extension)",
-    counters: ["pathogene"],
-    weakAgainst: ["ombre"],
+    characteristic: "Persistence — Protection & Reflect",
     weight: 100,
   },
 
@@ -129,9 +58,7 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     description: "Adaptation cognitive massive, systèmes nerveux hyper-réflexifs",
     origin: "Massive cognitive adaptation, hyper-reflexive nervous systems",
     biome: ["Laboratoires abandonnés", "Zones technologiques"],
-    characteristic: "Radar — Preview enemy intent, dodge anticipation, predict-and-react",
-    counters: ["symbiote"],
-    weakAgainst: ["pathogene"],
+    characteristic: "Radar — Knowledge & Copy",
     weight: 100,
   },
 
@@ -142,9 +69,7 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     description: "Fusion organique-synthétique, intégration bio-tech",
     origin: "Organic-synthetic fusion, bio-tech integration",
     biome: ["Zones de convergence", "Décharges électroniques"],
-    characteristic: "Link — Share buffs, split damage with ally, mutual buff transfer",
-    counters: ["radiant"],
-    weakAgainst: ["scribeur"],
+    characteristic: "Link — Sacrifice & Protection",
     weight: 100,
   },
 
@@ -155,9 +80,7 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     description: "Absorption sélective de radiation, mutants irradiés",
     origin: "Selective radiation absorption, irradiated mutants",
     biome: ["Zones radiatives", "Centrales abandonnées"],
-    characteristic: "Energy drain — Absorb enemy HP when hitting, self-sustain via damage",
-    counters: ["chimere"],
-    weakAgainst: ["symbiote"],
+    characteristic: "Energy drain — Sustain & Drain",
     weight: 100,
   },
 
@@ -168,9 +91,7 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     description: "Hybridation forcée inter-espèces, biologie chaotique",
     origin: "Forced cross-species hybridization, chaotic biology",
     biome: ["Laboratoires de recherche", "Zones expérimentales"],
-    characteristic: "Mutation — Random stat boost per turn, volatile but potentially game-changing",
-    counters: ["synchroniseur"],
-    weakAgainst: ["radiant"],
+    characteristic: "Mutation — Controlled Chaos",
     weight: 100,
   },
 
@@ -181,9 +102,7 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     description: "Evolution toxique/biologique guerre, immunité fortifiée",
     origin: "Biological warfare, toxin-based evolution, immune resistance",
     biome: ["Zones contaminées", "Décharges chimiques"],
-    characteristic: "Spread — Poison stacks, spreads to nearby allies, reduces enemy healing",
-    counters: ["scribeur"],
-    weakAgainst: ["resilient"],
+    characteristic: "Spread — Poison & Weaken",
     weight: 100,
   },
 
@@ -194,9 +113,7 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     description: "Manipulation bio-quantique, entités éthérées",
     origin: "Bio-quantum manipulation, ethereal entities",
     biome: ["Anomalies temporelles", "Zones entre-deux"],
-    characteristic: "Swap — Move allies/enemies, reposition, time warps, battlefield manipulation",
-    counters: ["ombre"],
-    weakAgainst: ["chimere"],
+    characteristic: "Swap — Order & Delay",
     weight: 100,
   },
 
@@ -207,38 +124,19 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     description: "Adaptation ombre, optical mastery, surprise attack evolution",
     origin: "Shadow adaptation, optical mastery, surprise attack evolution",
     biome: ["Zones sombres", "Couverts forestiers", "Cavernes"],
-    characteristic: "Surprise — Crit bonus first turn, evasion opener, shadow form with enhanced offense",
-    counters: ["resilient"],
-    weakAgainst: ["synchroniseur"],
+    characteristic: "Surprise — Dodge & Timing",
+    activeSkill: {
+      name: "Phase d'Ombre",
+      description: "Intangible: ne subis aucun damage pendant ce tour + ignore DEF sur ton attaque",
+      cooldown: 3,
+    },
+    passive: {
+      name: "Cible Arrière",
+      description: "Au début de chaque combat, ton attaque cible la DERNIÈRE position dans la queue (au lieu de la position 1)",
+    },
     weight: 100,
   },
 };
-
-/**
- * Get type advantage multiplier
- * Returns multiplier for damage received based on type interaction
- * @param attackerType Type of the attacker
- * @param defenderType Type of the defender
- * @returns Damage multiplier (1.0 = neutral, >1.0 = more, <1.0 = less)
- */
-export function getTypeAdvantageMultiplier(
-  attackerType: GeneticType,
-  defenderType: GeneticType
-): number {
-  const attackerData = TYPE_INTERACTIONS[attackerType];
-
-  // If attacker counters defender
-  if (attackerData.counters.includes(defenderType)) {
-    return 1.2; // +20% damage
-  }
-
-  // If attacker is weak against defender
-  if (attackerData.weak.includes(defenderType)) {
-    return 0.8; // -20% damage
-  }
-
-  return 1.0; // Neutral
-}
 
 /**
  * Get genetic type by ID
