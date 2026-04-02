@@ -135,6 +135,15 @@ export default function PokedexPage() {
   const getTotalCaptured = () => discovered.size;
   const getTotalSlots = () => geneticTypes.length * RANKS.length; // 8 × 7 = 56
 
+  const handleResetPokedex = () => {
+    if (confirm("Êtes-vous sûr de vouloir réinitialiser votre progression Pokédex ? Toutes les cartes seront verrouillées.")) {
+      localStorage.removeItem("ecobio-pokedex-unlocks");
+      setDiscovered(new Set());
+      // Trigger UI update
+      window.dispatchEvent(new Event("storage"));
+    }
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
       <div className="max-w-7xl mx-auto">
@@ -149,12 +158,22 @@ export default function PokedexPage() {
         </h1>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-8 shadow-lg">
-          <p className="text-lg text-gray-700 dark:text-gray-300">
-            Collection: <span className="font-bold text-green-600 dark:text-green-400">{getTotalCaptured()}</span> / {getTotalSlots()} cartes
-          </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Capturez des Ravaryn de chaque type et rang pour compléter le Pokédex
-          </p>
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-lg text-gray-700 dark:text-gray-300">
+                Collection: <span className="font-bold text-green-600 dark:text-green-400">{getTotalCaptured()}</span> / {getTotalSlots()} cartes
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Capturez des Ravaryn de chaque type et rang pour compléter le Pokédex
+              </p>
+            </div>
+            <button
+              onClick={handleResetPokedex}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold shadow-md transition-colors"
+            >
+              🔄 Reset Progression
+            </button>
+          </div>
         </div>
 
         {/* Type rows + Rank columns */}
