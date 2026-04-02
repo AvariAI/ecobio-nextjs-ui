@@ -59,79 +59,122 @@ function isCriticalHit(crit: number): boolean {
 export default function BattlePage() {
   const [battleState, setBattleState] = useState<BattleState | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    
-    // Load team from sessionStorage
-    const teamIds = sessionStorage.getItem("battle-team");
-    if (!teamIds) {
-      window.location.href = "/arena/training";
-      return;
-    }
+    const initBattle = async () => {
+      if (typeof window === "undefined") return;
 
-    const ids = JSON.parse(teamIds) as string[];
-    
-    // Load collection
-    const saved = localStorage.getItem("ecobio-collection");
-    if (!saved) {
-      window.location.href = "/arena/training";
-      return;
-    }
+      try {
+        // Load team from sessionStorage
+        const teamIdsJson = sessionStorage.getItem("battle-team");
+        if (!teamIdsJson) {
+          setError("Aucune équipe trouvée. Redirection vers la sélection...");
+          setTimeout(() => window.location.href = "/arena/training", 1500);
+          return;
+        }
 
-    const collection = JSON.parse(saved) as any[];
-    const selectedCreatures = ids
-      .map(id => collection.find((c: any) => c.id === id))
-      .filter(Boolean);
+        const teamIds = JSON.parse(teamIdsJson) as string[];
+        console.log("Team IDs loaded:", teamIds);
 
-    if (selectedCreatures.length !== 5) {
-      window.location.href = "/arena/training";
-      return;
-    }
+        // Load collection
+        const saved = localStorage.getItem("ecobio-collection");
+        if (!saved) {
+          setError("Collection vide. Redirection vers l'home...");
+          setTimeout(() => window.location.href = "/", 1500);
+          return;
+        }
 
-    // Build player team with all required fields
-    const playerTeam: (Creature & { position: number; currentHP: number })[] = selectedCreatures.map((c: any, index: number) => ({
-      id: c.id,
-      name: c.name,
-      creatureId: c.creatureId,
-      finalStats: c.finalStats || c.customStats || c.baseStats,
-      level: c.level || c.customStats?.level || 1,
-      currentHP: c.currentHP || c.maxHP || c.finalStats?.hp,
-      maxHP: c.maxHP || c.finalStats?.hp,
-      position: index + 1
-    }));
+        const collection = JSON.parse(saved) as any[];
+        console.log("Collection loaded:", collection.length, "creatures");
 
-    // Generate enemy team (5 Rank E creatures)
-    const enemyTeam: Creature[] = Array(5).fill(0).map(() => {
-      const creature = CREATURES[0]; // Use first creature for simplicity
-      return {
-        id: `enemy-${Math.random()}`,
-        name: creature.name,
-        creatureId: creature.id,
-        finalStats: {
-          rank: "E",
-          hp: creature.baseStats.hp,
-          attack: creature.baseStats.attack,
-          defense: creature.baseStats.defense,
-          speed: creature.baseStats.speed,
-          crit: creature.baseStats.crit
-        },
-        level: 1,
-        currentHP: creature.baseStats.hp,
-        maxHP: creature.baseStats.hp
-      };
-    });
+        // Build player team with all required fields
+        const playerTeam: Creature[] = [];
+        
+        for (let i = 0; i < teamIds.length; i++) {
+          const id = teamIds[i];
+          const c = collection.find((item: any) => item.id === id);
+          
+          if (!c) {
+            console.error(`Creature with id ${id} not found`);
+            continue;
+          }
 
-    // Initialize player team with preserved HP
-    const playerTeamWithHP = playerTeam.map(c => ({ ...c, currentHP: c.currentHP }));
+          // Get stats - prioritize finalStats, then customStats, then baseStats
+          const stats = c.finalStats || c.customStats || c.baseStats || c.baseStats;
+          
+          // Handle health - use currentHP if available, else maxHP or stats.hp
+          const hp = c.currentHP || c.maxHP || stats?.hp || 100;
+          const maxHP = c.maxHP || stats?.hp || 100;
 
-    setBattleState({
-      playerTeam: playerTeamWithHP,
-      enemyTeam,
-      turn: 1,
-      log: ["⚔️ Combat commencé!"],
-      winner: null
-    });
+          playerTeam.push({
+            id: c.id,
+            name: c.name,
+            creatureId: c.creatureId,
+            finalStats: {
+              rank: stats?.rank || c.rank || "E",
+              hp: maxHP,
+              attack: stats?.attack || c.baseStats?.attack || 10,
+              defense: stats?.defense || c.baseStats?.defense || 5,
+              speed: stats?.speed || c.baseStats?.speed || 10,
+              crit: stats?.crit || c.baseStats?.crit || 5
+            },
+            level: c.level || c.customStats?.level || 1,
+            currentHP: hp,
+            maxHP: maxHP,
+            position: i + 1
+          });
+        }
+
+        console.log("Player team built:", playerTeam.length, "creatures");
+
+        if (playerTeam.length !== 5) {
+          setError(`Équipe incomplète (${playerTeam.length}/5). Redirection...`);
+          setTimeout(() => window.location.href = "/arena/training", 1500);
+          return;
+        }
+
+        // Generate enemy team (5 Rank E creatures)
+        const enemyTeam: Creature[] = Array(5).fill(0).map((_, i) => {
+          const creature = CREATURES[0]; // Use first creature for simplicity
+          const baseHP = creature.baseStats.hp;
+          return {
+            id: `enemy-${Math.random()}`,
+            name: creature.name,
+            creatureId: creature.id,
+            finalStats: {
+              rank: "E",
+              hp: baseHP,
+              attack: creature.baseStats.attack,
+              defense: creature.baseStats.defense,
+              speed: creature.baseStats.speed,
+              crit: creature.baseStats.crit
+            },
+            level: 1,
+            currentHP: baseHP,
+            maxHP: baseHP
+          };
+        });
+
+        console.log("Enemy team generated");
+
+        // Initialize player team with preserved HP
+        const playerTeamWithHP = [...playerTeam];
+
+        setBattleState({
+          playerTeam: playerTeamWithHP,
+          enemyTeam,
+          turn: 1,
+          log: ["⚔️ Combat commencé!"],
+          winner: null
+        });
+      } catch (err) {
+        console.error("Battle initialization error:", err);
+        setError(`Erreur: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    };
+
+    initBattle();
   }, []);
 
   const processTurn = () => {
@@ -194,8 +237,19 @@ export default function BattlePage() {
     setIsProcessing(false);
   };
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white p-6">
+        <div className="max-w-2xl mx-auto text-center">
+          <h1 className="text-2xl font-bold text-red-500 mb-4">⚠️ Erreur</h1>
+          <p className="text-gray-300">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!battleState) {
-    return <div className="min-h-screen bg-gray-900 text-white p-6">Chargement...</div>;
+    return <div className="min-h-screen bg-gray-900 text-white p-6">Chargement du combat...</div>;
   }
 
   const playerAlive = battleState.playerTeam.filter(c => c.currentHP > 0).length;
@@ -235,7 +289,7 @@ export default function BattlePage() {
           <div className="bg-blue-900 bg-opacity-50 rounded-2xl p-4">
             <h2 className="text-2xl font-bold text-blue-300 mb-4">🔵 Ton Équipe ({playerAlive}/5)</h2>
             <div className="space-y-2">
-              {battleState.playerTeam.map((creature, index) => (
+              {battleState.playerTeam.map((creature) => (
                 <div
                   key={creature.id}
                   className="bg-gray-800 dark:bg-gray-700 rounded-lg p-3 flex items-center gap-3"
@@ -269,7 +323,7 @@ export default function BattlePage() {
           <div className="bg-red-900 bg-opacity-50 rounded-2xl p-4">
             <h2 className="text-2xl font-bold text-red-300 mb-4">⚔️ Ennemis ({enemyAlive}/5)</h2>
             <div className="space-y-2">
-              {battleState.enemyTeam.map((creature, index) => (
+              {battleState.enemyTeam.map((creature) => (
                 <div
                   key={creature.id}
                   className="bg-gray-800 dark:bg-gray-700 rounded-lg p-3 flex items-center gap-3"
