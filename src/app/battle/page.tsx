@@ -161,7 +161,7 @@ function BattlePageContent() {
   };
 
   const performAttack = (targetIndex: number) => {
-    const attacker = getCurrentCreature();
+    const attacker = stableCurrentCreature;
     if (!attacker || !playerTeam || !enemyTeam || isProcessing || winner) return;
 
     const targetTeam = attacker.team === "player" ? enemyTeam : playerTeam;
@@ -283,8 +283,9 @@ function BattlePageContent() {
   };
 
   const selectedCreatures = collection.filter(c => selectedIds.includes(c.id));
-  const currentCreature = getCurrentCreature();
-  const playerTurn = currentCreature?.team === "player" || false;
+  // Use stable turn order from state, don't recalc with getTurnOrder
+  const stableCurrentCreature = turnOrder.length > 0 && currentTurnIndex < turnOrder.length ? turnOrder[currentTurnIndex] : null;
+  const playerTurn = stableCurrentCreature?.team === "player";
 
   // HOME
   if (mode === "home") {
@@ -399,12 +400,12 @@ function BattlePageContent() {
             </div>
           )}
 
-          {phase === "battle" && currentCreature && (
+          {phase === "battle" && stableCurrentCreature && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 mb-4 border-2 border-gray-300">
               <div className="text-center">
                 <p className="text-2xl font-bold mb-2">🎯 Tour {turnCount}</p>
                 <p className="text-lg font-bold">
-                  Tour de: <span className={currentCreature.team === "player" ? "text-blue-700 dark:text-blue-300" : "text-red-700 dark:text-red-300"}>{currentCreature.name}</span> ({currentCreature.team})
+                  Tour de: <span className={stableCurrentCreature.team === "player" ? "text-blue-700 dark:text-blue-300" : "text-red-700 dark:text-red-300"}>{stableCurrentCreature.name}</span> ({stableCurrentCreature.team})
                 </p>
                 <p className="text-sm text-gray-600 mt-2">{playerTurn ? "→ Sélectionne un ennemi" : "...activer avec le bouton SUIVANT si bloqué"}</p>
               </div>
@@ -421,7 +422,7 @@ function BattlePageContent() {
                       <span className="font-bold">🪲 {c.name}</span>
                       <span className="text-sm text-gray-600">HP: {c.currentHP}/{c.stats.hp}</span>
                     </div>
-                    {currentCreature?.id === c.id && <div className="mt-1 text-xs text-blue-700 font-bold">← Actif</div>}
+                    {stableCurrentCreature?.id === c.id && <div className="mt-1 text-xs text-blue-700 font-bold">← Actif</div>}
                   </div>
                 ))}
               </div>
@@ -436,7 +437,7 @@ function BattlePageContent() {
                       <span className="font-bold">🪲 {c.name}</span>
                       <span className="text-sm text-gray-600">HP: {c.currentHP}/{c.stats.hp}</span>
                     </div>
-                    {currentCreature?.id === c.id && <div className="mt-1 text-xs text-red-700 font-bold">← Actif</div>}
+                    {stableCurrentCreature?.id === c.id && <div className="mt-1 text-xs text-red-700 font-bold">← Actif</div>}
                   </button>
                 ))}
               </div>
