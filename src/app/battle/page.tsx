@@ -223,10 +223,8 @@ function BattlePageContent() {
           { text: `🎯 Tour ${newTurnCount}: ${nextCreature.name} (${nextCreature.team})`, type: "info" },
         ]);
 
-        // Auto enemy attack (no setTimeout)
-        if (nextCreature.team === "enemy") {
-          executeEnemyAttack(nextCreature);
-        }
+        // No auto enemy attack - let user trigger via NEXT button
+        // if (nextCreature.team === "enemy") { executeEnemyAttack(nextCreature); }
 
         return;
       }
@@ -246,7 +244,7 @@ function BattlePageContent() {
       ]);
 
       if (nextCreature?.team === "enemy") {
-        executeEnemyAttack(nextCreature);
+        // executeEnemyAttack(nextCreature); // DISABLED to fix double-turn bug
       }
     }
   };
