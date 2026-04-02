@@ -8,6 +8,7 @@ interface HuntedCreature {
   id: string;
   name: string;
   rank?: Rank;
+  creatureId: string;
   customStats?: {
     hp: number;
     attack: number;
@@ -16,9 +17,36 @@ interface HuntedCreature {
     crit: number;
     level: number;
   };
+  finalStats?: {
+    rank: Rank;
+  };
   baseStats: { hp: number; attack: number; defense: number; speed: number; crit: number; };
+  geneticType?: string;
   traits?: string[];
   stars?: number;
+}
+
+function getCreatureImage(creatureId: string, rank: Rank, geneticType?: string): string {
+  if (creatureId === "housefly") {
+    const rankSuffix = rank === "S+" ? "S+" : rank;
+    return `/ecobio-nextjs-ui/creatures/fly-rank-${rankSuffix}.png`;
+  }
+  if (creatureId === "ant") {
+    const rankSuffix = rank === "S+" ? "S+" : rank;
+    return `/ecobio-nextjs-ui/creatures/ant_rank_${rankSuffix}.png`;
+  }
+  if (creatureId === "honeybee") {
+    const rankSuffix = rank === "S+" ? "S+" : rank;
+    return `/ecobio-nextjs-ui/creatures/bee-rank-${rankSuffix}.png`;
+  }
+  if (creatureId === "spider_mutant") {
+    return "/ecobio-nextjs-ui/images/creatures/spider_mutant_e.png";
+  }
+  if (creatureId === "ravaryn" && geneticType) {
+    const normalizedType = geneticType.toLowerCase().replace("é", "e").replace("è", "e");
+    return `/ecobio-nextjs-ui/images/creatures/ravaryn_${normalizedType}_e.png`;
+  }
+  return "/ecobio-nextjs-ui/images/creatures/spider_mutant_e.png";
 }
 
 export default function TrainingPage() {
@@ -64,7 +92,11 @@ export default function TrainingPage() {
               <div className="mb-4 grid grid-cols-5 gap-2">
                 {selectedCreatures.map(c => (
                   <div key={c.id} className="bg-blue-50 dark:bg-blue-900 rounded-lg p-2 text-center border-2 border-blue-300">
-                    <div className="text-2xl mb-1">🪲</div>
+                    <img
+                      src={getCreatureImage(c.creatureId, c.finalStats?.rank || c.rank || "E", c.geneticType)}
+                      alt={c.name}
+                      className="w-12 h-12 mx-auto mb-1 object-contain"
+                    />
                     <p className="text-xs font-bold truncate">{c.name}</p>
                     <p className="text-xs text-gray-600">{c.rank} N{c.customStats?.level || 1}</p>
                   </div>
@@ -81,7 +113,7 @@ export default function TrainingPage() {
                     key={c.id}
                     onClick={() => handleToggleCreature(c.id)}
                     disabled={!selectedIds.includes(c.id) && selectedIds.length >= 5}
-                    className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                    className={`w-full text-left p-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
                       selectedIds.includes(c.id)
                         ? "bg-blue-100 border-blue-500 dark:bg-blue-900"
                         : "bg-gray-50 border-gray-200 dark:bg-gray-700"
@@ -91,8 +123,15 @@ export default function TrainingPage() {
                         : "hover:shadow-md"
                     }`}
                   >
-                    <p className="font-bold">{c.name}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">R{c.rank || "E"} • N{c.customStats?.level || 1}</p>
+                    <img
+                      src={getCreatureImage(c.creatureId, c.finalStats?.rank || c.rank || "E", c.geneticType)}
+                      alt={c.name}
+                      className="w-12 h-12 object-contain flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold truncate">{c.name}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">R{c.rank || "E"} • N{c.customStats?.level || 1}</p>
+                    </div>
                   </button>
                 ))
               )}
