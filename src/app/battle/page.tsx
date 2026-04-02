@@ -465,53 +465,15 @@ export default function BattlePage() {
           []  // Test mode: no traits
         );
       } else if (battleMode === "easy") {
-        // Easy mode: Player from collection, enemy auto-generated
-        if (!selectedPlayer) {
-          alert("Sélectionnez votre créature de collection!");
-          return;
-        }
-
-        // Player creature from collection
-        const playerStatMods = applyTraitStatModifiers(
-          {
-            hp: selectedPlayer.finalStats.hp,
-            attack: selectedPlayer.finalStats.attack,
-            defense: selectedPlayer.finalStats.defense,
-            speed: selectedPlayer.finalStats.speed,
-            crit: selectedPlayer.finalStats.crit,
-          },
-          selectedPlayer.traits || [],
-          selectedPlayer.level || 1
-        );
-
-        const playerCreatureWithSkills = {
-          ...CREATURES[selectedPlayer.creatureId],
-          specimenSkill: selectedPlayer.specimenSkill,
-          personalitySkill: selectedPlayer.personalitySkill,
-        };
-
+        // Easy mode: Both player and enemy are auto-generated
+        // Player: auto-generated random creature
+        const randomPlayer = spawnEasyModeEnemy();
         p = createBattleCreature(
-          playerCreatureWithSkills,
-          {
-            hp: playerStatMods.modifiedStats.hp,
-            attack: playerStatMods.modifiedStats.attack,
-            defense: playerStatMods.modifiedStats.defense,
-            speed: playerStatMods.modifiedStats.speed,
-            crit: playerStatMods.modifiedStats.crit,
-            rank: selectedPlayer.finalStats.rank,
-          },
-          `${selectedPlayer.name} (R${selectedPlayer.finalStats.rank} L${selectedPlayer.level})`,
-          selectedPlayer.traits || []
+          randomPlayer.creatureTemplate,
+          randomPlayer.stats,
+          randomPlayer.name,
+          randomPlayer.traits || []
         );
-        p.baseStats = {
-          hp: selectedPlayer.finalStats.hp,
-          attack: selectedPlayer.finalStats.attack,
-          defense: selectedPlayer.finalStats.defense,
-          speed: selectedPlayer.finalStats.speed,
-          crit: selectedPlayer.finalStats.crit,
-          rank: selectedPlayer.finalStats.rank,
-        };
-        p.statModifiers = playerStatMods.breakdown;
 
         // Enemy: auto-generated random creature
         const randomEnemy = spawnEasyModeEnemy();
@@ -638,67 +600,86 @@ export default function BattlePage() {
       const enemyCreatures: Array<{ creatureTemplate: any; stats: any; name: string; traits?: string[] }> = [];
 
       // Build player team
-      for (let i = 0; i < teamSize; i++) {
-        const creatureId = playerTeamIds[i];
-        if (!creatureId && battleMode !== "test") continue;
+      if (battleMode === "easy") {
+        // Easy mode: Generate random player team
+        const randomPlayers = generateRandomEnemyTeam();
 
-        if (battleMode === "test") {
-          // Test mode: Use slot-based creature configuration
-          const slotConfig = playerSlotConfigs[i];
-          if (!slotConfig || !slotConfig.creatureId) continue;
+        for (let i = 0; i < teamSize; i++) {
+          const randomPlayer = randomPlayers[i];
 
-          const testCreature = CREATURES[slotConfig.creatureId];
-          const testStats = calculateScaledStats(testCreature, slotConfig.level, slotConfig.rank);
+          if (randomPlayer) {
+            playerCreatures.push({
+              creatureTemplate: randomPlayer.creatureTemplate,
+              stats: randomPlayer.stats,
+              name: randomPlayer.name,
+              traits: randomPlayer.traits,
+            });
+          }
+        }
+      } else {
+        // Test mode or Collection mode
+        for (let i = 0; i < teamSize; i++) {
+          const creatureId = playerTeamIds[i];
+          if (!creatureId && battleMode !== "test") continue;
 
-          // Get specimen skill from skills.ts database
-          const creatureWithSpecimenSkill = {
-            ...testCreature,
-            specimenSkill: getSpecimenSkill(slotConfig.creatureId),
-          };
+          if (battleMode === "test") {
+            // Test mode: Use slot-based creature configuration
+            const slotConfig = playerSlotConfigs[i];
+            if (!slotConfig || !slotConfig.creatureId) continue;
 
-          playerCreatures.push({
-            creatureTemplate: creatureWithSpecimenSkill,
-            stats: testStats,
-            name: `${testCreature.name} ${i + 1} (R${slotConfig.rank} L${slotConfig.level})`,
-            traits: [],
-          });
-        } else {
-          // Collection mode: Use selected creatures
-          const collected = collection.find(c => c.id === creatureId);
-          if (!collected) continue;
+            const testCreature = CREATURES[slotConfig.creatureId];
+            const testStats = calculateScaledStats(testCreature, slotConfig.level, slotConfig.rank);
 
-          const statMods = applyTraitStatModifiers(
-            {
-              hp: collected.finalStats.hp,
-              attack: collected.finalStats.attack,
-              defense: collected.finalStats.defense,
-              speed: collected.finalStats.speed,
-              crit: collected.finalStats.crit,
-            },
-            collected.traits || [],
-            collected.level || 1
-          );
+            // Get specimen skill from skills.ts database
+            const creatureWithSpecimenSkill = {
+              ...testCreature,
+              specimenSkill: getSpecimenSkill(slotConfig.creatureId),
+            };
 
-          // Create creature template with dual skills from collected creature
-          const creatureTemplateWithSkills = {
-            ...CREATURES[collected.creatureId],
-            specimenSkill: collected.specimenSkill,
-            personalitySkill: collected.personalitySkill,
-          };
+            playerCreatures.push({
+              creatureTemplate: creatureWithSpecimenSkill,
+              stats: testStats,
+              name: `${testCreature.name} ${i + 1} (R${slotConfig.rank} L${slotConfig.level})`,
+              traits: [],
+            });
+          } else {
+            // Collection mode: Use selected creatures
+            const collected = collection.find(c => c.id === creatureId);
+            if (!collected) continue;
 
-          playerCreatures.push({
-            creatureTemplate: creatureTemplateWithSkills,
-            stats: {
-              hp: statMods.modifiedStats.hp,
-              attack: statMods.modifiedStats.attack,
-              defense: statMods.modifiedStats.defense,
-              speed: statMods.modifiedStats.speed,
-              crit: statMods.modifiedStats.crit,
-              rank: collected.finalStats.rank,
-            },
-            name: `${collected.name} (R${collected.finalStats.rank} L${collected.level})`,
-            traits: collected.traits || [],
-          });
+            const statMods = applyTraitStatModifiers(
+              {
+                hp: collected.finalStats.hp,
+                attack: collected.finalStats.attack,
+                defense: collected.finalStats.defense,
+                speed: collected.finalStats.speed,
+                crit: collected.finalStats.crit,
+              },
+              collected.traits || [],
+              collected.level || 1
+            );
+
+            // Create creature template with dual skills from collected creature
+            const creatureTemplateWithSkills = {
+              ...CREATURES[collected.creatureId],
+              specimenSkill: collected.specimenSkill,
+              personalitySkill: collected.personalitySkill,
+            };
+
+            playerCreatures.push({
+              creatureTemplate: creatureTemplateWithSkills,
+              stats: {
+                hp: statMods.modifiedStats.hp,
+                attack: statMods.modifiedStats.attack,
+                defense: statMods.modifiedStats.defense,
+                speed: statMods.modifiedStats.speed,
+                crit: statMods.modifiedStats.crit,
+                rank: collected.finalStats.rank,
+              },
+              name: `${collected.name} (R${collected.finalStats.rank} L${collected.level})`,
+              traits: collected.traits || [],
+            });
+          }
         }
       }
 
@@ -1801,13 +1782,24 @@ export default function BattlePage() {
 
         {phase === "setup" && battleMode === "easy" && teamSize === 1 && (
           <div className="grid md:grid-cols-2 gap-8 mb-8">
-            <CollectionSelector
-              label="🔵 Your Creature"
-              collection={collection}
-              selectedId={selectedPlayerId}
-              onSelect={setSelectedPlayerId}
-              accent="blue"
-            />
+            {/* Easy Mode 1v1: Random player - no selector needed */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-2 border-blue-400 hover:shadow-2xl transition-all">
+              <h2 className="text-3xl font-bold mb-4">🔵 Player Creature</h2>
+              <div className="bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900 dark:to-cyan-900 rounded-xl p-6 min-h-64 flex flex-col items-center justify-center">
+                <div className="text-6xl mb-4">🎲</div>
+                <p className="text-lg text-blue-700 dark:text-blue-300 font-semibold text-center">
+                  Joueur aléatoire
+                </p>
+                <p className="text-sm text-blue-600 dark:text-blue-400 text-center mt-2">
+                  Généré automatiquement
+                </p>
+                <div className="mt-4 text-xs text-blue-500 dark:text-blue-300">
+                  <p>• Rang aléatoire (poids E)</p>
+                  <p>• Niveau 1</p>
+                  <p>• Traits RNG</p>
+                </div>
+              </div>
+            </div>
 
             {/* Easy Mode 1v1: Random enemy - no selector needed */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-2 border-red-400 hover:shadow-2xl transition-all">
@@ -1832,14 +1824,24 @@ export default function BattlePage() {
 
         {phase === "setup" && battleMode === "easy" && teamSize > 1 && (
           <div className="grid md:grid-cols-2 gap-8 mb-8">
-            <MultiCreatureCollectionSelector
-              label={`🔵 Équipe Joueur (${teamSize} créatures)`}
-              collection={collection}
-              teamIds={playerTeamIds}
-              onTeamSelect={handlePlayerTeamSelect}
-              teamSize={teamSize}
-              accent="blue"
-            />
+            {/* Easy Mode: Random player team - no selector needed */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-2 border-blue-400 hover:shadow-2xl transition-all">
+              <h2 className="text-2xl font-bold mb-4">🔵 Équipe Joueur ({teamSize} créatures)</h2>
+              <div className="bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900 dark:to-cyan-900 rounded-xl p-6 min-h-64 flex flex-col items-center justify-center">
+                <div className="text-6xl mb-4">🎲</div>
+                <p className="text-lg text-blue-700 dark:text-blue-300 font-semibold text-center">
+                  Joueurs aléatoires
+                </p>
+                <p className="text-sm text-blue-600 dark:text-blue-400 text-center mt-2">
+                  {teamSize} créatures générées automatiquement
+                </p>
+                <div className="mt-4 text-xs text-blue-500 dark:text-blue-300">
+                  <p>• Rangs E-S+</p>
+                  <p>• Niveaux aléatoires</p>
+                  <p>• Traits variés</p>
+                </div>
+              </div>
+            </div>
 
             {/* Easy Mode: Random enemies - no selector needed */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-2 border-red-400 hover:shadow-2xl transition-all">
@@ -1867,14 +1869,11 @@ export default function BattlePage() {
             <button
               onClick={startBattle}
               disabled={
-                // Easy mode 1v1: only need player selected (enemy is auto-generated)
-                (teamSize === 1 && battleMode === "easy" && !selectedPlayerId) ||
+                // Easy mode: always enabled (both teams auto-generated)
                 // Collection mode 1v1: need both player and enemy selected
                 (teamSize === 1 && battleMode !== "easy" && battleMode !== "test" && (!selectedPlayerId || !selectedEnemyId)) ||
                 // Test mode multi-creature: need valid configs for both teams
                 (teamSize > 1 && battleMode === "test" && (!validateTestSlotConfigs(playerSlotConfigs, teamSize) || !validateTestSlotConfigs(enemySlotConfigs, teamSize))) ||
-                // Easy mode multi-creature: only need player team (enemy is auto-generated)
-                (teamSize > 1 && battleMode === "easy" && !validateTeamSize(playerTeamIds, teamSize)) ||
                 // Collection mode multi-creature: need valid teams for both sides
                 (teamSize > 1 && battleMode !== "easy" && battleMode !== "test" && (!validateTeamSize(playerTeamIds, teamSize) || !validateTeamSize(enemyTeamIds, teamSize)))
               }
