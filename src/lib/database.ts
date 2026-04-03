@@ -95,7 +95,7 @@ export const CREATURES: Record<string, Creature> = {
       crit: 100,
     },
     desc: "",
-    image: "/images/giant_fly.png", // Temporary image
+    image: "/images/creatures/polyops.png",
   },
 };
 
