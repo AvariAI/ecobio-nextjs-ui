@@ -25,13 +25,14 @@ function getCardImage(geneticType: GeneticType, rank: Rank): string {
 }
 
 // Check if user has discovered this type rank (permanent unlock)
-function hasDiscovered(geneticType: GeneticType, rank: Rank): boolean {
+function hasDiscovered(geneticType: GeneticType, rank: Rank, creatureId?: string): boolean {
   try {
     // Check permanent pokedex unlocks first
     const unlocks = JSON.parse(localStorage.getItem("ecobio-pokedex-unlocks") || "[]");
     const isUnlocked = unlocks.some((unlock: any) =>
       unlock.geneticType === geneticType &&
-      unlock.rank === rank
+      unlock.rank === rank &&
+      (!creatureId || unlock.creatureId === creatureId)
     );
     if (isUnlocked) return true;
 
@@ -39,12 +40,13 @@ function hasDiscovered(geneticType: GeneticType, rank: Rank): boolean {
     const collection = JSON.parse(localStorage.getItem("ecobio-collection") || "[]");
     const matches = collection.filter((creature: any) =>
       creature.geneticType === geneticType &&
-      creature.finalStats.rank === rank
+      creature.finalStats.rank === rank &&
+      (!creatureId || creature.creatureId === creatureId)
     );
 
     // First discovery! Add to permanent unlocks
     if (matches.length > 0 && !isUnlocked) {
-      unlocks.push({ geneticType, rank, discoveredAt: Date.now() });
+      unlocks.push({ geneticType, rank, discoveredAt: Date.now(), creatureId });
       localStorage.setItem("ecobio-pokedex-unlocks", JSON.stringify(unlocks));
     }
 
@@ -54,13 +56,14 @@ function hasDiscovered(geneticType: GeneticType, rank: Rank): boolean {
   }
 }
 
-// Check if user has at least one captured creature of this type rank
-function hasCaptured(geneticType: GeneticType, rank: Rank): boolean {
+// Check if user has at least one captured creature of this type rank for a specific creature
+function hasCaptured(geneticType: GeneticType, rank: Rank, creatureId?: string): boolean {
   try {
     const collection = JSON.parse(localStorage.getItem("ecobio-collection") || "[]");
     const matches = collection.filter((creature: any) =>
       creature.geneticType === geneticType &&
-      creature.finalStats.rank === rank
+      creature.finalStats.rank === rank &&
+      (!creatureId || creature.creatureId === creatureId)
     );
     return matches.length > 0;
   } catch (error) {
@@ -69,13 +72,14 @@ function hasCaptured(geneticType: GeneticType, rank: Rank): boolean {
   }
 }
 
-// Get capture count for this type rank
-function getCaptureCount(geneticType: GeneticType, rank: Rank): number {
+// Get capture count for this type rank for a specific creature
+function getCaptureCount(geneticType: GeneticType, rank: Rank, creatureId?: string): number {
   try {
     const collection = JSON.parse(localStorage.getItem("ecobio-collection") || "[]");
     return collection.filter((creature: any) =>
       creature.geneticType === geneticType &&
-      creature.finalStats.rank === rank
+      creature.finalStats.rank === rank &&
+      (!creatureId || creature.creatureId === creatureId)
     ).length;
   } catch {
     return 0;
@@ -100,18 +104,33 @@ export default function PokedexPage() {
 
   const [discovered, setDiscovered] = useState<Set<string>>(new Set());
 
-  // Load discovered status from localStorage
+  // Load discovered status from localStorage for selected creature
   useEffect(() => {
     const discoveredSet = new Set<string>();
     geneticTypes.forEach(type => {
       RANKS.forEach(rank => {
-        if (hasDiscovered(type, rank)) {
+        if (hasDiscovered(type, rank, selectedCreature)) {
           discoveredSet.add(`${type}-${rank}`);
         }
       });
     });
     setDiscovered(discoveredSet);
-  }, [geneticTypes]);
+  }, [geneticTypes, selectedCreature]);
+
+  // Load global discovered status for all creatures
+  useEffect(() => {
+    const globalDiscoveredSet = new Set<string>();
+    availableCreatures.forEach(creatureId => {
+      geneticTypes.forEach(type => {
+        RANKS.forEach(rank => {
+          if (hasDiscovered(type, rank, creatureId)) {
+            globalDiscoveredSet.add(`${creatureId}-${type}-${rank}`);
+          }
+        });
+      });
+    });
+    setGlobalDiscovered(globalDiscoveredSet);
+  }, [availableCreatures, geneticTypes]);
 
   // Listen for collection updates
   useEffect(() => {
@@ -119,12 +138,25 @@ export default function PokedexPage() {
       const discoveredSet = new Set<string>();
       geneticTypes.forEach(type => {
         RANKS.forEach(rank => {
-          if (hasDiscovered(type, rank)) {
+          if (hasDiscovered(type, rank, selectedCreature)) {
             discoveredSet.add(`${type}-${rank}`);
           }
         });
       });
       setDiscovered(discoveredSet);
+      
+      // Update global counter too
+      const globalDiscoveredSet = new Set<string>();
+      availableCreatures.forEach(creatureId => {
+        geneticTypes.forEach(type => {
+          RANKS.forEach(rank => {
+            if (hasDiscovered(type, rank, creatureId)) {
+              globalDiscoveredSet.add(`${creatureId}-${type}-${rank}`);
+            }
+          });
+        });
+      });
+      setGlobalDiscovered(globalDiscoveredSet);
     };
 
     window.addEventListener("storage", handleStorageUpdate);
@@ -137,7 +169,12 @@ export default function PokedexPage() {
   }, [geneticTypes]);
 
   const getTotalCaptured = () => discovered.size;
-  const getTotalSlots = () => geneticTypes.length * RANKS.length; // 8 × 7 = 56
+  const getTotalSlots = () => geneticTypes.length * RANKS.length; // 8 × 7 = 56 par créature
+  
+  // Global counters (all creatures combined)
+  const [globalDiscovered, setGlobalDiscovered] = useState<Set<string>>(new Set());
+  const getGlobalTotalCaptured = () => globalDiscovered.size;
+  const getGlobalTotalSlots = () => availableCreatures.length * geneticTypes.length * RANKS.length; // N créatures × 8 types × 7 rangs = N × 56
 
   const handleResetPokedex = () => {
     if (confirm("Êtes-vous sûr de vouloir réinitialiser votre progression Pokédex ? Toutes les cartes seront verrouillées.")) {
@@ -188,6 +225,12 @@ export default function PokedexPage() {
           <div className="flex justify-between items-center">
             <div>
               <p className="text-lg text-gray-700 dark:text-gray-300">
+                <span className="font-bold text-blue-600 dark:text-blue-400">Global:</span> <span className="font-bold text-green-600 dark:text-green-400">{getGlobalTotalCaptured()}</span> / {getGlobalTotalSlots()} cartes
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Total toutes créatures confondues
+              </p>
+              <p className="text-lg text-gray-700 dark:text-gray-300 mt-1">
                 Collection {CREATURES[selectedCreature].name}: <span className="font-bold text-green-600 dark:text-green-400">{getTotalCaptured()}</span> / {getTotalSlots()} cartes
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -225,8 +268,8 @@ export default function PokedexPage() {
                   {RANKS.map((rank) => {
                     const cardKey = `${type}-${rank}`;
                     const isDiscovered = discovered.has(cardKey);
-                    const hasInCollection = hasCaptured(type, rank);
-                    const captureCount = getCaptureCount(type, rank);
+                    const hasInCollection = hasCaptured(type, rank, selectedCreature);
+                    const captureCount = getCaptureCount(type, rank, selectedCreature);
                     const isRowOdd = typeIndex % 2 === 0;
 
                     return (
