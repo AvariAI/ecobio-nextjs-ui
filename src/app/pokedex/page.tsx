@@ -23,9 +23,7 @@ function getCardImage(geneticType: GeneticType, rank: Rank, creatureId?: string)
   if (creatureId === "polyops") {
     return "/ecobio-nextjs-ui/images/creatures/polyops.png";
   }
-  // For Ravaryn and others, use creature-specific genetic type images
-  // Try to load rank-specific image first, fall back to E rank if not available
-  // (Ravaryn images currently only exist for E rank)
+  // For Ravaryn, use the full-size genetic type images (not thumbnails)
   return `/ecobio-nextjs-ui/images/creatures/ravaryn_${normalizedType}_e.png`;
 }
 
@@ -193,11 +191,9 @@ export default function PokedexPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
       <div className="max-w-7xl mx-auto">
-        <Link href="/">
-          <button className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 mb-4 inline-block font-semibold">
-            ← Retour
-          </button>
-        </Link>
+        <a href="/" className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 mb-4 inline-block font-semibold">
+          ← Retour
+        </a>
 
         <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
           📚 Pokédex
