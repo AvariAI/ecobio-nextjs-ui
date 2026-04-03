@@ -348,7 +348,7 @@ function getCreatureImage(creatureId: string, rank: Rank, geneticType?: string):
     return "/ecobio-nextjs-ui/images/creatures/maworm.png";
   }
   if (creatureId === "cornegrive") {
-    return "/ecobio-nextjs-ui/images/creatures/polyops.png"; // Placeholder for now
+    return "/ecobio-nextjs-ui/images/creatures/cornegrive.png";
   }
   return "/ecobio-nextjs-ui/images/creatures/spider_mutant_e.png";
 }
