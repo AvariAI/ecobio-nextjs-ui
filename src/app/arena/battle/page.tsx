@@ -20,6 +20,7 @@ interface Creature {
   currentHP: number;
   maxHP: number;
   position?: number;
+  geneticType?: string;
 }
 
 interface BattleState {
@@ -107,6 +108,7 @@ export default function BattlePage() {
             id: c.id,
             name: c.name,
             creatureId: c.creatureId,
+            geneticType: c.geneticType,
             finalStats: {
               rank: stats?.rank || c.rank || "E",
               hp: maxHP,
@@ -139,6 +141,7 @@ export default function BattlePage() {
               id: `enemy-${Math.random()}`,
               name: "Fourmi",
               creatureId: "ant",
+              geneticType: undefined,
               finalStats: {
                 rank: "E",
                 hp: 100,
@@ -159,6 +162,7 @@ export default function BattlePage() {
             id: `enemy-${Math.random()}`,
             name: creature.name || "Fourmi",
             creatureId: creature.id || "ant",
+            geneticType: undefined,
             finalStats: {
               rank: "E",
               hp: baseHP,
@@ -351,7 +355,7 @@ export default function BattlePage() {
                   <div className="flex items-center gap-2">
                     <span className="text-yellow-400 text-xs font-bold">#{creature.position}</span>
                     <img
-                      src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
+                      src={getCreatureImage(creature.creatureId, creature.finalStats.rank, creature.geneticType)}
                       alt={creature.name}
                       className="w-14 h-14 object-contain"
                     />
@@ -394,7 +398,7 @@ export default function BattlePage() {
                       </div>
                     </div>
                     <img
-                      src={getCreatureImage(creature.creatureId, creature.finalStats.rank)}
+                      src={getCreatureImage(creature.creatureId, creature.finalStats.rank, (creature as any).geneticType)}
                       alt={creature.name}
                       className="w-14 h-14 object-contain"
                     />
