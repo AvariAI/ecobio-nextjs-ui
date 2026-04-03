@@ -22,6 +22,10 @@ function getCardImage(geneticType: GeneticType, rank: Rank, creatureId?: string)
   if (creatureId === "polyops") {
     return "/ecobio-nextjs-ui/images/creatures/polyops.png";
   }
+  // If creature is Gravécaille, use Gravécaille image
+  if (creatureId === "gravaille") {
+    return "/ecobio-nextjs-ui/images/creatures/gravaille.png";
+  }
   // For Ravaryn, use the creatures/ directory (not images/creatures/)
   return `/ecobio-nextjs-ui/creatures/ravaryn_${normalizedType}_e.png`;
 }
@@ -258,8 +262,10 @@ export default function PokedexPage() {
               <div key={type} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
                 <div className="flex items-center gap-3 mb-4">
                   <img
-                    src={selectedCreature === "polyops" 
+                    src={selectedCreature === "polyops"
                       ? "/ecobio-nextjs-ui/images/creatures/polyops.png"
+                      : selectedCreature === "gravaille"
+                      ? "/ecobio-nextjs-ui/images/creatures/gravaille.png"
                       : `/ecobio-nextjs-ui/images/creatures/${selectedCreature}_${type.toLowerCase().replace("é", "e").replace("è", "e")}_e.png`
                     }
                     alt={typeData.name}
