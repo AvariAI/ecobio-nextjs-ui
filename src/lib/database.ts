@@ -97,6 +97,20 @@ export const CREATURES: Record<string, Creature> = {
     desc: "",
     image: "/images/creatures/polyops.png",
   },
+  gravaille: {
+    id: "gravaille",
+    name: "Gravécaille",
+    rank: "E",
+    baseStats: {
+      hp: 500,
+      attack: 100,
+      defense: 100,
+      speed: 100,
+      crit: 100,
+    },
+    desc: "",
+    image: "/images/creatures/polyops.png", // Placeholder for now
+  },
 };
 
 export const CREATURE_TYPES: string[] = ["Insect", "Mutant"];

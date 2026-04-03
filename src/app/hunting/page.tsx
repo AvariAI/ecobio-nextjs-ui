@@ -96,7 +96,7 @@ function rollRarity(): RarityRank {
 }
 
 function spawnCreature(): HuntedCreature {
-  const creaturePool = ["ravaryn", "polyops"];
+  const creaturePool = ["ravaryn", "polyops", "gravaille"];
   const creatureId = creaturePool[Math.floor(Math.random() * creaturePool.length)];
   const creature: Creature = CREATURES[creatureId];
 
@@ -340,6 +340,9 @@ function getCreatureImage(creatureId: string, rank: Rank, geneticType?: string):
   }
   if (creatureId === "polyops") {
     return "/ecobio-nextjs-ui/images/creatures/polyops.png";
+  }
+  if (creatureId === "gravaille") {
+    return "/ecobio-nextjs-ui/images/creatures/polyops.png"; // Placeholder for now
   }
   return "/ecobio-nextjs-ui/images/creatures/spider_mutant_e.png";
 }

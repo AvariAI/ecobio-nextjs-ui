@@ -60,6 +60,9 @@ function getCreatureImage(creatureId: string, rank: Rank, geneticType?: string):
   if (creatureId === "polyops") {
     return "/ecobio-nextjs-ui/images/creatures/polyops.png";
   }
+  if (creatureId === "gravaille") {
+    return "/ecobio-nextjs-ui/images/creatures/polyops.png"; // Placeholder for now
+  }
   return "/ecobio-nextjs-ui/images/creatures/spider_mutant_e.png";
 }
 
@@ -108,7 +111,7 @@ function rollRarity(): Rank {
 
 // Spawn ephemeral creature for battle (like hunting, no persistence)
 function spawnCreatureForBattle(): Creature {
-  const creaturePool = ["ravaryn", "polyops"];
+  const creaturePool = ["ravaryn", "polyops", "gravaille"];
   const creatureId = creaturePool[Math.floor(Math.random() * creaturePool.length)];
   const creature = CREATURES[creatureId];
 
