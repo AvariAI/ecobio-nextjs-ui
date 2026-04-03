@@ -33,6 +33,8 @@ interface BattleState {
   turn: number;
   log: string[];
   winner: "player" | "enemy" | null;
+  turnOrder: Array<{ id: string; owner: "player" | "enemy" }>;
+  currentAttackerIndex: number;
 }
 
 function getCreatureImage(creatureId: string, rank: Rank, geneticType?: string): string {
@@ -275,12 +277,34 @@ export default function BattlePage() {
 
         const playerTeamWithHP = [...playerTeam];
 
+        // Create initial turn order based on speed (fastest first, 50/50 tiebreaker)
+        const allCreaturesWithOwner = [
+          ...playerTeamWithHP.map(c => ({ ...c, owner: "player" as const })),
+          ...enemyTeam.map(c => ({ ...c, owner: "enemy" as const }))
+        ];
+
+        // Sort by speed, with random tiebreaker for equal speeds
+        allCreaturesWithOwner.sort((a, b) => {
+          if (b.finalStats.speed !== a.finalStats.speed) {
+            return b.finalStats.speed - a.finalStats.speed;
+          }
+          // Same speed: 50% random
+          return Math.random() - 0.5;
+        });
+
+        const turnOrder = allCreaturesWithOwner.map(c => ({
+          id: c.id,
+          owner: c.owner
+        }));
+
         setBattleState({
           playerTeam: playerTeamWithHP,
           enemyTeam,
           turn: 1,
           log: ["⚔️ Combat commencé!"],
-          winner: null
+          winner: null,
+          turnOrder,
+          currentAttackerIndex: 0
         });
       } catch (err) {
         console.error("Battle initialization error:", err);
@@ -300,24 +324,55 @@ export default function BattlePage() {
     const newPlayerTeam = [...battleState.playerTeam];
     const newEnemyTeam = [...battleState.enemyTeam];
     let newWinner: "player" | "enemy" | null = null;
+    let newIndex = battleState.currentAttackerIndex;
 
-    // Get all alive creatures from both teams, tagged with owner
-    const allAliveCreatures = [
-      ...newPlayerTeam.filter(c => c.currentHP > 0).map(c => ({ ...c, owner: "player" as const })),
-      ...newEnemyTeam.filter(c => c.currentHP > 0).map(c => ({ ...c, owner: "enemy" as const }))
-    ];
+    // Find the next alive creature in the turn order
+    let attacker: any = null;
+    let attackerFound = false;
+    let attempts = 0;
+    const maxAttempts = battleState.turnOrder.length; // Prevent infinite loop
 
-    // Sort by speed (fastest first), with random tiebreaker for equal speeds
-    allAliveCreatures.sort((a, b) => {
-      if (b.finalStats.speed !== a.finalStats.speed) {
-        return b.finalStats.speed - a.finalStats.speed;
+    while (attempts < maxAttempts && !attackerFound) {
+      const turnEntry = battleState.turnOrder[newIndex];
+      
+      if (turnEntry.owner === "player") {
+        const creature = newPlayerTeam.find(c => c.id === turnEntry.id);
+        if (creature && creature.currentHP > 0) {
+          attacker = { ...creature, owner: "player" as const };
+          attackerFound = true;
+        }
+      } else {
+        const creature = newEnemyTeam.find(c => c.id === turnEntry.id);
+        if (creature && creature.currentHP > 0) {
+          attacker = { ...creature, owner: "enemy" as const };
+          attackerFound = true;
+        }
       }
-      // Same speed: 50% random
-      return Math.random() - 0.5;
-    });
 
-    // Only process ONE attack per button click (fastest creature)
-    const attacker = allAliveCreatures[0];
+      if (!attackerFound) {
+        newIndex = (newIndex + 1) % battleState.turnOrder.length;
+        attempts++;
+      }
+    }
+
+    // If no alive attacker found, someone won
+    if (!attackerFound) {
+      const alivePlayers = newPlayerTeam.filter(c => c.currentHP > 0).length;
+      const aliveEnemies = newEnemyTeam.filter(c => c.currentHP > 0).length;
+      newWinner = alivePlayers > 0 ? "player" : "enemy";
+      
+      setBattleState({
+        playerTeam: newPlayerTeam,
+        enemyTeam: newEnemyTeam,
+        turn: battleState.turn + 1,
+        log: newLog,
+        winner: newWinner,
+        turnOrder: battleState.turnOrder,
+        currentAttackerIndex: newIndex
+      });
+      setIsProcessing(false);
+      return;
+    }
 
     // Determine target based on who attacks
     let target: any;
@@ -333,7 +388,9 @@ export default function BattlePage() {
           enemyTeam: newEnemyTeam,
           turn: battleState.turn + 1,
           log: newLog,
-          winner: newWinner
+          winner: newWinner,
+          turnOrder: battleState.turnOrder,
+          currentAttackerIndex: newIndex
         });
         setIsProcessing(false);
         return;
@@ -350,7 +407,9 @@ export default function BattlePage() {
           enemyTeam: newEnemyTeam,
           turn: battleState.turn + 1,
           log: newLog,
-          winner: newWinner
+          winner: newWinner,
+          turnOrder: battleState.turnOrder,
+          currentAttackerIndex: newIndex
         });
         setIsProcessing(false);
         return;
@@ -399,12 +458,17 @@ export default function BattlePage() {
     const critText = isCrit ? " **CRITIQUE!**" : "";
     newLog.push(`${attacker.name} → ${target.name}: ${damage} dégâts${critText}`);
 
+    // Move to next attacker in turn order
+    let nextIndex = (newIndex + 1) % battleState.turnOrder.length;
+
     setBattleState({
       playerTeam: newPlayerTeam,
       enemyTeam: newEnemyTeam,
       turn: battleState.turn + 1,
       log: newLog,
-      winner: newWinner
+      winner: newWinner,
+      turnOrder: battleState.turnOrder,
+      currentAttackerIndex: nextIndex
     });
 
     setIsProcessing(false);
