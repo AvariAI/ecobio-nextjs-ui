@@ -375,7 +375,16 @@ export default function BattlePage() {
                     <div className="flex-1">
                       <p className="text-white font-bold text-xs">{creature.name}</p>
                       <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
-                        <div className="h-full rounded-full from-green-500 to-green-600 transition-all duration-300" style={{ width: `${(creature.currentHP / creature.maxHP) * 100}%` }} />
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            creature.currentHP / creature.maxHP > 0.5
+                              ? "from-green-500 to-green-600"
+                              : creature.currentHP / creature.maxHP > 0.25
+                              ? "from-orange-500 to-orange-600"
+                              : "from-red-500 to-red-600"
+                          }`}
+                          style={{ width: `${(creature.currentHP / creature.maxHP) * 100}%` }}
+                        />
                       </div>
                       <div className="text-xs text-gray-400 mt-0.5">
                         {creature.currentHP}/{creature.maxHP}
@@ -420,7 +429,16 @@ export default function BattlePage() {
                     <div className="flex-1 text-right">
                       <p className="text-white font-bold text-xs">{creature.name}</p>
                       <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1 ml-auto">
-                        <div className="h-full rounded-full from-green-500 to-green-600 transition-all duration-300" style={{ width: `${(creature.currentHP / creature.maxHP) * 100}%` }} />
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            creature.currentHP / creature.maxHP > 0.5
+                              ? "from-green-500 to-green-600"
+                              : creature.currentHP / creature.maxHP > 0.25
+                              ? "from-orange-500 to-orange-600"
+                              : "from-red-500 to-red-600"
+                          }`}
+                          style={{ width: `${(creature.currentHP / creature.maxHP) * 100}%` }}
+                        />
                       </div>
                       <div className="text-xs text-gray-400 mt-0.5">
                         {creature.currentHP}/{creature.maxHP}
