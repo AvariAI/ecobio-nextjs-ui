@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Rank, CREATURES, PERSONALITIES, PersonalityType, generateRandomPersonality } from "@/lib/database";
+import { Rank, CREATURES, PERSONALITIES, PersonalityType, generateRandomPersonality, applyLevelScaling } from "@/lib/database";
+import { rollRandomGeneticType } from "@/lib/genetic-types";
+import { getVarianceRange, BattleStats } from "@/lib/battle";
+import { rollRandomTraits, applyTraitStatModifiers } from "@/lib/traits";
 
 interface Creature {
   id: string;
@@ -20,8 +23,8 @@ interface Creature {
   currentHP: number;
   maxHP: number;
   position?: number;
-  geneticType?: string;
-  personality?: PersonalityType;
+  geneticType: string;
+  personality: PersonalityType;
 }
 
 interface BattleState {
@@ -65,28 +68,120 @@ function isCriticalHit(crit: number): boolean {
   return Math.random() * 100 < crit;
 }
 
-// Apply RNG variance to stats (15% variance like hunting)
-function applyRandomVariance(stats: Record<string, number>): Record<string, number> {
-  const variance = 0.15;
-  return {
-    hp: Math.floor(stats.hp * (0.9 + Math.random() * variance * 2)),
-    attack: Math.floor(stats.attack * (0.9 + Math.random() * variance * 2)),
-    defense: Math.floor(stats.defense * (0.9 + Math.random() * variance * 2)),
-    speed: Math.floor(stats.speed * (0.9 + Math.random() * variance * 2)),
-    crit: Math.floor(stats.crit * (0.9 + Math.random() * variance * 2))
-  };
-}
-
 function getPersonalityEmoji(personality?: PersonalityType): string {
   const emojiMap: Record<PersonalityType, string> = {
     agressif: "🦁",
     protecteur: "🛡️",
     rapide: "💨",
-    strategie: "❤️",
-    precis: "🎯",
-    mysterieux: "🌙"
+    stratège: "❤️",
+    précis: "🎯",
+    mystérieux: "🌙"
   };
   return personality ? emojiMap[personality] : "";
+}
+
+// Rarity roll for enemy creatures (like hunting)
+function rollRarity(): Rank {
+  const dist: { rank: Rank; weight: number }[] = [
+    { rank: "E", weight: 8175 },
+    { rank: "D", weight: 1000 },
+    { rank: "C", weight: 600 },
+    { rank: "B", weight: 150 },
+    { rank: "A", weight: 50 },
+    { rank: "S", weight: 20 },
+    { rank: "S+", weight: 5 },
+  ];
+  const totalWeight = dist.reduce((sum, item) => sum + item.weight, 0);
+  const roll = Math.random() * totalWeight;
+  let cum = 0;
+  for (const item of dist) {
+    cum += item.weight;
+    if (roll < cum) return item.rank;
+  }
+  return "E";
+}
+
+// Spawn ephemeral creature for battle (like hunting, no persistence)
+function spawnCreatureForBattle(): Creature {
+  const creaturePool = ["ravaryn"];
+  const creatureId = creaturePool[Math.floor(Math.random() * creaturePool.length)];
+  const creature = CREATURES[creatureId];
+
+  if (!creature) {
+    console.error("Creature reference is undefined!");
+    throw new Error("Failed to spawn creature");
+  }
+
+  // Roll random rank (like hunting)
+  const rank: Rank = rollRarity();
+
+  // Get variance range based on rank
+  let [minVar, maxVar] = getVarianceRange(rank);
+
+  // Variance RNG: Stats variation based on rank (like hunting)
+  const hpVariance = minVar + Math.random() * (maxVar - minVar);
+  const atkVariance = minVar + Math.random() * (maxVar - minVar);
+  const defVariance = minVar + Math.random() * (maxVar - minVar);
+  const spdVariance = minVar + Math.random() * (maxVar - minVar);
+  const critVariance = minVar + Math.random() * (maxVar - minVar);
+
+  // Stats POST-variance ONLY (variance RNG only)
+  const varianceStats: BattleStats = {
+    hp: Math.max(1, Math.floor(creature.baseStats.hp * hpVariance)),
+    attack: Math.max(1, Math.floor(creature.baseStats.attack * atkVariance)),
+    defense: Math.max(1, Math.floor(creature.baseStats.defense * defVariance)),
+    speed: Math.max(1, Math.floor(creature.baseStats.speed * spdVariance)),
+    crit: Math.max(1, Math.floor(creature.baseStats.crit * critVariance)),
+    rank,
+  };
+
+  // Generate random personality (RNG!)
+  const personality = generateRandomPersonality();
+
+  // Roll random genetic type
+  const geneticType = rollRandomGeneticType();
+
+  // Roll random traits based on rank
+  const traitIds = rollRandomTraits(rank);
+
+  // Apply personality-based level scaling (level 1 = no scaling, like hunting spawn)
+  const scaledStats = applyLevelScaling({ ...varianceStats }, 1, personality);
+
+  // Apply trait stat modifiers (level-dependent scaling, like hunting)
+  const { modifiedStats: traitStats } = applyTraitStatModifiers(
+    {
+      hp: scaledStats.hp,
+      attack: scaledStats.attack,
+      defense: scaledStats.defense,
+      speed: scaledStats.speed,
+      crit: scaledStats.crit,
+    },
+    traitIds,
+    1 // Start at level 1 (ephemeral creatures don't grow)
+  );
+
+  // Final stats with personality scaling + trait modifications
+  const finalStats: BattleStats = {
+    hp: traitStats.hp,
+    attack: traitStats.attack,
+    defense: traitStats.defense,
+    speed: traitStats.speed,
+    crit: traitStats.crit,
+    rank,
+  };
+
+  return {
+    id: `enemy-${Math.random().toString(36).substr(2, 9)}`,
+    name: creature.name,
+    creatureId: creature.id,
+    geneticType,
+    personality,
+    finalStats,
+    level: 1,
+    currentHP: finalStats.hp,
+    maxHP: finalStats.hp,
+    // Ephemeral - not saved to localStorage!
+  };
 }
 
 export default function BattlePage() {
@@ -140,8 +235,8 @@ export default function BattlePage() {
             id: c.id,
             name: c.name,
             creatureId: c.creatureId,
-            geneticType: c.geneticType,
-            personality: c.personality,
+            geneticType: c.geneticType || "resilient", // Default fallback
+            personality: c.personality || generateRandomPersonality(), // Default fallback
             finalStats: {
               rank: stats?.rank || c.rank || "E",
               hp: maxHP,
@@ -165,52 +260,18 @@ export default function BattlePage() {
           return;
         }
 
-        // Generate enemy team (5 Rank E creatures) - full RNG like hunting spawn
-        const creatureIds = Object.keys(CREATURES);
+        // Generate enemy team (5 creatures) - ephemeral creatures with full RNG like hunting
         const enemyTeam: Creature[] = [];
-        
-        for (let i = 0; i < 5; i++) {
-          const randomCreatureId = creatureIds[Math.floor(Math.random() * creatureIds.length)];
-          const creature = CREATURES[randomCreatureId];
-          
-          if (!creature) {
-            console.error(`Creature reference is undefined! ID: ${randomCreatureId}`);
-            continue;
-          }
 
-          const baseStats = {
-            hp: creature.baseStats?.hp || 100,
-            attack: creature.baseStats?.attack || 15,
-            defense: creature.baseStats?.defense || 10,
-            speed: creature.baseStats?.speed || 12,
-            crit: creature.baseStats?.crit || 5
-          };
-          
-          const varianceStats = applyRandomVariance(baseStats);
-          const personality = generateRandomPersonality();
-          
+        for (let i = 0; i < 5; i++) {
+          const creature = spawnCreatureForBattle();
           enemyTeam.push({
-            id: `enemy-${Math.random()}`,
-            name: creature.name || "Fourmi",
-            creatureId: creature.id || "ant",
-            geneticType: undefined,
-            personality,
-            finalStats: {
-              rank: "E",
-              hp: varianceStats.hp,
-              attack: varianceStats.attack,
-              defense: varianceStats.defense,
-              speed: varianceStats.speed,
-              crit: varianceStats.crit
-            },
-            level: 1,
-            currentHP: varianceStats.hp,
-            maxHP: varianceStats.hp,
+            ...creature,
             position: i + 1
           });
         }
 
-        console.log("Enemy team generated:", enemyTeam.map(c => `${c.name} (${c.personality})`));
+        console.log("Enemy team generated:", enemyTeam.map(c => `${c.name} (${c.personality}, ${c.geneticType}, ${c.finalStats.rank})`));
 
         const playerTeamWithHP = [...playerTeam];
 
@@ -375,7 +436,7 @@ export default function BattlePage() {
                       {damageNumbers.find(dn => dn.id === creature.id)?.damage}
                     </div>
                   )}
-                  
+
                   <div className="absolute -top-1 -left-1 bg-yellow-500 text-white text-xs px-1 py-0.5 rounded-full font-bold">
                     #{creature.position}
                   </div>
@@ -402,10 +463,13 @@ export default function BattlePage() {
                       </div>
                       <div className="text-xs text-gray-400 mt-0.5 flex justify-between">
                         <span>{creature.currentHP}/{creature.maxHP}</span>
-                        {creature.personality && PERSONALITIES[creature.personality] && (
-                          <span className="text-purple-400">{getPersonalityEmoji(creature.personality)} {PERSONALITIES[creature.personality].name}</span>
-                        )}
+                        <span className="text-cyan-400 capitalize">🔬 {creature.geneticType}</span>
                       </div>
+                      {creature.personality && PERSONALITIES[creature.personality] && (
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          <span className="text-purple-400">{getPersonalityEmoji(creature.personality)} {PERSONALITIES[creature.personality].name}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -437,7 +501,7 @@ export default function BattlePage() {
                       <span className="text-xl">💀</span>
                     </div>
                   )}
-                  
+
                   <div className="flex items-center gap-2 justify-end">
                     <div className="flex-1 text-right">
                       <p className="text-white font-bold text-xs">{creature.name}</p>
@@ -458,6 +522,9 @@ export default function BattlePage() {
                           <span className="text-purple-400">{PERSONALITIES[creature.personality].name} {getPersonalityEmoji(creature.personality)}</span>
                         )}
                         <span>{creature.currentHP}/{creature.maxHP}</span>
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        <span className="text-cyan-400 capitalize">🔬 {creature.geneticType}</span>
                       </div>
                     </div>
                     <img
@@ -556,6 +623,11 @@ export default function BattlePage() {
                 <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-4 text-center">
                   <p className="text-gray-400 text-sm">Rang</p>
                   <p className="text-2xl font-bold text-green-400">{selectedCreature.finalStats.rank}</p>
+                </div>
+                {/* Show genetic type in modal */}
+                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-4 text-center col-span-2">
+                  <p className="text-gray-400 text-sm mb-1">Type Génétique</p>
+                  <p className="text-2xl font-bold text-cyan-400 capitalize">🔬 {selectedCreature.geneticType}</p>
                 </div>
               </div>
 
