@@ -17,11 +17,16 @@ function getRankBadgeColor(rank: Rank): string {
   return "bg-gray-600";
 }
 
-function getCardImage(geneticType: GeneticType, rank: Rank): string {
+function getCardImage(geneticType: GeneticType, rank: Rank, creatureId?: string): string {
   const normalizedType = geneticType.toLowerCase().replace("é", "e").replace("è", "e");
+  // If creature is Polyops, use Polyops image
+  if (creatureId === "polyops") {
+    return "/ecobio-nextjs-ui/images/creatures/polyops.png";
+  }
+  // For Ravaryn and others, use creature-specific genetic type images
   // Try to load rank-specific image first, fall back to E rank if not available
   // (Ravaryn images currently only exist for E rank)
-  return `/ecobio-nextjs-ui/creatures/ravaryn_${normalizedType}_e.png`;
+  return `/ecobio-nextjs-ui/images/creatures/ravaryn_${normalizedType}_e.png`;
 }
 
 // Check if user has discovered this type rank (permanent unlock)
@@ -290,13 +295,13 @@ export default function PokedexPage() {
 
                         {/* Card content */}
                         <img
-                          src={getCardImage(type, rank)}
+                          src={getCardImage(type, rank, selectedCreature)}
                           alt={`${typeData.name} ${rank}`}
                           className={`w-full h-full object-cover ${
                             isDiscovered ? "" : "opacity-0"
                           }`}
                           onError={(e) => {
-                            console.error(`Failed to load: ${getCardImage(type, rank)}`);
+                            console.error(`Failed to load: ${getCardImage(type, rank, selectedCreature)}`);
                             (e.target as HTMLImageElement).style.display = "none";
                           }}
                         />
