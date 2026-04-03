@@ -139,33 +139,23 @@ export default function BattlePage() {
           return;
         }
 
-        const enemyTeam: Creature[] = Array(5).fill(0).map((_, i) => {
-          const creature = CREATURES[0];
+        // Generate enemy team (5 Rank E creatures) - random from all CREATURES
+        const creatureIds = Object.keys(CREATURES);
+        const enemyTeam: Creature[] = [];
+        
+        for (let i = 0; i < 5; i++) {
+          // Random creature from database
+          const randomCreatureId = creatureIds[Math.floor(Math.random() * creatureIds.length)];
+          const creature = CREATURES[randomCreatureId];
           
           if (!creature) {
-            console.error("Creature reference is undefined!");
-            return {
-              id: `enemy-${Math.random()}`,
-              name: "Fourmi",
-              creatureId: "ant",
-              geneticType: undefined,
-              finalStats: {
-                rank: "E",
-                hp: 100,
-                attack: 15,
-                defense: 10,
-                speed: 12,
-                crit: 5
-              },
-              level: 1,
-              currentHP: 100,
-              maxHP: 100
-            };
+            console.error(`Creature reference is undefined! ID: ${randomCreatureId}`);
+            continue;
           }
 
           const baseHP = creature.baseStats?.hp || 100;
           
-          return {
+          enemyTeam.push({
             id: `enemy-${Math.random()}`,
             name: creature.name || "Fourmi",
             creatureId: creature.id || "ant",
@@ -182,10 +172,10 @@ export default function BattlePage() {
             currentHP: baseHP,
             maxHP: baseHP,
             position: i + 1
-          };
-        });
+          });
+        }
 
-        console.log("Enemy team generated");
+        console.log("Enemy team generated:", enemyTeam.map(c => c.name));
 
         const playerTeamWithHP = [...playerTeam];
 
@@ -449,13 +439,13 @@ export default function BattlePage() {
                       </div>
                     </div>
                     <img
-                      src={getCreatureImage(creature.creatureId, creature.finalStats.rank, (creature as any).geneticType)}
+                      src={getCreatureImage(creature.creatureId, creature.finalStats.rank, creature.geneticType)}
                       alt={creature.name}
                       className="w-14 h-14 object-contain"
                     />
                     {/* Position badge */}
                     <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1 py-0.5 rounded-full font-bold">
-                      #{(creature.id.split('@')[1] || '1')}
+                      #{creature.position || '?'}
                     </div>
                   </div>
 
@@ -511,7 +501,7 @@ export default function BattlePage() {
             >
               <div className="text-center mb-6">
                 <img
-                  src={getCreatureImage(selectedCreature.creatureId, selectedCreature.finalStats.rank)}
+                  src={getCreatureImage(selectedCreature.creatureId, selectedCreature.finalStats.rank, selectedCreature.geneticType)}
                   alt={selectedCreature.name}
                   className="w-32 h-32 mx-auto mb-4 object-contain"
                 />
