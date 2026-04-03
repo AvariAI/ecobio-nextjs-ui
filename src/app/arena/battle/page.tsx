@@ -296,40 +296,95 @@ export default function BattlePage() {
 
     setIsProcessing(true);
 
-    const allCreatures = [
-      ...battleState.playerTeam.filter(c => c.currentHP > 0).map(c => ({ ...c, owner: "player" as const })),
-      ...battleState.enemyTeam.filter(c => c.currentHP > 0).map(c => ({ ...c, owner: "enemy" as const }))
-    ];
-
-    allCreatures.sort((a, b) => b.finalStats.speed - a.finalStats.speed);
-
     const newLog = [...battleState.log];
     const newPlayerTeam = [...battleState.playerTeam];
     const newEnemyTeam = [...battleState.enemyTeam];
     let newWinner: "player" | "enemy" | null = null;
 
-    for (const attacker of allCreatures) {
-      if (attacker.currentHP <= 0) continue;
+    // Get alive player creatures, sorted by speed (fastest first)
+    const alivePlayerCreatures = newPlayerTeam
+      .filter(c => c.currentHP > 0)
+      .sort((a, b) => b.finalStats.speed - a.finalStats.speed);
 
-      const targets = attacker.owner === "player" 
-        ? newEnemyTeam.filter(c => c.currentHP > 0)
-        : newPlayerTeam.filter(c => c.currentHP > 0);
+    // Get alive enemy creatures, sorted by speed (fastest first)
+    const aliveEnemyCreatures = newEnemyTeam
+      .filter(c => c.currentHP > 0)
+      .sort((a, b) => b.finalStats.speed - a.finalStats.speed);
 
-      targets.sort((a, b) => (a.position || 0) - (b.position || 0));
+    if (alivePlayerCreatures.length === 0) {
+      newWinner = "enemy";
+    } else if (aliveEnemyCreatures.length === 0) {
+      newWinner = "player";
+    }
 
-      if (targets.length === 0) {
-        newWinner = attacker.owner === "player" ? "player" : "enemy";
-        break;
-      }
+    if (newWinner) {
+      setBattleState({
+        playerTeam: newPlayerTeam,
+        enemyTeam: newEnemyTeam,
+        turn: battleState.turn + 1,
+        log: newLog,
+        winner: newWinner
+      });
+      setIsProcessing(false);
+      return;
+    }
 
-      const target = targets[0];
-      const isCrit = isCriticalHit(attacker.finalStats.crit);
-      const damage = calculateDamage(attacker, target, isCrit);
+    // Player's fastest creature attacks enemy
+    const playerAttacker = alivePlayerCreatures[0];
+    const targetEnemy = aliveEnemyCreatures[0]; // Target fastest enemy
 
+    const isCrit = isCriticalHit(playerAttacker.finalStats.crit);
+    const damage = calculateDamage(playerAttacker, targetEnemy, isCrit);
+
+    // Show damage number
+    setDamageNumbers(prev => [...prev, {
+      id: `damage-${Date.now()}`,
+      damage,
+      isCrit,
+      x: Math.random() * 50 - 25,
+      y: Math.random() * 20 - 10
+    }]);
+
+    setTimeout(() => {
+      setDamageNumbers(prev => prev.filter(d => d.id !== `damage-${Date.now()}`));
+    }, 1500);
+
+    // Apply damage
+    const targetEnemyIndex = newEnemyTeam.findIndex(c => c.id === targetEnemy.id);
+    newEnemyTeam[targetEnemyIndex] = { ...targetEnemy, currentHP: Math.max(0, targetEnemy.currentHP - damage) };
+
+    const critText = isCrit ? " **CRITIQUE!**" : "";
+    newLog.push(`${playerAttacker.name} → ${targetEnemy.name}: ${damage} dégâts${critText}`);
+
+    // Check if enemy is defeated
+    const stillAliveEnemies = newEnemyTeam.filter(c => c.currentHP > 0);
+    if (stillAliveEnemies.length === 0) {
+      newWinner = "player";
+      setBattleState({
+        playerTeam: newPlayerTeam,
+        enemyTeam: newEnemyTeam,
+        turn: battleState.turn + 1,
+        log: newLog,
+        winner: newWinner
+      });
+      setIsProcessing(false);
+      return;
+    }
+
+    // Enemy counter-attacks (fastest alive enemy)
+    const enemyAttacker = stillAliveEnemies[0];
+    const stillAlivePlayers = newPlayerTeam.filter(c => c.currentHP > 0).sort((a, b) => b.finalStats.speed - a.finalStats.speed);
+    const targetPlayer = stillAlivePlayers[0];
+
+    const enemyIsCrit = isCriticalHit(enemyAttacker.finalStats.crit);
+    const enemyDamage = calculateDamage(enemyAttacker, targetPlayer, enemyIsCrit);
+
+    // Show enemy damage number
+    setTimeout(() => {
       setDamageNumbers(prev => [...prev, {
         id: `damage-${Date.now()}`,
-        damage,
-        isCrit,
+        damage: enemyDamage,
+        isCrit: enemyIsCrit,
         x: Math.random() * 50 - 25,
         y: Math.random() * 20 - 10
       }]);
@@ -337,30 +392,32 @@ export default function BattlePage() {
       setTimeout(() => {
         setDamageNumbers(prev => prev.filter(d => d.id !== `damage-${Date.now()}`));
       }, 1500);
+    }, 500);
 
-      if (attacker.owner === "player") {
-        const targetIndex = newEnemyTeam.findIndex(c => c.id === target.id);
-        newEnemyTeam[targetIndex] = { ...target, currentHP: Math.max(0, target.currentHP - damage) };
-      } else {
-        const targetIndex = newPlayerTeam.findIndex(c => c.id === target.id);
-        newPlayerTeam[targetIndex] = { ...target, currentHP: Math.max(0, target.currentHP - damage) };
+    // Apply enemy damage
+    setTimeout(() => {
+      const targetPlayerIndex = newPlayerTeam.findIndex(c => c.id === targetPlayer.id);
+      newPlayerTeam[targetPlayerIndex] = { ...targetPlayer, currentHP: Math.max(0, targetPlayer.currentHP - enemyDamage) };
+
+      const enemyCritText = enemyIsCrit ? " **CRITIQUE!**" : "";
+      newLog.push(`${enemyAttacker.name} → ${targetPlayer.name}: ${enemyDamage} dégâts${enemyCritText}`);
+
+      // Check if player is defeated
+      const stillAlivePlayersFinal = newPlayerTeam.filter(c => c.currentHP > 0);
+      if (stillAlivePlayersFinal.length === 0) {
+        newWinner = "enemy";
       }
 
-      const attackerName = attacker.owner === "player" ? `${attacker.name}` : `Ennemi`;
-      const targetName = attacker.owner === "player" ? target.name : `Ennemi`;
-      const critText = isCrit ? " **CRITIQUE!**" : "";
-      newLog.push(`${attackerName} → ${targetName}: ${damage} dégâts${critText}`);
-    }
+      setBattleState({
+        playerTeam: newPlayerTeam,
+        enemyTeam: newEnemyTeam,
+        turn: battleState.turn + 1,
+        log: newLog,
+        winner: newWinner
+      });
 
-    setBattleState({
-      playerTeam: newPlayerTeam,
-      enemyTeam: newEnemyTeam,
-      turn: battleState.turn + 1,
-      log: newLog,
-      winner: newWinner
-    });
-
-    setIsProcessing(false);
+      setIsProcessing(false);
+    }, 500);
   };
 
   if (error) {
