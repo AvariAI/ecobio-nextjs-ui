@@ -340,54 +340,54 @@ export default function BattlePage() {
           {/* Battle grid - simple vertical formation */}
           <div className="grid grid-cols-5 gap-x-4 mb-6">
             {/* Player team - left, vertical */}
-            <div className="col-span-2 flex flex-col gap-3">
+            <div className="col-span-2 flex flex-col gap-2">
               {battleState.playerTeam.map((creature) => (
                 <div
                   key={creature.id}
                   onClick={() => !battleState.winner && setSelectedCreature(creature)}
-                  className={`relative bg-gradient-to-br from-blue-900/90 to-blue-950 rounded-2xl p-4 cursor-pointer transition-all hover:scale-105 shadow-lg border-2 border-blue-500/30 ${
+                  className={`relative bg-gradient-to-br from-blue-900/90 to-blue-950 rounded-xl p-3 cursor-pointer transition-all hover:scale-105 shadow-lg border-2 border-blue-500/30 ${
                     creature.currentHP <= 0 ? "opacity-40 grayscale" : ""
                   }`}
                 >
                   {creature.currentHP <= 0 && (
-                    <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
                       <span className="text-xl">💀</span>
                     </div>
                   )}
                   {damageNumbers.find(dn => dn.id === creature.id) && (
-                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-2xl font-bold text-red-500 animate-[float-up_1s_ease-out_forwards]">
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-xl font-bold text-red-500 animate-[float-up_1s_ease-out_forwards]">
                       {damageNumbers.find(dn => dn.id === creature.id)?.damage}
                     </div>
                   )}
                   
                   {/* Position badge */}
-                  <div className="absolute -top-2 -left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded-full font-bold">
+                  <div className="absolute -top-1 -left-1 bg-yellow-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold">
                     #{creature.position}
                   </div>
 
                   {/* Creature info row */}
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <img
                       src={getCreatureImage(creature.creatureId, creature.finalStats.rank, creature.geneticType)}
                       alt={creature.name}
-                      className="w-20 h-20 object-contain"
+                      className="w-16 h-16 object-contain"
                     />
                     <div className="flex-1">
-                      <p className="text-white font-bold text-lg">{creature.name}</p>
-                      <div className="w-full bg-gray-700 rounded-full h-3 mt-2">
+                      <p className="text-white font-bold text-sm">{creature.name}</p>
+                      <div className="w-full bg-gray-700 rounded-full h-2 mt-1">
                         <div className="h-full rounded-full from-green-500 to-green-600 transition-all duration-300" style={{ width: `${(creature.currentHP / creature.maxHP) * 100}%` }} />
                       </div>
-                      <div className="text-xs text-gray-400 mt-1">
-                        {creature.currentHP}/{creature.maxHP} HP
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {creature.currentHP}/{creature.maxHP}
                       </div>
                     </div>
                   </div>
 
                   {/* Buffs/Debuffs placeholder */}
-                  <div className="mt-3 pt-2 border-t border-blue-600/30">
+                  <div className="mt-2 pt-1.5 border-t border-blue-600/30">
                     <div className="flex gap-1">
-                      <div className="w-8 h-8 bg-blue-600/30 rounded border border-blue-400/50 flex items-center justify-center text-blue-300 text-xs">+</div>
-                      <div className="w-8 h-8 bg-gray-600/30 rounded border border-gray-400/30 flex items-center justify-center text-gray-400 text-xs">-</div>
+                      <div className="w-7 h-7 bg-blue-600/30 rounded border border-blue-400/50 flex items-center justify-center text-blue-300 text-xs">+</div>
+                      <div className="w-7 h-7 bg-gray-600/30 rounded border border-gray-400/30 flex items-center justify-center text-gray-400 text-xs">-</div>
                     </div>
                   </div>
                 </div>
@@ -400,48 +400,48 @@ export default function BattlePage() {
             </div>
 
             {/* Enemy team - right, vertical */}
-            <div className="col-span-2 flex flex-col gap-3">
+            <div className="col-span-2 flex flex-col gap-2">
               {battleState.enemyTeam.map((creature) => (
                 <div
                   key={creature.id}
                   onClick={() => !battleState.winner && setSelectedCreature(creature)}
-                  className={`relative bg-gradient-to-br from-red-900/90 to-red-950 rounded-2xl p-4 cursor-pointer transition-all hover:scale-105 shadow-lg border-2 border-red-500/30 ${
+                  className={`relative bg-gradient-to-br from-red-900/90 to-red-950 rounded-xl p-3 cursor-pointer transition-all hover:scale-105 shadow-lg border-2 border-red-500/30 ${
                     creature.currentHP <= 0 ? "opacity-40 grayscale" : ""
                   }`}
                 >
                   {creature.currentHP <= 0 && (
-                    <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
                       <span className="text-xl">💀</span>
                     </div>
                   )}
                   
                   {/* Creature info row */}
-                  <div className="flex items-center gap-3 justify-end">
+                  <div className="flex items-center gap-2 justify-end">
                     <div className="flex-1 text-right">
-                      <p className="text-white font-bold text-lg">{creature.name}</p>
-                      <div className="w-full bg-gray-700 rounded-full h-3 mt-2 ml-auto">
+                      <p className="text-white font-bold text-sm">{creature.name}</p>
+                      <div className="w-full bg-gray-700 rounded-full h-2 mt-1 ml-auto">
                         <div className="h-full rounded-full from-green-500 to-green-600 transition-all duration-300" style={{ width: `${(creature.currentHP / creature.maxHP) * 100}%` }} />
                       </div>
-                      <div className="text-xs text-gray-400 mt-1">
-                        {creature.currentHP}/{creature.maxHP} HP
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {creature.currentHP}/{creature.maxHP}
                       </div>
                     </div>
                     <img
                       src={getCreatureImage(creature.creatureId, creature.finalStats.rank, (creature as any).geneticType)}
                       alt={creature.name}
-                      className="w-20 h-20 object-contain"
+                      className="w-16 h-16 object-contain"
                     />
                     {/* Position badge */}
-                    <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold">
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold">
                       #{(creature.id.split('@')[1] || '1')}
                     </div>
                   </div>
 
                   {/* Buffs/Debuffs placeholder */}
-                  <div className="mt-3 pt-2 border-t border-red-600/30">
+                  <div className="mt-2 pt-1.5 border-t border-red-600/30">
                     <div className="flex gap-1 justify-end">
-                      <div className="w-8 h-8 bg-gray-600/30 rounded border border-gray-400/30 flex items-center justify-center text-gray-400 text-xs">-</div>
-                      <div className="w-8 h-8 bg-red-600/30 rounded border border-red-400/50 flex items-center justify-center text-red-300 text-xs">-</div>
+                      <div className="w-7 h-7 bg-gray-600/30 rounded border border-gray-400/30 flex items-center justify-center text-gray-400 text-xs">-</div>
+                      <div className="w-7 h-7 bg-red-600/30 rounded border border-red-400/50 flex items-center justify-center text-red-300 text-xs">-</div>
                     </div>
                   </div>
                 </div>
