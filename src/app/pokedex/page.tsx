@@ -345,12 +345,12 @@ export default function PokedexPage() {
                           </div>
                         )}
 
-                        {/* Capture count - only shown when in collection and has more than 1 */}
-                        {isDiscovered && hasInCollection && captureCount > 1 && (
+                        {/* Capture count - REMOVED - don't show duplicate counts */}
+                        {/* {isDiscovered && hasInCollection && captureCount > 1 && (
                           <div className="absolute bottom-2 left-2 bg-purple-600 text-white text-xs font-bold px-2 py-0.5 rounded-full z-10">
                             ×{captureCount}
                           </div>
-                        )}
+                        )} */}
                       </div>
                     );
                   })}
