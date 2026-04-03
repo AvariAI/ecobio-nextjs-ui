@@ -198,10 +198,14 @@ export default function PokedexPage() {
   const getGlobalTotalCaptured = () => globalDiscovered.size;
   const getGlobalTotalSlots = () => availableCreatures.length * geneticTypes.length * RANKS.length; // N créatures × 8 types × 7 rangs = N × 56
 
+  // Image zoom modal state
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
   const handleResetPokedex = () => {
     if (confirm("Êtes-vous sûr de vouloir réinitialiser votre progression Pokédex ? Toutes les cartes seront verrouillées.")) {
       localStorage.removeItem("ecobio-pokedex-unlocks");
       setDiscovered(new Set());
+      setGlobalDiscovered(new Set());
       // Trigger UI update
       window.dispatchEvent(new Event("storage"));
     }
@@ -330,8 +334,9 @@ export default function PokedexPage() {
                           src={getCardImage(type, rank, selectedCreature)}
                           alt={`${typeData.name} ${rank}`}
                           className={`w-full h-full object-cover ${
-                            isDiscovered ? "" : "opacity-0"
+                            isDiscovered ? "cursor-pointer" : ""
                           }`}
+                          onClick={() => isDiscovered && setZoomedImage(getCardImage(type, rank, selectedCreature))}
                           onError={(e) => {
                             console.error(`Failed to load: ${getCardImage(type, rank, selectedCreature)}`);
                             (e.target as HTMLImageElement).style.display = "none";
@@ -359,6 +364,24 @@ export default function PokedexPage() {
             );
           })}
         </div>
+
+        {/* Image zoom modal */}
+        {zoomedImage && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+            onClick={() => setZoomedImage(null)}
+          >
+            <img 
+              src={zoomedImage} 
+              alt="Zoomed card" 
+              className="max-w-full max-h-[90vh] object-contain rounded-lg cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                setZoomedImage(null);
+              }}
+            />
+          </div>
+        )}
 
       </div>
     </main>
