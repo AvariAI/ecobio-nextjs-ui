@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { GENETIC_TYPES, GeneticType } from "@/lib/genetic-types";
 import { CREATURES, Rank } from "@/lib/database";
-import Link from "next/link";
 
 const RANKS: Rank[] = ["E", "D", "C", "B", "A", "S", "S+"];
 
@@ -90,6 +90,8 @@ function getCaptureCount(geneticType: GeneticType, rank: Rank, creatureId?: stri
 }
 
 export default function PokedexPage() {
+  const router = useRouter();
+  
   // Available creatures for pokedex selection
   const availableCreatures = Object.keys(CREATURES);
   const [selectedCreature, setSelectedCreature] = useState<string>("ravaryn");
@@ -191,11 +193,12 @@ export default function PokedexPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
       <div className="max-w-7xl mx-auto">
-        <Link href="/">
-          <button className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 mb-4 inline-block font-semibold">
-            ← Retour
-          </button>
-        </Link>
+        <button 
+          onClick={() => router.push("/ecobio-nextjs-ui/")}
+          className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 mb-4 inline-block font-semibold"
+        >
+          ← Retour
+        </button>
 
         <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
           📚 Pokédex
