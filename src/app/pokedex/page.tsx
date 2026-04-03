@@ -40,7 +40,7 @@ function getCardImage(geneticType: GeneticType, rank: Rank, creatureId?: string)
   }
   // If creature is Verdogre, use Verdogre image
   if (creatureId === "verdogre") {
-    return "/ecobio-nextjs-ui/images/creatures/polyops.png"; // Placeholder for now
+    return "/ecobio-nextjs-ui/images/creatures/verdogre.png";
   }
   // For Ravaryn, use the creatures/ directory (not images/creatures/)
   return `/ecobio-nextjs-ui/creatures/ravaryn_${normalizedType}_e.png`;
@@ -289,7 +289,7 @@ export default function PokedexPage() {
                       : selectedCreature === "oxydrabe"
                       ? "/ecobio-nextjs-ui/images/creatures/oxydrabe.png"
                       : selectedCreature === "verdogre"
-                      ? "/ecobio-nextjs-ui/images/creatures/polyops.png"
+                      ? "/ecobio-nextjs-ui/images/creatures/verdogre.png"
                       : `/ecobio-nextjs-ui/images/creatures/${selectedCreature}_${type.toLowerCase().replace("é", "e").replace("è", "e")}_e.png`
                     }
                     alt={typeData.name}
