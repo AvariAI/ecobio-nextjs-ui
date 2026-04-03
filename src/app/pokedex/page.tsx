@@ -30,6 +30,10 @@ function getCardImage(geneticType: GeneticType, rank: Rank, creatureId?: string)
   if (creatureId === "maworm") {
     return "/ecobio-nextjs-ui/images/creatures/maworm.png";
   }
+  // If creature is Cornegrive, use Cornegrive image
+  if (creatureId === "cornegrive") {
+    return "/ecobio-nextjs-ui/images/creatures/polyops.png"; // Placeholder for now
+  }
   // For Ravaryn, use the creatures/ directory (not images/creatures/)
   return `/ecobio-nextjs-ui/creatures/ravaryn_${normalizedType}_e.png`;
 }
@@ -272,6 +276,8 @@ export default function PokedexPage() {
                       ? "/ecobio-nextjs-ui/images/creatures/gravaille.png"
                       : selectedCreature === "maworm"
                       ? "/ecobio-nextjs-ui/images/creatures/maworm.png"
+                      : selectedCreature === "cornegrive"
+                      ? "/ecobio-nextjs-ui/images/creatures/polyops.png"
                       : `/ecobio-nextjs-ui/images/creatures/${selectedCreature}_${type.toLowerCase().replace("é", "e").replace("è", "e")}_e.png`
                     }
                     alt={typeData.name}
