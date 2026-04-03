@@ -180,7 +180,8 @@ export default function BattlePage() {
             },
             level: 1,
             currentHP: baseHP,
-            maxHP: baseHP
+            maxHP: baseHP,
+            position: i + 1
           };
         });
 
@@ -229,6 +230,9 @@ export default function BattlePage() {
       const targets = attacker.owner === "player" 
         ? newEnemyTeam.filter(c => c.currentHP > 0)
         : newPlayerTeam.filter(c => c.currentHP > 0);
+
+      // Sort by position to target the lowest position first (1, then 2, then 3, etc.)
+      targets.sort((a, b) => (a.position || 0) - (b.position || 0));
 
       if (targets.length === 0) {
         newWinner = attacker.owner === "player" ? "player" : "enemy";
