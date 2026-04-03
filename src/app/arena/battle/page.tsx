@@ -31,7 +31,7 @@ interface BattleState {
   winner: "player" | "enemy" | null;
 }
 
-function getCreatureImage(creatureId: string, rank: Rank): string {
+function getCreatureImage(creatureId: string, rank: Rank, geneticType?: string): string {
   if (creatureId === "housefly") {
     const rankSuffix = rank === "S+" ? "S+" : rank;
     return `/ecobio-nextjs-ui/creatures/fly-rank-${rankSuffix}.png`;
@@ -43,6 +43,13 @@ function getCreatureImage(creatureId: string, rank: Rank): string {
   if (creatureId === "honeybee") {
     const rankSuffix = rank === "S+" ? "S+" : rank;
     return `/ecobio-nextjs-ui/creatures/bee-rank-${rankSuffix}.png`;
+  }
+  if (creatureId === "spider_mutant") {
+    return "/ecobio-nextjs-ui/images/creatures/spider_mutant_e.png";
+  }
+  if (creatureId === "ravaryn" && geneticType) {
+    const normalizedType = geneticType.toLowerCase().replace("é", "e").replace("è", "e");
+    return `/ecobio-nextjs-ui/images/creatures/ravaryn_${normalizedType}_e.png`;
   }
   return "/ecobio-nextjs-ui/images/creatures/spider_mutant_e.png";
 }
