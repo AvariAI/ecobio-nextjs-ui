@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { GENETIC_TYPES, GeneticType } from "@/lib/genetic-types";
-import { Rank } from "@/lib/database";
+import { CREATURES, Rank } from "@/lib/database";
 import Link from "next/link";
 
 const RANKS: Rank[] = ["E", "D", "C", "B", "A", "S", "S+"];
@@ -83,6 +83,10 @@ function getCaptureCount(geneticType: GeneticType, rank: Rank): number {
 }
 
 export default function PokedexPage() {
+  // Available creatures for pokedex selection
+  const availableCreatures = Object.keys(CREATURES);
+  const [selectedCreature, setSelectedCreature] = useState<string>("ravaryn");
+
   const [geneticTypes] = useState<GeneticType[]>([
     "resilient",
     "scribeur",
@@ -154,17 +158,40 @@ export default function PokedexPage() {
         </Link>
 
         <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-          📚 Pokédex - Ravaryn
+          📚 Pokédex
         </h1>
+
+        {/* Creature selection */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 mb-6 shadow-lg">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Sélectionner une créature</h2>
+          <div className="flex gap-4 flex-wrap">
+            {availableCreatures.map(creatureId => {
+              const creature = CREATURES[creatureId];
+              return (
+                <button
+                  key={creatureId}
+                  onClick={() => setSelectedCreature(creatureId)}
+                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                    selectedCreature === creatureId
+                      ? "bg-green-600 text-white shadow-lg scale-105"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
+                  }`}
+                >
+                  {creature.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-8 shadow-lg">
           <div className="flex justify-between items-center">
             <div>
               <p className="text-lg text-gray-700 dark:text-gray-300">
-                Collection: <span className="font-bold text-green-600 dark:text-green-400">{getTotalCaptured()}</span> / {getTotalSlots()} cartes
+                Collection {CREATURES[selectedCreature].name}: <span className="font-bold text-green-600 dark:text-green-400">{getTotalCaptured()}</span> / {getTotalSlots()} cartes
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Capturez des Ravaryn de chaque type et rang pour compléter le Pokédex
+                Capturez des {CREATURES[selectedCreature].name} de chaque type et rang pour compléter le Pokédex
               </p>
             </div>
             <button
