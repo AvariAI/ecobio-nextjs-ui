@@ -379,8 +379,9 @@ export default function BattlePage() {
     let targetTeam: "player" | "enemy";
 
     if (attacker.owner === "player") {
-      // Player attacks: target random alive enemy
-      const aliveEnemies = newEnemyTeam.filter(c => c.currentHP > 0);
+      // Player attacks: target first alive enemy by position
+      const sortedEnemies = [...newEnemyTeam].sort((a, b) => (a.position || 0) - (b.position || 0));
+      const aliveEnemies = sortedEnemies.filter(c => c.currentHP > 0);
       if (aliveEnemies.length === 0) {
         newWinner = "player";
         setBattleState({
@@ -395,11 +396,12 @@ export default function BattlePage() {
         setIsProcessing(false);
         return;
       }
-      target = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
+      target = aliveEnemies[0]; // First alive by position
       targetTeam = "enemy";
     } else {
-      // Enemy attacks: target random alive player
-      const alivePlayers = newPlayerTeam.filter(c => c.currentHP > 0);
+      // Enemy attacks: target first alive player by position
+      const sortedPlayers = [...newPlayerTeam].sort((a, b) => (a.position || 0) - (b.position || 0));
+      const alivePlayers = sortedPlayers.filter(c => c.currentHP > 0);
       if (alivePlayers.length === 0) {
         newWinner = "enemy";
         setBattleState({
@@ -414,7 +416,7 @@ export default function BattlePage() {
         setIsProcessing(false);
         return;
       }
-      target = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+      target = alivePlayers[0]; // First alive by position
       targetTeam = "player";
     }
 
@@ -456,7 +458,9 @@ export default function BattlePage() {
     }
 
     const critText = isCrit ? " **CRITIQUE!**" : "";
-    newLog.push(`${attacker.name} → ${target.name}: ${damage} dégâts${critText}`);
+    const attackerLabel = `${attacker.name} (${attacker.position || '?'} ${attacker.owner === 'player' ? 'Joueur' : 'Adversaire'})`;
+    const targetLabel = `${target.name} (${target.position || '?'} ${targetTeam === 'player' ? 'Joueur' : 'Adversaire'})`;
+    newLog.push(`${attackerLabel} → ${targetLabel}: ${damage} dégâts${critText}`);
 
     // Move to next attacker in turn order
     let nextIndex = (newIndex + 1) % battleState.turnOrder.length;
