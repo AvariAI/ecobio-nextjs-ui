@@ -330,19 +330,24 @@ export default function BattlePage() {
     let attacker: any = null;
     let attackerFound = false;
     let attempts = 0;
-    const maxAttempts = battleState.turnOrder.length; // Prevent infinite loop
+    const maxAttempts = battleState.turnOrder.length || 20; // Prevent infinite loop
+    
+    console.log("Processing turn - Index:", newIndex, "Turn order length:", battleState.turnOrder.length, "Turn order:", battleState.turnOrder);
 
     while (attempts < maxAttempts && !attackerFound) {
       const turnEntry = battleState.turnOrder[newIndex];
+      console.log(`Attempt ${attempts}: Finding creature at index ${newIndex}, turnEntry:`, turnEntry);
       
       if (turnEntry.owner === "player") {
         const creature = newPlayerTeam.find(c => c.id === turnEntry.id);
+        console.log("Player creature found:", creature ? creature.name : "NOT FOUND", "HP:", creature?.currentHP);
         if (creature && creature.currentHP > 0) {
           attacker = { ...creature, owner: "player" as const };
           attackerFound = true;
         }
       } else {
         const creature = newEnemyTeam.find(c => c.id === turnEntry.id);
+        console.log("Enemy creature found:", creature ? creature.name : "NOT FOUND", "HP:", creature?.currentHP);
         if (creature && creature.currentHP > 0) {
           attacker = { ...creature, owner: "enemy" as const };
           attackerFound = true;
@@ -354,6 +359,8 @@ export default function BattlePage() {
         attempts++;
       }
     }
+    
+    console.log("Attacker selected:", attacker?.name, attacker?.owner, "Found:", attackerFound);
 
     // If no alive attacker found, someone won
     if (!attackerFound) {
