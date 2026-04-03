@@ -96,7 +96,7 @@ function rollRarity(): RarityRank {
 }
 
 function spawnCreature(): HuntedCreature {
-  const creaturePool = ["ravaryn"];
+  const creaturePool = ["ravaryn", "polyops"];
   const creatureId = creaturePool[Math.floor(Math.random() * creaturePool.length)];
   const creature: Creature = CREATURES[creatureId];
 

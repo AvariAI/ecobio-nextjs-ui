@@ -105,7 +105,7 @@ function rollRarity(): Rank {
 
 // Spawn ephemeral creature for battle (like hunting, no persistence)
 function spawnCreatureForBattle(): Creature {
-  const creaturePool = ["ravaryn"];
+  const creaturePool = ["ravaryn", "polyops"];
   const creatureId = creaturePool[Math.floor(Math.random() * creaturePool.length)];
   const creature = CREATURES[creatureId];
 

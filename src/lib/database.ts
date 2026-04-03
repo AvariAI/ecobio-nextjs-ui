@@ -83,6 +83,20 @@ export const CREATURES: Record<string, Creature> = {
     desc: "Ravaryn - Créature mystérieuse du monde post-apocalyptique",
     image: "/images/giant_fly.png", // Placeholder
   },
+  polyops: {
+    id: "polyops",
+    name: "Polyops",
+    rank: "E",
+    baseStats: {
+      hp: 500,
+      attack: 100,
+      defense: 100,
+      speed: 100,
+      crit: 100,
+    },
+    desc: "",
+    image: "/images/giant_fly.png", // Temporary image
+  },
 };
 
 export const CREATURE_TYPES: string[] = ["Insect", "Mutant"];
