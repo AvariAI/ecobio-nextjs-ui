@@ -76,6 +76,9 @@ function getCreatureImage(creatureId: string, rank: Rank, geneticType?: string):
   if (creatureId === "oxydrabe") {
     return "/ecobio-nextjs-ui/images/creatures/oxydrabe.png";
   }
+  if (creatureId === "verdogre") {
+    return "/ecobio-nextjs-ui/images/creatures/polyops.png"; // Placeholder for now
+  }
   return "/ecobio-nextjs-ui/images/creatures/spider_mutant_e.png";
 }
 
