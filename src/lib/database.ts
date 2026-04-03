@@ -151,7 +151,7 @@ export const CREATURES: Record<string, Creature> = {
       crit: 100,
     },
     desc: "",
-    image: "/images/creatures/polyops.png", // Placeholder for now
+    image: "/images/creatures/oxydrabe.png",
   },
 };
 
