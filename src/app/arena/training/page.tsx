@@ -61,6 +61,9 @@ function getCreatureImage(creatureId: string, rank: Rank, geneticType?: string):
     const normalizedType = geneticType.toLowerCase().replace("é", "e").replace("è", "e");
     return `/ecobio-nextjs-ui/images/creatures/ravaryn_${normalizedType}_e.png`;
   }
+  if (creatureId === "polyops") {
+    return "/ecobio-nextjs-ui/images/creatures/polyops.png";
+  }
   return "/ecobio-nextjs-ui/images/creatures/spider_mutant_e.png";
 }
 
