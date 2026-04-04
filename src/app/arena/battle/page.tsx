@@ -201,21 +201,22 @@ function createDisease(attacker: Creature, damage: number): Disease {
   };
 }
 
-function calculateDiseaseDamage(team: Creature[]): { damage: number; log: string[] } {
+function calculateDiseaseDamage(team: Creature[]): { damage: number; log: string[]; teamWithUpdatedDiseases: Creature[] } {
   const diseaseLog: string[] = [];
   let totalDamage = 0;
   
-  const creaturesWithDiseases = team.filter(c => c.diseases.length > 0 && c.currentHP > 0);
+  const creaturesWithDiseases = team.filter(c => c.diseases.some(d => d.remainingTurns > 0) && c.currentHP > 0);
+  const updatedTeam = [...team];
   
   creaturesWithDiseases.forEach(creature => {
     const activeDiseases = creature.diseases.filter(d => d.remainingTurns > 0);
     
     if (activeDiseases.length === 0) return;
     
-    // Calculate snowball bonus (0%/10%/20%/30% capped)
+    // Calculate charge bonus for THIS CREATURE ONLY (personal charge bonus)
     const chargeBonus = Math.min(30, (activeDiseases.length - 1) * 10);
     
-    // Sum 25% of each disease pool
+    // Sum 25% of each disease pool for THIS CREATURE
     const diseasePoolSum = activeDiseases.reduce((sum, disease) => sum + disease.pool, 0);
     const diseaseDamage = Math.floor(diseasePoolSum * 0.25);
     const finalDamage = Math.floor(diseaseDamage * (100 + chargeBonus) / 100);
@@ -225,10 +226,37 @@ function calculateDiseaseDamage(team: Creature[]): { damage: number; log: string
       diseaseLog.push(
         `☠️ ${creature.name}: ${activeDiseases.length} maladie${activeDiseases.length > 1 ? 's' : ''} → ${finalDamage} dégâts (${chargeBonus}% bonus)`
       );
+      
+      // Apply damage to this creature
+      const creatureIndex = updatedTeam.findIndex(c => c.id === creature.id);
+      if (creatureIndex !== -1) {
+        updatedTeam[creatureIndex] = {
+          ...updatedTeam[creatureIndex],
+          currentHP: Math.max(0, updatedTeam[creatureIndex].currentHP - finalDamage)
+        };
+      }
+    }
+    
+    // Update disease states (decrement remainingTurns) for THIS CREATURE
+    const updatedDiseases = activeDiseases.map(disease => ({
+      ...disease,
+      remainingTurns: disease.remainingTurns - 1
+    }));
+    
+    // Remove expired diseases
+    const activeDiseasesAfter = updatedDiseases.filter(d => d.remainingTurns > 0);
+    
+    // Update creature with updated diseases
+    const finalCreatureIndex = updatedTeam.findIndex(c => c.id === creature.id);
+    if (finalCreatureIndex !== -1) {
+      updatedTeam[finalCreatureIndex] = {
+        ...updatedTeam[finalCreatureIndex],
+        diseases: activeDiseasesAfter
+      };
     }
   });
   
-  return { damage: totalDamage, log: diseaseLog };
+  return { damage: totalDamage, log: diseaseLog, teamWithUpdatedDiseases: updatedTeam };
 }
 
 function updateDiseases(team: Creature[]): Creature[] {
@@ -636,17 +664,12 @@ export default function BattlePage() {
       const targetIndex = newEnemyTeam.findIndex(c => c.id === target.id);
       let updatedTarget = { ...target, currentHP: Math.max(0, target.currentHP - (attacker.geneticType?.toLowerCase() === "pathogene" ? 0 : damage)) };
       
-      // Check if attacker is Pathogène and apply disease to ALL enemies
-      if (attacker.geneticType?.toLowerCase() === "pathogene" && damage > 0) {
-        newEnemyTeam = newEnemyTeam.map(enemyCreature => {
-          if (enemyCreature.currentHP > 0) {
-            const disease = createDisease(attacker, damage);
-            const currentDiseases = enemyCreature.diseases || [];
-            return { ...enemyCreature, diseases: [...currentDiseases, disease] };
-          }
-          return enemyCreature;
-        });
-        newLog.push(`🧬 ${attacker.name} inflige maladie à TOUTES les créatures ennemies`);
+      // Check if attacker is Pathogène and apply disease to SINGLE target
+      if (attacker.geneticType?.toLowerCase() === "pathogene" && damage > 0 && updatedTarget.currentHP > 0) {
+        const disease = createDisease(attacker, damage);
+        const currentDiseases = updatedTarget.diseases || [];
+        updatedTarget = { ...updatedTarget, diseases: [...currentDiseases, disease] };
+        newLog.push(`🧬 ${attacker.name} inflige maladie à ${updatedTarget.name}`);
       }
       
       newEnemyTeam[targetIndex] = updatedTarget;
@@ -660,17 +683,12 @@ export default function BattlePage() {
       const targetIndex = newPlayerTeam.findIndex(c => c.id === target.id);
       let updatedTarget = { ...target, currentHP: Math.max(0, target.currentHP - (attacker.geneticType?.toLowerCase() === "pathogene" ? 0 : damage)) };
       
-      // Check if attacker is Pathogène and apply disease to ALL enemies
-      if (attacker.geneticType?.toLowerCase() === "pathogene" && damage > 0) {
-        newPlayerTeam = newPlayerTeam.map(enemyCreature => {
-          if (enemyCreature.currentHP > 0) {
-            const disease = createDisease(attacker, damage);
-            const currentDiseases = enemyCreature.diseases || [];
-            return { ...enemyCreature, diseases: [...currentDiseases, disease] };
-          }
-          return enemyCreature;
-        });
-        newLog.push(`🧬 ${attacker.name} inflige maladie à TOUTES les créatures ennemies`);
+      // Check if attacker is Pathogène and apply disease to SINGLE target  
+      if (attacker.geneticType?.toLowerCase() === "pathogene" && damage > 0 && updatedTarget.currentHP > 0) {
+        const disease = createDisease(attacker, damage);
+        const currentDiseases = updatedTarget.diseases || [];
+        updatedTarget = { ...updatedTarget, diseases: [...currentDiseases, disease] };
+        newLog.push(`🧬 ${attacker.name} inflige maladie à ${updatedTarget.name}`);
       }
       
       newPlayerTeam[targetIndex] = updatedTarget;
@@ -709,16 +727,13 @@ export default function BattlePage() {
     // Move to next attacker in turn order
     let nextIndex = (newIndex + 1) % battleState.turnOrder.length;
 
-    // Apply disease damage at end of turn (Pathogène DoT)
+    // Apply disease damage at end of turn (Pathogène DoT) - NEW INTEGRATED SYSTEM
     const playerDiseaseResult = calculateDiseaseDamage(finalPlayerTeam);
     const enemyDiseaseResult = calculateDiseaseDamage(finalEnemyTeam);
     
-    let finalPlayerTeamWithDisease = applyDiseaseDamage(finalPlayerTeam, playerDiseaseResult.damage);
-    let finalEnemyTeamWithDisease = applyDiseaseDamage(finalEnemyTeam, enemyDiseaseResult.damage);
-    
-    // Update disease states (decrement turns, remove expired)
-    finalPlayerTeamWithDisease = updateDiseases(finalPlayerTeamWithDisease);
-    finalEnemyTeamWithDisease = updateDiseases(finalEnemyTeamWithDisease);
+    // The damage and updates are applied directly within calculateDiseaseDamage
+    const finalPlayerTeamWithDisease = playerDiseaseResult.teamWithUpdatedDiseases;
+    const finalEnemyTeamWithDisease = enemyDiseaseResult.teamWithUpdatedDiseases;
     
     // Add disease damage logs
     if (playerDiseaseResult.log.length > 0 || enemyDiseaseResult.log.length > 0) {
