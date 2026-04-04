@@ -99,7 +99,7 @@ function calculateDamage(attacker: Creature, defender: Creature, isCrit: boolean
 }
 
 function isCriticalHit(crit: number): boolean {
-  return Math.random() * 100 < crit;
+  return Math.random() * 100 < (crit / 10);
 }
 
 function getPersonalityEmoji(personality?: PersonalityType): string {
