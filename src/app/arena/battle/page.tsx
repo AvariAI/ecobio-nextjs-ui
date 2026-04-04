@@ -498,8 +498,8 @@ export default function BattlePage() {
     setIsProcessing(true);
 
     const newLog = [...battleState.log];
-    const newPlayerTeam = [...battleState.playerTeam];
-    const newEnemyTeam = [...battleState.enemyTeam];
+    let newPlayerTeam = [...battleState.playerTeam];
+    let newEnemyTeam = [...battleState.enemyTeam];
     let newWinner: "player" | "enemy" | null = null;
     let newIndex = battleState.currentAttackerIndex;
 
@@ -631,17 +631,22 @@ export default function BattlePage() {
       setDamageNumbers(prev => prev.filter(d => d.id !== `damage-${Date.now()}`));
     }, 1500);
 
-    // Apply damage to target team
+    // Apply damage to target team (Pathogène: NO DIRECT DAMAGE + INFECTION)
     if (targetTeam === "enemy") {
       const targetIndex = newEnemyTeam.findIndex(c => c.id === target.id);
-      let updatedTarget = { ...target, currentHP: Math.max(0, target.currentHP - damage) };
+      let updatedTarget = { ...target, currentHP: Math.max(0, target.currentHP - (attacker.geneticType?.toLowerCase() === "pathogene" ? 0 : damage)) };
       
-      // Check if attacker is Pathogène and apply disease
-      if (attacker.geneticType?.toLowerCase() === "pathogene" && damage > 0 && updatedTarget.currentHP > 0) {
-        const disease = createDisease(attacker, damage);
-        const currentDiseases = updatedTarget.diseases || [];
-        updatedTarget = { ...updatedTarget, diseases: [...currentDiseases, disease] };
-        newLog.push(`🧬 ${attacker.name} inflige maladie à ${updatedTarget.name}`);
+      // Check if attacker is Pathogène and apply disease to ALL enemies
+      if (attacker.geneticType?.toLowerCase() === "pathogene" && damage > 0) {
+        newEnemyTeam = newEnemyTeam.map(enemyCreature => {
+          if (enemyCreature.currentHP > 0) {
+            const disease = createDisease(attacker, damage);
+            const currentDiseases = enemyCreature.diseases || [];
+            return { ...enemyCreature, diseases: [...currentDiseases, disease] };
+          }
+          return enemyCreature;
+        });
+        newLog.push(`🧬 ${attacker.name} inflige maladie à TOUTES les créatures ennemies`);
       }
       
       newEnemyTeam[targetIndex] = updatedTarget;
@@ -653,14 +658,19 @@ export default function BattlePage() {
       }
     } else {
       const targetIndex = newPlayerTeam.findIndex(c => c.id === target.id);
-      let updatedTarget = { ...target, currentHP: Math.max(0, target.currentHP - damage) };
+      let updatedTarget = { ...target, currentHP: Math.max(0, target.currentHP - (attacker.geneticType?.toLowerCase() === "pathogene" ? 0 : damage)) };
       
-      // Check if attacker is Pathogène and apply disease
-      if (attacker.geneticType?.toLowerCase() === "pathogene" && damage > 0 && updatedTarget.currentHP > 0) {
-        const disease = createDisease(attacker, damage);
-        const currentDiseases = updatedTarget.diseases || [];
-        updatedTarget = { ...updatedTarget, diseases: [...currentDiseases, disease] };
-        newLog.push(`🧬 ${attacker.name} inflige maladie à ${updatedTarget.name}`);
+      // Check if attacker is Pathogène and apply disease to ALL enemies
+      if (attacker.geneticType?.toLowerCase() === "pathogene" && damage > 0) {
+        newPlayerTeam = newPlayerTeam.map(enemyCreature => {
+          if (enemyCreature.currentHP > 0) {
+            const disease = createDisease(attacker, damage);
+            const currentDiseases = enemyCreature.diseases || [];
+            return { ...enemyCreature, diseases: [...currentDiseases, disease] };
+          }
+          return enemyCreature;
+        });
+        newLog.push(`🧬 ${attacker.name} inflige maladie à TOUTES les créatures ennemies`);
       }
       
       newPlayerTeam[targetIndex] = updatedTarget;

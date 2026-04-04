@@ -110,7 +110,7 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     weight: 100,
     passive: {
       name: "Impact Maladie",
-      description: "Transforme tous les dégâts en maladie de 4 tours avec effet snowball cumulatif",
+      description: "Transforme tous les dégâts en maladie de 4 tours cumulable",
     },
   },
 
