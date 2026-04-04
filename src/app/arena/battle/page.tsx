@@ -37,6 +37,20 @@ interface BattleState {
   currentAttackerIndex: number;
 }
 
+// Get the current attacker from the battle state
+const getCurrentAttacker = (battleState: BattleState): Creature | null => {
+  if (battleState.currentAttackerIndex === null || battleState.currentAttackerIndex === undefined) return null;
+  
+  const turnEntry = battleState.turnOrder[battleState.currentAttackerIndex];
+  if (!turnEntry) return null;
+  
+  if (turnEntry.owner === "player") {
+    return battleState.playerTeam.find(c => c.id === turnEntry.id) || null;
+  } else {
+    return battleState.enemyTeam.find(c => c.id === turnEntry.id) || null;
+  }
+};
+
 function getCreatureImage(creatureId: string, rank: Rank, geneticType?: string): string {
   if (creatureId === "housefly") {
     const rankSuffix = rank === "S+" ? "S+" : rank;
@@ -513,6 +527,7 @@ export default function BattlePage() {
 
   const playerAlive = battleState.playerTeam.filter(c => c.currentHP > 0).length;
   const enemyAlive = battleState.enemyTeam.filter(c => c.currentHP > 0).length;
+  const currentAttacker = getCurrentAttacker(battleState);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-950 via-orange-950 to-purple-950 p-6">
@@ -551,12 +566,18 @@ export default function BattlePage() {
 
           <div className="grid grid-cols-5 gap-x-4 mb-4">
             <div className="col-span-2 flex flex-col gap-1.5">
-              {battleState.playerTeam.map((creature) => (
+              {battleState.playerTeam.map((creature) => {
+                const isAttacker = currentAttacker?.id === creature.id;
+                return (
                 <div
                   key={creature.id}
                   onClick={() => !battleState.winner && setSelectedCreature(creature)}
-                  className={`relative bg-gradient-to-br from-blue-900/90 to-blue-950 rounded-xl p-2.5 cursor-pointer transition-all hover:scale-105 shadow-lg border-2 border-blue-500/30 ${
-                    creature.currentHP <= 0 ? "opacity-40 grayscale" : ""
+                  className={`relative bg-gradient-to-br from-blue-900/90 to-blue-950 rounded-xl p-2.5 cursor-pointer transition-all hover:scale-105 shadow-lg border-2 ${
+                    creature.currentHP <= 0 
+                      ? "opacity-40 grayscale border-blue-500/30" 
+                      : isAttacker 
+                        ? "border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.5)]" 
+                        : "border-blue-500/30"
                   }`}
                 >
                   {creature.currentHP <= 0 && (
@@ -574,32 +595,40 @@ export default function BattlePage() {
                     #{creature.position}
                   </div>
 
+                  {isAttacker && creature.currentHP > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold shadow-lg animate-[pulse_1s_ease-in-out_infinite]">
+                      JOUE
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2">
                     <img
                       src={getCreatureImage(creature.creatureId, creature.finalStats.rank, creature.geneticType)}
                       alt={creature.name}
-                      className="w-14 h-14 object-contain"
+                      className={`w-14 h-14 object-contain ${isAttacker && creature.currentHP > 0 ? "animate-[pulse_1s_ease-in-out_infinite]" : ""}`}
                     />
                     <div className="flex-1">
                       <p className="text-white font-bold text-xs">{creature.name}</p>
-                      <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
+                      <div className="w-full bg-gray-800 rounded-full h-2 mt-1">
                         <div
                           className={`h-full rounded-full transition-all duration-300 ${
                             creature.currentHP / creature.maxHP > 0.5
-                              ? "from-green-500 to-green-600"
+                              ? "from-green-400 to-green-500"
                               : creature.currentHP / creature.maxHP > 0.25
-                              ? "from-orange-500 to-orange-600"
-                              : "from-red-500 to-red-600"
+                              ? "from-orange-400 to-orange-500"
+                              : "from-red-400 to-red-500"
                           }`}
                           style={{ width: `${(creature.currentHP / creature.maxHP) * 100}%` }}
                         />
                       </div>
-                      <div className="text-xs text-gray-400 mt-0.5 flex justify-between">
-                        <span>{creature.currentHP}/{creature.maxHP}</span>
+                      <div className="text-xs text-gray-300 mt-0.5 flex justify-between font-medium">
+                        <span className={`${creature.currentHP / creature.maxHP > 0.5 ? "text-green-400" : creature.currentHP / creature.maxHP > 0.25 ? "text-orange-400" : "text-red-400"}`}>
+                          {creature.currentHP}/{creature.maxHP}
+                        </span>
                         <span className="text-cyan-400 capitalize">🔬 {creature.geneticType}</span>
                       </div>
                       {creature.personality && PERSONALITIES[creature.personality] && (
-                        <div className="text-xs text-gray-400 mt-0.5">
+                        <div className="text-xs text-gray-300 mt-0.5">
                           <span className="text-purple-400">{getPersonalityEmoji(creature.personality)} {PERSONALITIES[creature.personality].name}</span>
                         </div>
                       )}
@@ -613,7 +642,7 @@ export default function BattlePage() {
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
 
             <div className="col-span-1 flex items-center justify-center">
@@ -621,12 +650,18 @@ export default function BattlePage() {
             </div>
 
             <div className="col-span-2 flex flex-col gap-1.5">
-              {battleState.enemyTeam.map((creature) => (
+              {battleState.enemyTeam.map((creature) => {
+                const isAttacker = currentAttacker?.id === creature.id;
+                return (
                 <div
                   key={creature.id}
                   onClick={() => !battleState.winner && setSelectedCreature(creature)}
-                  className={`relative bg-gradient-to-br from-red-900/90 to-red-950 rounded-xl p-2.5 cursor-pointer transition-all hover:scale-105 shadow-lg border-2 border-red-500/30 ${
-                    creature.currentHP <= 0 ? "opacity-40 grayscale" : ""
+                  className={`relative bg-gradient-to-br from-red-900/90 to-red-950 rounded-xl p-2.5 cursor-pointer transition-all hover:scale-105 shadow-lg border-2 ${
+                    creature.currentHP <= 0 
+                      ? "opacity-40 grayscale border-red-500/30" 
+                      : isAttacker 
+                        ? "border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.5)]" 
+                        : "border-red-500/30"
                   }`}
                 >
                   {creature.currentHP <= 0 && (
@@ -635,35 +670,43 @@ export default function BattlePage() {
                     </div>
                   )}
 
+                  {isAttacker && creature.currentHP > 0 && (
+                    <div className="absolute -top-1 -left-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold shadow-lg animate-[pulse_1s_ease-in-out_infinite]">
+                      JOUE
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2 justify-end">
                     <div className="flex-1 text-right">
                       <p className="text-white font-bold text-xs">{creature.name}</p>
-                      <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1 ml-auto">
+                      <div className="w-full bg-gray-800 rounded-full h-2 mt-1 ml-auto">
                         <div
                           className={`h-full rounded-full transition-all duration-300 ${
                             creature.currentHP / creature.maxHP > 0.5
-                              ? "from-green-500 to-green-600"
+                              ? "from-green-400 to-green-500"
                               : creature.currentHP / creature.maxHP > 0.25
-                              ? "from-orange-500 to-orange-600"
-                              : "from-red-500 to-red-600"
+                              ? "from-orange-400 to-orange-500"
+                              : "from-red-400 to-red-500"
                           }`}
                           style={{ width: `${(creature.currentHP / creature.maxHP) * 100}%` }}
                         />
                       </div>
-                      <div className="text-xs text-gray-400 mt-0.5 flex justify-between">
+                      <div className="text-xs text-gray-300 mt-0.5 flex justify-between font-medium">
                         {creature.personality && PERSONALITIES[creature.personality] && (
                           <span className="text-purple-400">{PERSONALITIES[creature.personality].name} {getPersonalityEmoji(creature.personality)}</span>
                         )}
-                        <span>{creature.currentHP}/{creature.maxHP}</span>
+                        <span className={`${creature.currentHP / creature.maxHP > 0.5 ? "text-green-400" : creature.currentHP / creature.maxHP > 0.25 ? "text-orange-400" : "text-red-400"}`}>
+                          {creature.currentHP}/{creature.maxHP}
+                        </span>
                       </div>
-                      <div className="text-xs text-gray-400 mt-0.5">
+                      <div className="text-xs text-gray-300 mt-0.5">
                         <span className="text-cyan-400 capitalize">🔬 {creature.geneticType}</span>
                       </div>
                     </div>
                     <img
                       src={getCreatureImage(creature.creatureId, creature.finalStats.rank, creature.geneticType)}
                       alt={creature.name}
-                      className="w-14 h-14 object-contain"
+                      className={`w-14 h-14 object-contain ${isAttacker && creature.currentHP > 0 ? "animate-[pulse_1s_ease-in-out_infinite]" : ""}`}
                     />
                     <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1 py-0.5 rounded-full font-bold">
                       #{creature.position}
@@ -677,7 +720,7 @@ export default function BattlePage() {
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
 
