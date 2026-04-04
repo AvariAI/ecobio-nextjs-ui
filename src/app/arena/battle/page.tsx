@@ -146,12 +146,17 @@ function handleResilientSauvetage(
   const newTeam = [...team];
   const swapLog: string[] = [];
 
-  // Perform swaps one-to-one up to min(resilients, creatures)
+  // Perform swaps one-to-one, excluding self-swaps
   const maxSwaps = Math.min(resilientsSorted.length, creaturesSorted.length);
   for (let i = 0; i < maxSwaps; i++) {
-    const resilient = resilientsSorted[i];
     const creature = creaturesSorted[i];
     
+    // Filter out the creature who needs saving from available resilients
+    const availableResilients = resilientsSorted.filter(r => r.id !== creature.id);
+    
+    if (availableResilients.length === 0) break; // No resilients available to save this creature
+    
+    const resilient = availableResilients[i % availableResilients.length];
     const resilientPos = resilient.position || 0;
     const creaturePos = creature.position || 0;
 
