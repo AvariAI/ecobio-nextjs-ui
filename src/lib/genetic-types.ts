@@ -49,6 +49,10 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     biome: ["Ruines urbaines", "Zones contaminées"],
     characteristic: "Persistence — Protection & Reflect",
     weight: 100,
+    passive: {
+      name: "Sauvetage",
+      description: "Echange sa position avec un allié qui atteint <25% d'HP",
+    },
   },
 
   scribeur: {

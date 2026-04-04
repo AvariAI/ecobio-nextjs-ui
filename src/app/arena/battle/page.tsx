@@ -25,6 +25,7 @@ interface Creature {
   position?: number;
   geneticType: string;
   personality: PersonalityType;
+  hasTriggeredSauvetage?: boolean;
 }
 
 interface BattleState {
@@ -112,6 +113,67 @@ function getPersonalityEmoji(personality?: PersonalityType): string {
     mystérieux: "🌙"
   };
   return personality ? emojiMap[personality] : "";
+}
+
+// Handle Resilient Sauvetage passive ability
+function handleResilientSauvetage(
+  team: Creature[], 
+  teamLog: string[], 
+  teamName: "player" | "enemy"
+): Creature[] {
+  // Find resilient creatures in the team
+  const resilients = team.filter(c => 
+    c.currentHP > 0 && 
+    c.geneticType?.toLowerCase() === "resilient"
+  );
+
+  if (resilients.length === 0) return team;
+
+  // Find creatures that just dropped below 25% HP (and didn't already trigger)
+  const creaturesInDanger = team.filter(c => {
+    const hpPercent = c.currentHP / c.maxHP;
+    return hpPercent < 0.25 && hpPercent > 0 && !c.hasTriggeredSauvetage && c.currentHP > 0;
+  });
+
+  if (creaturesInDanger.length === 0) return team;
+
+  // Get resilients sorted by speed (highest first)
+  const resilientsSorted = [...resilients].sort((a, b) => b.finalStats.speed - a.finalStats.speed);
+  
+  // Get creatures in danger sorted by position (lowest first = highest priority target)
+  const creaturesSorted = [...creaturesInDanger].sort((a, b) => (a.position || 0) - (b.position || 0));
+
+  const newTeam = [...team];
+  const swapLog: string[] = [];
+
+  // Perform swaps one-to-one up to min(resilients, creatures)
+  const maxSwaps = Math.min(resilientsSorted.length, creaturesSorted.length);
+  for (let i = 0; i < maxSwaps; i++) {
+    const resilient = resilientsSorted[i];
+    const creature = creaturesSorted[i];
+    
+    const resilientPos = resilient.position || 0;
+    const creaturePos = creature.position || 0;
+
+    // Update positions in newTeam
+    const resilientIndex = newTeam.findIndex(c => c.id === resilient.id);
+    const creatureIndex = newTeam.findIndex(c => c.id === creature.id);
+    
+    if (resilientIndex !== -1 && creatureIndex !== -1) {
+      newTeam[resilientIndex] = { ...resilient, position: creaturePos };
+      newTeam[creatureIndex] = { ...creature, position: resilientPos, hasTriggeredSauvetage: true };
+      
+      swapLog.push(
+        `${resilient.name} (Resilient) utilise Sauvetage → échange position ${resilientPos}↔${creaturePos} avec ${creature.name}`
+      );
+    }
+  }
+
+  if (swapLog.length > 0) {
+    teamLog.push(`${teamName === "player" ? "🛡️ JOUEUR" : "⚔️ ADV"} Sauvetage activé:`, ...swapLog);
+  }
+
+  return newTeam;
 }
 
 // Rarity roll for enemy creatures (like hunting)
@@ -282,7 +344,8 @@ export default function BattlePage() {
             level: c.level || c.customStats?.level || 1,
             currentHP: hp,
             maxHP: maxHP,
-            position: i + 1
+            position: i + 1,
+            hasTriggeredSauvetage: false
           });
         }
 
@@ -301,7 +364,8 @@ export default function BattlePage() {
           const creature = spawnCreatureForBattle();
           enemyTeam.push({
             ...creature,
-            position: i + 1
+            position: i + 1,
+            hasTriggeredSauvetage: false
           });
         }
 
@@ -512,12 +576,31 @@ export default function BattlePage() {
     const targetLabel = `${target.name} (${target.position || '?'} ${targetTeam === 'player' ? 'Joueur' : 'Adversaire'})`;
     newLog.push(`${attackerLabel} → ${targetLabel}: ${damage} dégâts${critText}`);
 
+    // Reset Sauvetage trigger for creatures that healed back above 25%
+    const resetSauvetageTrigger = (team: Creature[]) => {
+      return team.map(c => {
+        const hpPercent = c.currentHP / c.maxHP;
+        if (hpPercent > 0.25 && c.hasTriggeredSauvetage) {
+          return { ...c, hasTriggeredSauvetage: false };
+        }
+        return c;
+      });
+    };
+
+    // Apply Sauvetage passive ability
+    const playerTeamAfterSauvetage = handleResilientSauvetage(newPlayerTeam, newLog, "player");
+    const enemyTeamAfterSauvetage = handleResilientSauvetage(newEnemyTeam, newLog, "enemy");
+
+    // Reset Sauvetage triggers after checking
+    const finalPlayerTeam = resetSauvetageTrigger(playerTeamAfterSauvetage);
+    const finalEnemyTeam = resetSauvetageTrigger(enemyTeamAfterSauvetage);
+
     // Move to next attacker in turn order
     let nextIndex = (newIndex + 1) % battleState.turnOrder.length;
 
     setBattleState({
-      playerTeam: newPlayerTeam,
-      enemyTeam: newEnemyTeam,
+      playerTeam: finalPlayerTeam,
+      enemyTeam: finalEnemyTeam,
       turn: battleState.turn + 1,
       log: newLog,
       winner: newWinner,
