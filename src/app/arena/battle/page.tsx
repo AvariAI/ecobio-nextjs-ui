@@ -411,8 +411,17 @@ export default function BattlePage() {
     let targetTeam: "player" | "enemy";
 
     if (attacker.owner === "player") {
-      // Player attacks: target first alive enemy by position
-      const sortedEnemies = [...newEnemyTeam].sort((a, b) => (a.position || 0) - (b.position || 0));
+      // Player attacks: target based on genetic type
+      const isOmbre = attacker.geneticType?.toLowerCase() === "ombre";
+      const sortedEnemies = [...newEnemyTeam].sort((a, b) => {
+        if (isOmbre) {
+          // Ombre: inverted order (5→4→3→2→1)
+          return (b.position || 0) - (a.position || 0);
+        } else {
+          // Normal: standard order (1→2→3→4→5)
+          return (a.position || 0) - (b.position || 0);
+        }
+      });
       const aliveEnemies = sortedEnemies.filter(c => c.currentHP > 0);
       if (aliveEnemies.length === 0) {
         newWinner = "player";
@@ -428,11 +437,20 @@ export default function BattlePage() {
         setIsProcessing(false);
         return;
       }
-      target = aliveEnemies[0]; // First alive by position
+      target = aliveEnemies[0]; // First alive by order
       targetTeam = "enemy";
     } else {
-      // Enemy attacks: target first alive player by position
-      const sortedPlayers = [...newPlayerTeam].sort((a, b) => (a.position || 0) - (b.position || 0));
+      // Enemy attacks: target based on genetic type
+      const isOmbre = attacker.geneticType?.toLowerCase() === "ombre";
+      const sortedPlayers = [...newPlayerTeam].sort((a, b) => {
+        if (isOmbre) {
+          // Ombre: inverted order (5→4→3→2→1)
+          return (b.position || 0) - (a.position || 0);
+        } else {
+          // Normal: standard order (1→2→3→4→5)
+          return (a.position || 0) - (b.position || 0);
+        }
+      });
       const alivePlayers = sortedPlayers.filter(c => c.currentHP > 0);
       if (alivePlayers.length === 0) {
         newWinner = "enemy";
@@ -448,7 +466,7 @@ export default function BattlePage() {
         setIsProcessing(false);
         return;
       }
-      target = alivePlayers[0]; // First alive by position
+      target = alivePlayers[0]; // First alive by order
       targetTeam = "player";
     }
 
