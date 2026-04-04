@@ -667,9 +667,11 @@ export default function BattlePage() {
 
           <div className="grid grid-cols-5 gap-x-4 mb-4">
             <div className="col-span-2 flex flex-col gap-1.5">
-              {battleState.playerTeam.map((creature) => {
-                const isAttacker = currentAttacker?.id === creature.id;
-                return (
+              {[...battleState.playerTeam]
+                .sort((a, b) => (a.position || 0) - (b.position || 0))
+                .map((creature) => {
+                  const isAttacker = currentAttacker?.id === creature.id;
+                  return (
                 <div
                   key={creature.id}
                   onClick={() => !battleState.winner && setSelectedCreature(creature)}
@@ -751,9 +753,11 @@ export default function BattlePage() {
             </div>
 
             <div className="col-span-2 flex flex-col gap-1.5">
-              {battleState.enemyTeam.map((creature) => {
-                const isAttacker = currentAttacker?.id === creature.id;
-                return (
+              {[...battleState.enemyTeam]
+                .sort((a, b) => (a.position || 0) - (b.position || 0))
+                .map((creature) => {
+                  const isAttacker = currentAttacker?.id === creature.id;
+                  return (
                 <div
                   key={creature.id}
                   onClick={() => !battleState.winner && setSelectedCreature(creature)}
