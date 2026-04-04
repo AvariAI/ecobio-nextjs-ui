@@ -108,6 +108,10 @@ export const GENETIC_TYPES: Record<GeneticType, GeneticTypeData> = {
     biome: ["Zones contaminées", "Décharges chimiques"],
     characteristic: "Spread — Poison & Weaken",
     weight: 100,
+    passive: {
+      name: "Impact Maladie",
+      description: "Transforme tous les dégâts en maladie de 4 tours avec effet snowball cumulatif",
+    },
   },
 
   synchroniseur: {
