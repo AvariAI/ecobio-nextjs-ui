@@ -609,14 +609,14 @@ export default function BattlePage() {
                     />
                     <div className="flex-1">
                       <p className="text-white font-bold text-xs">{creature.name}</p>
-                      <div className="w-full bg-gray-800 rounded-full h-2 mt-1">
+                      <div className="w-full bg-gray-900 rounded-full h-2 mt-1">
                         <div
                           className={`h-full rounded-full transition-all duration-300 ${
                             creature.currentHP / creature.maxHP > 0.5
-                              ? "from-green-400 to-green-500"
+                              ? "bg-gradient-to-r from-green-400 to-green-500"
                               : creature.currentHP / creature.maxHP > 0.25
-                              ? "from-orange-400 to-orange-500"
-                              : "from-red-400 to-red-500"
+                              ? "bg-gradient-to-r from-orange-400 to-orange-500"
+                              : "bg-gradient-to-r from-red-400 to-red-500"
                           }`}
                           style={{ width: `${(creature.currentHP / creature.maxHP) * 100}%` }}
                         />
@@ -679,14 +679,14 @@ export default function BattlePage() {
                   <div className="flex items-center gap-2 justify-end">
                     <div className="flex-1 text-right">
                       <p className="text-white font-bold text-xs">{creature.name}</p>
-                      <div className="w-full bg-gray-800 rounded-full h-2 mt-1 ml-auto">
+                      <div className="w-full bg-gray-900 rounded-full h-2 mt-1 ml-auto">
                         <div
                           className={`h-full rounded-full transition-all duration-300 ${
                             creature.currentHP / creature.maxHP > 0.5
-                              ? "from-green-400 to-green-500"
+                              ? "bg-gradient-to-r from-green-400 to-green-500"
                               : creature.currentHP / creature.maxHP > 0.25
-                              ? "from-orange-400 to-orange-500"
-                              : "from-red-400 to-red-500"
+                              ? "bg-gradient-to-r from-orange-400 to-orange-500"
+                              : "bg-gradient-to-r from-red-400 to-red-500"
                           }`}
                           style={{ width: `${(creature.currentHP / creature.maxHP) * 100}%` }}
                         />
