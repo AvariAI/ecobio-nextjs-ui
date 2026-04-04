@@ -7,6 +7,14 @@ import { rollRandomGeneticType } from "@/lib/genetic-types";
 import { getVarianceRange, BattleStats } from "@/lib/battle";
 import { rollRandomTraits, applyTraitStatModifiers } from "@/lib/traits";
 
+interface Disease {
+  id: string;
+  pool: number; // Damage total de l'attaque qui l'a créée
+  remainingTurns: number; // 4 → 3 → 2 → 1 → 0 (expire)
+  sourceCreatureId: string; // Qui l'a infligée
+  sourceCreatureName: string; // Nom pour le display
+}
+
 interface Creature {
   id: string;
   name: string;
@@ -26,6 +34,7 @@ interface Creature {
   geneticType: string;
   personality: PersonalityType;
   hasTriggeredSauvetage?: boolean;
+  diseases: Disease[];
 }
 
 interface BattleState {
@@ -181,6 +190,71 @@ function handleResilientSauvetage(
   return newTeam;
 }
 
+// Pathogène disease management
+function createDisease(attacker: Creature, damage: number): Disease {
+  return {
+    id: `disease-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    pool: damage,
+    remainingTurns: 4,
+    sourceCreatureId: attacker.id,
+    sourceCreatureName: attacker.name
+  };
+}
+
+function calculateDiseaseDamage(team: Creature[]): { damage: number; log: string[] } {
+  const diseaseLog: string[] = [];
+  let totalDamage = 0;
+  
+  const creaturesWithDiseases = team.filter(c => c.diseases.length > 0 && c.currentHP > 0);
+  
+  creaturesWithDiseases.forEach(creature => {
+    const activeDiseases = creature.diseases.filter(d => d.remainingTurns > 0);
+    
+    if (activeDiseases.length === 0) return;
+    
+    // Calculate snowball bonus (0%/10%/20%/30% capped)
+    const chargeBonus = Math.min(30, (activeDiseases.length - 1) * 10);
+    
+    // Sum 25% of each disease pool
+    const diseasePoolSum = activeDiseases.reduce((sum, disease) => sum + disease.pool, 0);
+    const diseaseDamage = Math.floor(diseasePoolSum * 0.25);
+    const finalDamage = Math.floor(diseaseDamage * (100 + chargeBonus) / 100);
+    
+    if (finalDamage > 0) {
+      totalDamage += finalDamage;
+      diseaseLog.push(
+        `☠️ ${creature.name}: ${activeDiseases.length} maladie${activeDiseases.length > 1 ? 's' : ''} → ${finalDamage} dégâts (${chargeBonus}% bonus)`
+      );
+    }
+  });
+  
+  return { damage: totalDamage, log: diseaseLog };
+}
+
+function updateDiseases(team: Creature[]): Creature[] {
+  return team.map(creature => {
+    // Remove expired diseases and decrement remaining turns
+    const activeDiseases = creature.diseases
+      .map(disease => ({
+        ...disease,
+        remainingTurns: disease.remainingTurns - 1
+      }))
+      .filter(disease => disease.remainingTurns > 0);
+    
+    return {
+      ...creature,
+      diseases: activeDiseases
+    };
+  });
+}
+
+function applyDiseaseDamage(team: Creature[], damage: number): Creature[] {
+  return team.map(creature => ({
+    ...creature,
+    currentHP: Math.max(0, creature.currentHP - damage)
+  }));
+}
+
 // Rarity roll for enemy creatures (like hunting)
 function rollRarity(): Rank {
   const dist: { rank: Rank; weight: number }[] = [
@@ -281,7 +355,7 @@ function spawnCreatureForBattle(): Creature {
     level: 1,
     currentHP: finalStats.hp,
     maxHP: finalStats.hp,
-    // Ephemeral - not saved to localStorage!
+    diseases: [], // Ephemeral - not saved to localStorage!
   };
 }
 
@@ -350,7 +424,8 @@ export default function BattlePage() {
             currentHP: hp,
             maxHP: maxHP,
             position: i + 1,
-            hasTriggeredSauvetage: false
+            hasTriggeredSauvetage: false,
+            diseases: []
           });
         }
 
@@ -370,7 +445,8 @@ export default function BattlePage() {
           enemyTeam.push({
             ...creature,
             position: i + 1,
-            hasTriggeredSauvetage: false
+            hasTriggeredSauvetage: false,
+            diseases: []
           });
         }
 
@@ -558,7 +634,17 @@ export default function BattlePage() {
     // Apply damage to target team
     if (targetTeam === "enemy") {
       const targetIndex = newEnemyTeam.findIndex(c => c.id === target.id);
-      newEnemyTeam[targetIndex] = { ...target, currentHP: Math.max(0, target.currentHP - damage) };
+      let updatedTarget = { ...target, currentHP: Math.max(0, target.currentHP - damage) };
+      
+      // Check if attacker is Pathogène and apply disease
+      if (attacker.geneticType?.toLowerCase() === "pathogene" && damage > 0 && updatedTarget.currentHP > 0) {
+        const disease = createDisease(attacker, damage);
+        const currentDiseases = updatedTarget.diseases || [];
+        updatedTarget = { ...updatedTarget, diseases: [...currentDiseases, disease] };
+        newLog.push(`🧬 ${attacker.name} inflige maladie à ${updatedTarget.name}`);
+      }
+      
+      newEnemyTeam[targetIndex] = updatedTarget;
       
       // Check if enemy team is defeated
       const stillAliveEnemies = newEnemyTeam.filter(c => c.currentHP > 0);
@@ -567,7 +653,17 @@ export default function BattlePage() {
       }
     } else {
       const targetIndex = newPlayerTeam.findIndex(c => c.id === target.id);
-      newPlayerTeam[targetIndex] = { ...target, currentHP: Math.max(0, target.currentHP - damage) };
+      let updatedTarget = { ...target, currentHP: Math.max(0, target.currentHP - damage) };
+      
+      // Check if attacker is Pathogène and apply disease
+      if (attacker.geneticType?.toLowerCase() === "pathogene" && damage > 0 && updatedTarget.currentHP > 0) {
+        const disease = createDisease(attacker, damage);
+        const currentDiseases = updatedTarget.diseases || [];
+        updatedTarget = { ...updatedTarget, diseases: [...currentDiseases, disease] };
+        newLog.push(`🧬 ${attacker.name} inflige maladie à ${updatedTarget.name}`);
+      }
+      
+      newPlayerTeam[targetIndex] = updatedTarget;
       
       // Check if player team is defeated
       const stillAlivePlayers = newPlayerTeam.filter(c => c.currentHP > 0);
@@ -603,9 +699,25 @@ export default function BattlePage() {
     // Move to next attacker in turn order
     let nextIndex = (newIndex + 1) % battleState.turnOrder.length;
 
+    // Apply disease damage at end of turn (Pathogène DoT)
+    const playerDiseaseResult = calculateDiseaseDamage(finalPlayerTeam);
+    const enemyDiseaseResult = calculateDiseaseDamage(finalEnemyTeam);
+    
+    let finalPlayerTeamWithDisease = applyDiseaseDamage(finalPlayerTeam, playerDiseaseResult.damage);
+    let finalEnemyTeamWithDisease = applyDiseaseDamage(finalEnemyTeam, enemyDiseaseResult.damage);
+    
+    // Update disease states (decrement turns, remove expired)
+    finalPlayerTeamWithDisease = updateDiseases(finalPlayerTeamWithDisease);
+    finalEnemyTeamWithDisease = updateDiseases(finalEnemyTeamWithDisease);
+    
+    // Add disease damage logs
+    if (playerDiseaseResult.log.length > 0 || enemyDiseaseResult.log.length > 0) {
+      newLog.push(...playerDiseaseResult.log, ...enemyDiseaseResult.log);
+    }
+
     setBattleState({
-      playerTeam: finalPlayerTeam,
-      enemyTeam: finalEnemyTeam,
+      playerTeam: finalPlayerTeamWithDisease,
+      enemyTeam: finalEnemyTeamWithDisease,
       turn: battleState.turn + 1,
       log: newLog,
       winner: newWinner,
@@ -706,6 +818,13 @@ export default function BattlePage() {
                   {isAttacker && creature.currentHP > 0 && (
                     <div className="absolute -top-1 -right-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold shadow-lg animate-[pulse_1s_ease-in-out_infinite]">
                       JOUE
+                    </div>
+                  )}
+
+                  {/* Disease badge */}
+                  {creature.diseases.length > 0 && (
+                    <div className="absolute top-6 -right-1 bg-red-600 text-white text-xs px-1 py-0.5 rounded-full font-bold shadow-lg">
+                      ☠️ {creature.diseases.length}
                     </div>
                   )}
 
@@ -821,6 +940,13 @@ export default function BattlePage() {
                     <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1 py-0.5 rounded-full font-bold">
                       #{creature.position}
                     </div>
+
+                    {/* Disease badge for enemy */}
+                    {creature.diseases.length > 0 && (
+                      <div className="absolute top-6 -left-1 bg-red-600 text-white text-xs px-1 py-0.5 rounded-full font-bold shadow-lg">
+                        ☠️ {creature.diseases.length}
+                      </div>
+                    )}
                   </div>
 
                   <div className="mt-1.5 pt-1.5 border-t border-red-600/30">
@@ -916,6 +1042,69 @@ export default function BattlePage() {
                   <p className="text-2xl font-bold text-cyan-400 capitalize">🔬 {selectedCreature.geneticType}</p>
                 </div>
               </div>
+
+              {/* Show diseases if any */}
+              {selectedCreature.diseases.length > 0 && (
+                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-4 mt-4">
+                  <h4 className="text-red-400 font-bold text-lg mb-3 flex items-center gap-2">
+                    ☠️ MALADIES ACTIVES ({selectedCreature.diseases.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedCreature.diseases.map((disease, index) => {
+                      const damagePerTurn = Math.floor(disease.pool * 0.25);
+                      const totalRemaining = damagePerTurn * disease.remainingTurns;
+                      return (
+                        <div key={disease.id} className="bg-gray-600 rounded-lg p-3">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <p className="text-white text-sm font-semibold">
+                                Maladie #{index + 1}
+                              </p>
+                              <p className="text-gray-300 text-xs">
+                                Source: {disease.sourceCreatureName}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-red-400 text-sm font-bold">
+                                🗓️ {disease.remainingTurns}/4 tours
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <span className="text-gray-400">Damage/tour:</span>
+                              <span className="text-red-300 ml-1">{damagePerTurn} HP</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400">Restant:</span>
+                              <span className="text-red-300 ml-1">{totalRemaining} HP</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    
+                    {/* Calculate and show current turn total damage */}
+                    {(() => {
+                      const activeDiseases = selectedCreature.diseases.filter(d => d.remainingTurns > 0);
+                      const chargeBonus = Math.min(30, (activeDiseases.length - 1) * 10);
+                      const poolSum = activeDiseases.reduce((sum, d) => sum + d.pool, 0);
+                      const diseaseDamage = Math.floor(poolSum * 0.25);
+                      const finalDamage = Math.floor(diseaseDamage * (100 + chargeBonus) / 100);
+                      return (
+                        <div className="bg-red-900/50 rounded-lg p-3 mt-3 border border-red-500/30">
+                          <div className="text-center">
+                            <p className="text-gray-300 text-xs mb-1">TOTAL CE TOUR</p>
+                            <p className="text-red-400 text-sm font-bold">
+                              {finalDamage} dégâts ({chargeBonus}% bonus)
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
 
               <button
                 onClick={() => setSelectedCreature(null)}
