@@ -727,22 +727,68 @@ export default function BattlePage() {
     // Move to next attacker in turn order
     let nextIndex = (newIndex + 1) % battleState.turnOrder.length;
 
-    // Apply disease damage at end of turn (Pathogène DoT) - NEW INTEGRATED SYSTEM
-    const playerDiseaseResult = calculateDiseaseDamage(finalPlayerTeam);
-    const enemyDiseaseResult = calculateDiseaseDamage(finalEnemyTeam);
+    // Apply disease damage at end of CURRENT CREATURE's turn
+    const attackerDiseaseApply = attacker.currentHP > 0 ? applyDiseaseDamageForCreature(attacker, newLog) : { damage: 0, log: [], updatedCreature: attacker };
     
-    // The damage and updates are applied directly within calculateDiseaseDamage
-    const finalPlayerTeamWithDisease = playerDiseaseResult.teamWithUpdatedDiseases;
-    const finalEnemyTeamWithDisease = enemyDiseaseResult.teamWithUpdatedDiseases;
+    let finalPlayerTeamFinal = finalPlayerTeam;
+    let finalEnemyTeamFinal = finalEnemyTeam;
     
-    // Add disease damage logs
-    if (playerDiseaseResult.log.length > 0 || enemyDiseaseResult.log.length > 0) {
-      newLog.push(...playerDiseaseResult.log, ...enemyDiseaseResult.log);
+    // Update the team with the updated attacker if applicable
+    if (attackerDiseaseApply.damage > 0) {
+      if (attacker.owner === "player") {
+        const attackerIndex = finalPlayerTeamFinal.findIndex(c => c.id === attacker.id);
+        if (attackerIndex !== -1) {
+          finalPlayerTeamFinal[attackerIndex] = attackerDiseaseApply.updatedCreature;
+        }
+      } else {
+        const attackerIndex = finalEnemyTeamFinal.findIndex(c => c.id === attacker.id);
+        if (attackerIndex !== -1) {
+          finalEnemyTeamFinal[attackerIndex] = attackerDiseaseApply.updatedCreature;
+        }
+      }
+      
+      if (attackerDiseaseApply.log.length > 0) {
+        newLog.push(...attackerDiseaseApply.log);
+      }
+    }
+
+    // Also apply disease damage to previous attacker if they also have diseases
+    const previousAttacker = (newIndex === 0) 
+      ? battleState.turnOrder[battleState.turnOrder.length - 1] 
+      : battleState.turnOrder[newIndex - 1];
+    
+    let previousCreature: Creature | undefined = undefined;
+    if (previousAttacker.owner === "player") {
+      previousCreature = finalPlayerTeamFinal.find(c => c.id === previousAttacker.id);
+    } else {
+      previousCreature = finalEnemyTeamFinal.find(c => c.id === previousAttacker.id);
+    }
+    
+    if (previousCreature && previousCreature.currentHP > 0) {
+      const prevDiseaseApply = applyDiseaseDamageForCreature(previousCreature, newLog);
+      
+      if (prevDiseaseApply.damage > 0) {
+        if (previousAttacker.owner === "player") {
+          const prevIndex = finalPlayerTeamFinal.findIndex(c => c.id === previousCreature.id);
+          if (prevIndex !== -1) {
+            finalPlayerTeamFinal[prevIndex] = prevDiseaseApply.updatedCreature;
+          }
+        } else {
+          const prevIndex = finalEnemyTeamFinal.findIndex(c => c.id === previousCreature.id);
+          if (prevIndex !== -1) {
+            finalEnemyTeamFinal[prevIndex] = prevDiseaseApply.updatedCreature;
+          }
+        }
+        
+        if (prevDiseaseApply.log.length > 0) {
+          newLog.push(...prevDiseaseApply.log);
+        }
+      }
     }
 
     setBattleState({
-      playerTeam: finalPlayerTeamWithDisease,
-      enemyTeam: finalEnemyTeamWithDisease,
+      playerTeam: finalPlayerTeamFinal,
+      enemyTeam: finalEnemyTeamFinal,
       turn: battleState.turn + 1,
       log: newLog,
       winner: newWinner,
@@ -771,6 +817,50 @@ export default function BattlePage() {
   const playerAlive = battleState.playerTeam.filter(c => c.currentHP > 0).length;
   const enemyAlive = battleState.enemyTeam.filter(c => c.currentHP > 0).length;
   const currentAttacker = getCurrentAttacker(battleState);
+
+  // Function to calculate AND apply damage for a specific creature during their turn
+  function applyDiseaseDamageForCreature(creature: Creature, teamLog: string[]): { damage: number; log: string[]; updatedCreature: Creature } {
+    const activeDiseases = creature.diseases.filter(d => d.remainingTurns > 0 && creature.currentHP > 0);
+    
+    if (activeDiseases.length === 0) {
+      return { damage: 0, log: [], updatedCreature: creature };
+    }
+    
+    const diseaseLog: string[] = [];
+    let totalDamage = 0;
+    
+    // Calculate charge bonus for THIS creature ONLY  
+    const chargeBonus = Math.min(30, (activeDiseases.length - 1) * 10);
+    
+    // Sum 25% of each disease pool
+    const diseasePoolSum = activeDiseases.reduce((sum, disease) => sum + disease.pool, 0);
+    const diseaseDamage = Math.floor(diseasePoolSum * 0.25);
+    const finalDamage = Math.floor(diseaseDamage * (100 + chargeBonus) / 100);
+    
+    if (finalDamage > 0) {
+      diseaseLog.push(
+        `☠️ ${creature.name}: ${activeDiseases.length} maladie${activeDiseases.length > 1 ? 's' : ''} → ${finalDamage} dégâts (${chargeBonus}% bonus)`
+      );
+      
+      totalDamage = finalDamage;
+    }
+    
+    // Update disease states (decrement remainingTurns) for THIS creature
+    const updatedDiseases = activeDiseases.map(disease => ({
+      ...disease,
+      remainingTurns: disease.remainingTurns - 1
+    })).filter(disease => disease.remainingTurns > 0);
+    
+    return { 
+      damage: totalDamage, 
+      log: diseaseLog, 
+      updatedCreature: {
+        ...creature,
+        currentHP: Math.max(0, creature.currentHP - totalDamage),
+        diseases: updatedDiseases
+      }
+    };
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-950 via-orange-950 to-purple-950 p-6">
