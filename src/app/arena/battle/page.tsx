@@ -1107,7 +1107,7 @@ export default function BattlePage() {
             onClick={() => setSelectedCreature(null)}
           >
             <div 
-              className="bg-gray-800 dark:bg-gray-900 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl"
+              className="bg-gray-800 dark:bg-gray-900 rounded-3xl p-6 max-w-md w-full mx-4 shadow-2xl max-h-[80vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="text-center mb-6">
@@ -1125,51 +1125,51 @@ export default function BattlePage() {
                 )}
               </div>
 
-              <div className="space-y-4 grid grid-cols-2 gap-4">
-                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-4 text-center">
-                  <p className="text-gray-400 text-sm">HP</p>
-                  <p className="text-2xl font-bold text-white">{selectedCreature.currentHP}</p>
+              <div className="space-y-4 grid grid-cols-2 gap-3">
+                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-3 text-center">
+                  <p className="text-gray-400 text-xs">HP</p>
+                  <p className="text-xl font-bold text-white">{selectedCreature.currentHP}</p>
                   <p className="text-gray-500 text-xs">/ {selectedCreature.maxHP}</p>
                 </div>
-                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-4 text-center">
-                  <p className="text-gray-400 text-sm">ATK</p>
-                  <p className="text-2xl font-bold text-white">{selectedCreature.finalStats.attack}</p>
+                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-3 text-center">
+                  <p className="text-gray-400 text-xs">ATK</p>
+                  <p className="text-xl font-bold text-white">{selectedCreature.finalStats.attack}</p>
                 </div>
-                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-4 text-center">
-                  <p className="text-gray-400 text-sm">DEF</p>
-                  <p className="text-2xl font-bold text-white">{selectedCreature.finalStats.defense}</p>
+                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-3 text-center">
+                  <p className="text-gray-400 text-xs">DEF</p>
+                  <p className="text-xl font-bold text-white">{selectedCreature.finalStats.defense}</p>
                 </div>
-                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-4 text-center">
-                  <p className="text-gray-400 text-sm">SPD</p>
-                  <p className="text-2xl font-bold text-white">{selectedCreature.finalStats.speed}</p>
+                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-3 text-center">
+                  <p className="text-gray-400 text-xs">SPD</p>
+                  <p className="text-xl font-bold text-white">{selectedCreature.finalStats.speed}</p>
                 </div>
-                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-4 text-center">
-                  <p className="text-gray-400 text-sm">CRIT</p>
-                  <p className="text-2xl font-bold text-white">{selectedCreature.finalStats.crit}</p>
+                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-3 text-center">
+                  <p className="text-gray-400 text-xs">CRIT</p>
+                  <p className="text-xl font-bold text-white">{selectedCreature.finalStats.crit}</p>
                 </div>
-                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-4 text-center">
-                  <p className="text-gray-400 text-sm">Rang</p>
-                  <p className="text-2xl font-bold text-green-400">{selectedCreature.finalStats.rank}</p>
+                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-3 text-center">
+                  <p className="text-gray-400 text-xs">Rang</p>
+                  <p className="text-xl font-bold text-green-400">{selectedCreature.finalStats.rank}</p>
                 </div>
                 {/* Show genetic type in modal */}
-                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-4 text-center col-span-2">
-                  <p className="text-gray-400 text-sm mb-1">Type Génétique</p>
-                  <p className="text-2xl font-bold text-cyan-400 capitalize">🔬 {selectedCreature.geneticType}</p>
+                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-3 text-center col-span-2">
+                  <p className="text-gray-400 text-xs mb-1">Type Génétique</p>
+                  <p className="text-lg font-bold text-cyan-400 capitalize">🔬 {selectedCreature.geneticType}</p>
                 </div>
               </div>
 
               {/* Show diseases if any */}
               {selectedCreature.diseases.length > 0 && (
-                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-4 mt-4">
-                  <h4 className="text-red-400 font-bold text-lg mb-3 flex items-center gap-2">
+                <div className="bg-gray-700 dark:bg-gray-800 rounded-xl p-4 mt-3">
+                  <h4 className="text-red-400 font-bold text-lg mb-2 flex items-center gap-2">
                     ☠️ MALADIES ACTIVES ({selectedCreature.diseases.length})
                   </h4>
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
                     {selectedCreature.diseases.map((disease, index) => {
                       const damagePerTurn = Math.floor(disease.pool * 0.25);
                       const totalRemaining = damagePerTurn * disease.remainingTurns;
                       return (
-                        <div key={disease.id} className="bg-gray-600 rounded-lg p-3">
+                        <div key={disease.id} className="bg-gray-600 rounded-lg p-2">
                           <div className="flex justify-between items-start">
                             <div className="flex-1">
                               <p className="text-white text-sm font-semibold">
@@ -1185,9 +1185,9 @@ export default function BattlePage() {
                               </p>
                             </div>
                           </div>
-                          <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                          <div className="mt-1 grid grid-cols-2 gap-1 text-xs">
                             <div>
-                              <span className="text-gray-400">Damage/tour:</span>
+                              <span className="text-gray-400">Dmg/tour:</span>
                               <span className="text-red-300 ml-1">{damagePerTurn} HP</span>
                             </div>
                             <div>
@@ -1207,9 +1207,9 @@ export default function BattlePage() {
                       const diseaseDamage = Math.floor(poolSum * 0.25);
                       const finalDamage = Math.floor(diseaseDamage * (100 + chargeBonus) / 100);
                       return (
-                        <div className="bg-red-900/50 rounded-lg p-3 mt-3 border border-red-500/30">
+                        <div className="bg-red-900/50 rounded-lg p-2 mt-2 border border-red-500/30">
                           <div className="text-center">
-                            <p className="text-gray-300 text-xs mb-1">TOTAL CE TOUR</p>
+                            <p className="text-gray-300 text-xs">TOTAL CE TOUR</p>
                             <p className="text-red-400 text-sm font-bold">
                               {finalDamage} dégâts ({chargeBonus}% bonus)
                             </p>
@@ -1223,7 +1223,7 @@ export default function BattlePage() {
 
               <button
                 onClick={() => setSelectedCreature(null)}
-                className="w-full mt-6 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-xl font-bold rounded-xl transition-all"
+                className="w-full mt-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-lg font-bold rounded-xl transition-all"
               >
                 Fermer
               </button>
